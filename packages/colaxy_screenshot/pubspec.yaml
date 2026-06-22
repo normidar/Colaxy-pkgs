@@ -10,7 +10,7 @@ dependencies:
   path_provider: ^2.0.0
   screenshot: ^3.0.0
   window_size: ^0.1.0
-description: A Flutter package template.
+description: Automated app store screenshot generation for iOS, Android, and macOS across multiple devices and languages, with Fastlane integration.
 dev_dependencies:
   auto_exporter: ^4.0.0
   build_runner: ^2.0.0

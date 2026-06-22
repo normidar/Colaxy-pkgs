@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel in-progress runs on the same ref to save CI minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format-and-fix:
+    name: Format & fix check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Installs the Flutter/Dart toolchain declared in mise.toml so CI stays
+      # in sync with local development.
+      - name: Set up toolchain (mise)
+        uses: jdx/mise-action@v2
+        with:
+          install: true
+          cache: true
+
+      - name: Activate Melos
+        run: |
+          dart pub global activate melos
+          echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+      - name: Bootstrap workspace
+        run: melos bootstrap
+
+      - name: Run melos format
+        run: melos run format
+
+      - name: Run melos fix
+        run: melos run fix
+
+      - name: Verify no files changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Working tree changed after 'melos run format' / 'melos run fix'."
+            echo "Run both commands locally and commit the result before pushing."
+            echo "--- git status ---"
+            git status --porcelain
+            echo "--- git diff ---"
+            git --no-pager diff
+            exit 1
+          fi
+          echo "✅ All files are already formatted and fixed."

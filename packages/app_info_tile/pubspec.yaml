@@ -8,7 +8,7 @@ dependencies:
   package_info_plus: ^9.0.0
   riverpod_annotation: ^3.0.0
   riverpod_helper: ^0.1.0+1
-description: A Flutter package template.
+description: A Flutter widget for displaying app information (name, version, build number) and licenses, with Riverpod integration and multi-language support.
 dev_dependencies:
   auto_exporter: any
   build_runner: ^2.0.0
