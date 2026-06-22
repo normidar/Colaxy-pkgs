@@ -31,8 +31,10 @@ jobs:
           dart pub global activate melos
           echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
 
-      - name: Bootstrap workspace
-        run: melos bootstrap
+      # These are Flutter packages, so resolve with `flutter pub get`. As a pub
+      # workspace, a single resolve at the root covers every member package.
+      - name: Resolve workspace dependencies
+        run: flutter pub get
 
       - name: Run melos format
         run: melos run format
