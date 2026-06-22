@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart';
 import 'package:colaxy_adaptive_scaffold/src/navigation_item.dart';
-
-
+import 'package:flutter/material.dart';
 
 /// A scaffold that adapts between a [BottomNavigationBar] and a [NavigationRail]
 /// based on the screen aspect ratio (width/height).
@@ -158,7 +156,8 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
     final size = MediaQuery.of(context).size;
     final aspectRatio = size.width / size.height;
     final useRail = aspectRatio >= widget.aspectRatioThreshold;
-    final useDrawer = !useRail && widget.items.length > widget.maxBottomNavigationItems;
+    final useDrawer =
+        !useRail && widget.items.length > widget.maxBottomNavigationItems;
 
     // Get the current page to display
     final currentPage = widget.items[_selectedIndex].page;
@@ -206,8 +205,8 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
                 child: Text(
                   'Menu',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                      ),
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
                 ),
               ),
               ...widget.items.asMap().entries.map((entry) {

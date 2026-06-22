@@ -5,18 +5,18 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('AdaptiveScaffold builds correctly', (tester) async {
     await tester.pumpWidget(
-      MaterialApp(
+      const MaterialApp(
         home: AdaptiveScaffold(
           items: [
             NavigationItem(
               name: 'Home',
-              icon: const Icon(Icons.home),
-              page: const Text('Home Page'),
+              icon: Icon(Icons.home),
+              page: Text('Home Page'),
             ),
             NavigationItem(
               name: 'Settings',
-              icon: const Icon(Icons.settings),
-              page: const Text('Settings Page'),
+              icon: Icon(Icons.settings),
+              page: Text('Settings Page'),
             ),
           ],
         ),

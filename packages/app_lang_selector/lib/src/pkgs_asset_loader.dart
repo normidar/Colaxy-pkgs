@@ -28,7 +28,7 @@ class PkgsAssetLoader extends AssetLoader {
   }
 
   Future<Map<String, dynamic>> loadLocale(
-      String basePath, Locale locale) async {
+      String basePath, Locale locale,) async {
     final localePath =
         '$basePath/${locale.toStringWithSeparator(separator: "-")}.json';
     EasyLocalization.logger.debug('Load asset from $localePath');
@@ -38,7 +38,7 @@ class PkgsAssetLoader extends AssetLoader {
   }
 
   Future<Map<String, dynamic>> loadPackage(
-      String packageName, Locale locale) async {
+      String packageName, Locale locale,) async {
     final localePath = getPackagePath(packageName, locale);
     EasyLocalization.logger.debug('Load asset from $localePath');
     return (json.decode(await rootBundle.loadString(localePath))

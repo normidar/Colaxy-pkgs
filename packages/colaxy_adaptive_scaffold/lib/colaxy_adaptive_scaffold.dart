@@ -1,5 +1,5 @@
 /// A Flutter package template.
-library colaxy_adaptive_scaffold;
+library;
 
 export 'src/adaptive_scaffold.dart';
 export 'src/navigation_item.dart';

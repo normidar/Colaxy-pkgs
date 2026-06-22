@@ -67,10 +67,7 @@ class HomePage extends StatelessWidget {
         children: [
           Icon(Icons.home, size: 100, color: Colors.blue[300]),
           const SizedBox(height: 16),
-          Text(
-            'Home Page',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
+          Text('Home Page', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
           const Text('Welcome to the adaptive scaffold example!'),
         ],
