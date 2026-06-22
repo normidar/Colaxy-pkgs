@@ -1,0 +1,13 @@
+name: colaxy_pkgs
+description: Root project for Melos
+version: 1.0.0
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.11.0 <4.0.0' # ワークスペース機能を使うため3.5.0以上に変更
+
+dev_dependencies:
+  melos: any
+
+workspace:
+  - packages/*

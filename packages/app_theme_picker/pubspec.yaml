@@ -21,7 +21,7 @@ dev_dependencies:
   very_good_analysis: any
 environment:
   flutter: '>=1.17.0'
-  sdk: ^3.0.0
+  sdk: ^3.5.0
 flutter:
   assets:
     - assets/localizations/
@@ -34,3 +34,4 @@ topics:
   - picker
   - easy-localization
 version: 0.1.3
+resolution: workspace
