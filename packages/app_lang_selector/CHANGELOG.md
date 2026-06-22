@@ -1,3 +1,9 @@
+## 0.1.0+1
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: format and fix.
+ - **FIX**: use melos.
+
 ## 0.1.0
 
 - Update riverpod dependencies.

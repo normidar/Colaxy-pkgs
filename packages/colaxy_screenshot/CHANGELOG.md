@@ -1,3 +1,8 @@
+## 0.6.0+1
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+
 ## 0.6.0
 
 - Remove imghippoApiKey from config.

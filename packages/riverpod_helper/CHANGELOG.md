@@ -1,3 +1,8 @@
+## 0.1.0+1
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+
 ## [0.1.0] - 2025-11-14
 
 - Update riverpod dependencies.
