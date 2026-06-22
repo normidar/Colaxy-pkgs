@@ -1,4 +1,4 @@
-name: example
+name: app_lang_selector_example
 description: Example app demonstrating app_lang_selector package
 
 publish_to: 'none'
