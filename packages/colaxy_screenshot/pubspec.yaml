@@ -1,0 +1,32 @@
+---
+dependencies:
+  device_frame_plus: ^1.0.0
+  device_info_plus: ^12.2.0
+  easy_localization: ^3.0.0
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.0.0
+  image: ^4.0.0
+  path_provider: ^2.0.0
+  screenshot: ^3.0.0
+  window_size: ^0.1.0
+description: A Flutter package template.
+dev_dependencies:
+  auto_exporter: ^4.0.0
+  build_runner: ^2.0.0
+  flutter_lints: any
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: any
+environment:
+  flutter: '>=1.17.0'
+  sdk: ^3.0.0
+homepage: https://github.com/normidar/colaxy_screenshot
+name: colaxy_screenshot
+topics:
+  - screenshot
+  - fastlane
+  - automation
+  - image
+  - png
+version: 0.6.0

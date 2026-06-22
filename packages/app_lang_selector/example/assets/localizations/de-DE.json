@@ -1,0 +1,6 @@
+{
+  "app_title": "Sprachauswahl-Beispiel",
+  "welcome_message": "Willkommen bei App Lang Selector!",
+  "description": "Dies ist eine Demonstration des app_lang_selector-Pakets. Sie können die Sprache der App einfach mit dem Sprachauswahlmenü unten ändern.",
+  "current_language": "Aktuelle Sprache:"
+}

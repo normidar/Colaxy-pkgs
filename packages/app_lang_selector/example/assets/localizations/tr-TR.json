@@ -1,0 +1,6 @@
+{
+  "app_title": "Dil Seçici Örneği",
+  "welcome_message": "App Lang Selector'e Hoş Geldiniz!",
+  "description": "Bu, app_lang_selector paketinin bir gösterimidir. Aşağıdaki dil seçiciyi kullanarak uygulamanın dilini kolayca değiştirebilirsiniz.",
+  "current_language": "Mevcut Dil:"
+}

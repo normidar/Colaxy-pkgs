@@ -1,0 +1,21 @@
+name: example
+description: Example app for colaxy_adaptive_scaffold
+publish_to: 'none'
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=1.17.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  colaxy_adaptive_scaffold:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: any
+
+flutter:
+  uses-material-design: true

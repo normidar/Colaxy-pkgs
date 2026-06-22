@@ -1,0 +1,6 @@
+{
+  "app_title": "Пример Выбора Языка",
+  "welcome_message": "Добро пожаловать в App Lang Selector!",
+  "description": "Это демонстрация пакета app_lang_selector. Вы можете легко изменить язык приложения, используя селектор языка ниже.",
+  "current_language": "Текущий язык:"
+}

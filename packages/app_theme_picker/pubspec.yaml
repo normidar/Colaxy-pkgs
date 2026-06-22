@@ -1,0 +1,36 @@
+---
+dependencies:
+  app_lang_selector: ^0.1.0
+  easy_localization: ^3.0.7
+  flex_color_scheme: ^8.2.0
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.0.3
+  riverpod_annotation: ^3.0.3
+  riverpod_helper: ^0.1.0
+description: A Flutter package template.
+dev_dependencies:
+  auto_exporter: any
+  build_runner: ^2.7.1
+  build_test: ^3.0.0
+  custom_lint: ^0.8.0
+  flutter_test:
+    sdk: flutter
+  riverpod_generator: ^3.0.3
+  riverpod_lint: ^3.0.3
+  very_good_analysis: any
+environment:
+  flutter: '>=1.17.0'
+  sdk: ^3.0.0
+flutter:
+  assets:
+    - assets/localizations/
+homepage: https://github.com/normidar/app_theme_picker
+name: app_theme_picker
+topics:
+  - theme
+  - color
+  - style
+  - picker
+  - easy-localization
+version: 0.1.3
