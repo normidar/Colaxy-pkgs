@@ -25,7 +25,8 @@ environment:
 flutter:
   assets:
     - assets/localizations/
-homepage: https://github.com/normidar/app_theme_picker
+homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_theme_picker
+repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_theme_picker
 name: app_theme_picker
 topics:
   - theme

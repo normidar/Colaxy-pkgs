@@ -23,8 +23,8 @@ environment:
 flutter:
   assets:
     - assets/localizations/
-homepage: https://github.com/normidar/app_lang_selector
-issue_tracker: https://github.com/normidar/app_lang_selector/issues
+homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_lang_selector
+issue_tracker: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_lang_selector/issues
 name: app_lang_selector
 topics:
   - language

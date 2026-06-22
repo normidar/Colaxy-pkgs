@@ -25,8 +25,8 @@ environment:
 flutter:
   assets:
     - assets/localizations/
-homepage: https://github.com/normidar/app_info_tile
-repository: https://github.com/normidar/app_info_tile
+homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_info_tile
+repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_info_tile
 name: app_info_tile
 topics:
   - app-info
