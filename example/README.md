@@ -15,6 +15,8 @@ Language, theme, and layout are all switched automatically. By looking at this e
 dart pub add riverpod_helper riverpod_annotation flutter_riverpod dev:riverpod_generator dev:build_runner dev:custom_lint dev:riverpod_lint
 ```
 
+> Recommended UI convention: put the rules in `ui/pages/`. Inside the `ui/pages` folder, always write a mock for each screen, and make sure each mock can render the screen without requiring any external data.
+
 ## How to support multiple languages?
 
 1. Add libraries:
@@ -23,9 +25,17 @@ dart pub add riverpod_helper riverpod_annotation flutter_riverpod dev:riverpod_g
 dart pub add easy_localization app_lang_selector
 ```
 
-## Will you release your app to store? use Fastlane!
+## A beautiful icon is good for your app.
 
+We use the icons_launcher library to generate icons. We are planning to fork it and use pure_svg, so SVG-format images can also be generated as icons.
 
+## Will you release your app to a store? Use Fastlane!
+
+Check out the Fastlane homepage and install Fastlane!
+
+First,
+
+...(assuming macOS)
 
 ## How to take screenshots automatically?
 
