@@ -27,7 +27,7 @@ dart pub add easy_localization app_lang_selector
 
 ## A beautiful icon is good for your app.
 
-We use the icons_launcher library to generate icons. We are planning to fork it and use pure_svg, so SVG-format images can also be generated as icons.
+We use the colaxy_icons_launcher library to generate icons. We are planning to fork it and use pure_svg, so SVG-format images can also be generated as icons.
 
 ## Will you release your app to a store? Use Fastlane!
 
