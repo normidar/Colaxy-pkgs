@@ -8,7 +8,7 @@ dependencies:
   flutter_riverpod: ^3.0.3
   riverpod_annotation: ^3.0.3
   riverpod_helper: ^0.1.0+1
-description: A Flutter package template.
+description: A customizable Flutter theme picker with FlexColorScheme color schemes, light/dark/system modes, persistent settings, and Riverpod state management.
 dev_dependencies:
   auto_exporter: any
   build_runner: ^2.7.1

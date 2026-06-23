@@ -1,6 +1,8 @@
-name: example
+name: colaxy_adaptive_scaffold_example
 description: Example app for colaxy_adaptive_scaffold
 publish_to: 'none'
+
+resolution: workspace
 
 environment:
   sdk: ^3.8.0
