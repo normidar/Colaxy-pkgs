@@ -1,3 +1,9 @@
+## 0.1.0+2
+
+ - **FIX**: give example workspace members unique package names.
+ - **FIX**: bump app_lang_selector example SDK to ^3.5.0 for workspace support.
+ - **FIX**: include example apps as pub workspace members.
+
 ## 0.1.0+1
 
  - **FIX**: reset repo link and homepage link.

@@ -1,6 +1,6 @@
 ---
 dependencies:
-  app_lang_selector: ^0.1.0+1
+  app_lang_selector: ^0.1.0+2
   easy_localization: ^3.0.7
   flutter:
     sdk: flutter
@@ -34,5 +34,5 @@ topics:
   - package-info
   - app
   - easy-localization
-version: 0.1.0+1
+version: 0.1.0+2
 resolution: workspace
