@@ -3,6 +3,8 @@ import 'dart:typed_data';
 import 'package:image/image.dart';
 import 'package:universal_io/io.dart';
 
+import 'svg_converter.dart';
+
 /// Icon template
 class IconTemplate {
   /// Constructor
@@ -29,8 +31,15 @@ class Icon {
     return Icon._(image);
   }
 
-  /// Load an image from file
+  /// Load an image from file. If [filePath] was previously resolved from an
+  /// SVG source via `resolveSvgImagePath`, the rasterized PNG bytes are
+  /// taken directly from memory instead of reading a file from disk.
   static Icon? loadFile(String filePath) {
+    final svgPngBytes = svgPngBytesFor(filePath);
+    if (svgPngBytes != null) {
+      return Icon._loadBytes(svgPngBytes);
+    }
+
     return Icon._loadBytes(File(filePath).readAsBytesSync());
   }
 

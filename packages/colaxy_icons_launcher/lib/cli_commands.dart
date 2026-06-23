@@ -5,6 +5,7 @@ import 'package:yaml/yaml.dart';
 import 'utils/cli_logger.dart';
 import 'utils/constants.dart';
 import 'utils/icon.dart';
+import 'utils/svg_converter.dart';
 import 'utils/template.dart';
 import 'utils/utils.dart';
 
@@ -19,14 +20,14 @@ part 'utils/flavor_helper.dart';
 late _FlavorHelper _flavorHelper;
 
 /// Create launcher icons
-void createIconsLauncher({String? path, String? flavor}) {
+Future<void> createIconsLauncher({String? path, String? flavor}) async {
   if (flavor != null) {
     print('\n📱  Starting with $flavor flavor 🚀\n');
   }
   _flavorHelper = _FlavorHelper(flavor);
   final config = _getConfig(configFile: path);
   _checkConfig(config);
-  _createIconsByConfig(config);
+  await _createIconsByConfig(config);
 }
 
 /// Get config file
@@ -191,7 +192,7 @@ void _checkConfig(Map<String, dynamic> config) {
 }
 
 /// Create icons base on config
-void _createIconsByConfig(Map<String, dynamic> config) {
+Future<void> _createIconsByConfig(Map<String, dynamic> config) async {
   // Global image path
   final imagePath = _checkImageExists(config: config, parameter: 'image_path');
   final platforms = config['platforms'] as Map<String, dynamic>;
@@ -209,6 +210,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       CliLogger.error('Could not find image path for Android');
       exit(1);
     }
+    imagePathAndroid = await resolveSvgImagePath(imagePathAndroid);
   }
 
   String? imagePathIos = imagePath;
@@ -226,16 +228,23 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       CliLogger.error('Could not find image path for iOS');
       exit(1);
     }
+    imagePathIos = await resolveSvgImagePath(imagePathIos);
 
     imagePathIosDark = _checkImageExists(
       config: platforms['ios'] as Map<String, dynamic>,
       parameter: 'dark_path',
     );
+    if (imagePathIosDark != null) {
+      imagePathIosDark = await resolveSvgImagePath(imagePathIosDark);
+    }
 
     imagePathIosTinted = _checkImageExists(
       config: platforms['ios'] as Map<String, dynamic>,
       parameter: 'tinted_path',
     );
+    if (imagePathIosTinted != null) {
+      imagePathIosTinted = await resolveSvgImagePath(imagePathIosTinted);
+    }
   }
 
   String? imagePathMacos = imagePath;
@@ -251,6 +260,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       CliLogger.error('Could not find image path for macOS');
       exit(1);
     }
+    imagePathMacos = await resolveSvgImagePath(imagePathMacos);
   }
 
   String? imagePathWindows = imagePath;
@@ -266,6 +276,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       CliLogger.error('Could not find image path for Windows');
       exit(1);
     }
+    imagePathWindows = await resolveSvgImagePath(imagePathWindows);
   }
 
   String? imagePathLinux = imagePath;
@@ -281,6 +292,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       CliLogger.error('Could not find image path for Linux');
       exit(1);
     }
+    imagePathLinux = await resolveSvgImagePath(imagePathLinux);
   }
 
   String? imagePathWeb = imagePath;
@@ -297,13 +309,14 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       CliLogger.error('Could not find image path for Web');
       exit(1);
     }
+    imagePathWeb = await resolveSvgImagePath(imagePathWeb);
 
     final newMaskableImagePath = _checkImageExists(
       config: platforms['web'] as Map<String, dynamic>,
       parameter: 'maskable_image_path',
     );
     if (newMaskableImagePath != null) {
-      maskableImagePathWeb = newMaskableImagePath;
+      maskableImagePathWeb = await resolveSvgImagePath(newMaskableImagePath);
     }
   }
 
@@ -315,7 +328,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       parameter: 'favicon_path',
     );
     if (newImagePath != null) {
-      faviconPathWeb = newImagePath;
+      faviconPathWeb = await resolveSvgImagePath(newImagePath);
     }
 
     final faviconOutputExtension =
@@ -333,7 +346,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       parameter: 'adaptive_background_image',
     );
     if (newImagePath != null) {
-      adaptiveBgImage = newImagePath;
+      adaptiveBgImage = await resolveSvgImagePath(newImagePath);
     }
   }
 
@@ -344,7 +357,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       parameter: 'adaptive_foreground_image',
     );
     if (newImagePath != null) {
-      adaptiveFgImage = newImagePath;
+      adaptiveFgImage = await resolveSvgImagePath(newImagePath);
     }
   }
 
@@ -355,7 +368,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       parameter: 'adaptive_round_image',
     );
     if (newImagePath != null) {
-      adaptiveRoundImage = newImagePath;
+      adaptiveRoundImage = await resolveSvgImagePath(newImagePath);
     }
   }
 
@@ -366,7 +379,7 @@ void _createIconsByConfig(Map<String, dynamic> config) {
       parameter: 'adaptive_monochrome_image',
     );
     if (newImagePath != null) {
-      adaptiveMonochrome = newImagePath;
+      adaptiveMonochrome = await resolveSvgImagePath(newImagePath);
     }
   }
 
@@ -428,7 +441,9 @@ void _createIconsByConfig(Map<String, dynamic> config) {
         exit(1);
       }
 
-      createAndroidNotificationIcon(notificationImagePath);
+      createAndroidNotificationIcon(
+        await resolveSvgImagePath(notificationImagePath),
+      );
     }
   }
 
@@ -490,9 +505,10 @@ String? _checkImageExists({
     final imageExtension = p.extension(image).toLowerCase();
     if (imageExtension != '.png' &&
         imageExtension != '.jpg' &&
-        imageExtension != '.jpeg') {
+        imageExtension != '.jpeg' &&
+        imageExtension != '.svg') {
       CliLogger.error(
-        'Unsupported file format: $image  Your image must be a JPG, JPEG or PNG file.',
+        'Unsupported file format: $image  Your image must be a JPG, JPEG, PNG or SVG file.',
       );
       exit(1);
     }
