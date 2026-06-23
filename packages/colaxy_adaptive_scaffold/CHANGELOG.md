@@ -1,3 +1,7 @@
+## 0.0.1+3
+
+ - **FIX**: update auto_exporter library.
+
 ## 0.0.1+2
 
  - **FIX**: give example workspace members unique package names.

@@ -11,6 +11,32 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 Packages with breaking changes:
 
+ - [`colaxy_icons_launcher` - `v0.1.0`](#colaxy_icons_launcher---v010)
+
+Packages with other changes:
+
+ - [`colaxy_adaptive_scaffold` - `v0.0.1+3`](#colaxy_adaptive_scaffold---v0013)
+
+---
+
+#### `colaxy_icons_launcher` - `v0.1.0`
+
+ - **FIX**: add icons_launcher library.
+ - **BREAKING** **FEAT**: make svg image usable.
+
+#### `colaxy_adaptive_scaffold` - `v0.0.1+3`
+
+ - **FIX**: update auto_exporter library.
+
+
+## 2026-06-23
+
+### Changes
+
+---
+
+Packages with breaking changes:
+
  - There are no breaking changes in this release.
 
 Packages with other changes:
