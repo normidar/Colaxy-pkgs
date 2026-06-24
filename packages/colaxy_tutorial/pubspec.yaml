@@ -1,0 +1,34 @@
+---
+dependencies:
+  app_lang_selector: ^0.1.0+2
+  easy_localization: ^3.0.7
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^3.0.3
+  package_info_plus: ^9.0.0
+  shared_preferences: ^2.2.3
+  tutorial_coach_mark: ^1.2.12
+description: A tool for showing tutorials, developed on tutorial_coach_mark, more easier to use, more features.
+dev_dependencies:
+  auto_exporter: any
+  build_runner: ^2.4.11
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter
+  very_good_analysis: any
+environment:
+  flutter: '>=1.17.0'
+  sdk: ^3.5.0
+flutter:
+  assets:
+    - assets/localizations/
+name: colaxy_tutorial
+repository: https://github.com/normidar/Colaxy-pkgs/tree/main/packages/colaxy_tutorial
+topics:
+  - tutorial
+  - tutorial-coach-mark
+  - manual
+  - guide
+  - startup
+version: 0.2.0
+resolution: workspace

@@ -1,0 +1,12 @@
+{
+  "colaxy_tutorial:dont_show_again": "다시 표시하지 마세요",
+  "colaxy_tutorial:ok": "확인",
+  "colaxy_tutorial:reset": "리셋",
+  "colaxy_tutorial:reset_successful": "리셋에 성공했습니다",
+  "colaxy_tutorial:reset_tutorial": "튜토리얼을 초기 상태로 되돌리기",
+  "colaxy_tutorial:settings_page_title": "튜토리얼 설정",
+  "colaxy_tutorial:skip": "건너뛰기",
+  "colaxy_tutorial:start": "시작하기",
+  "colaxy_tutorial:tile_title": "튜토리얼",
+  "colaxy_tutorial:understood": "알았어"
+}
