@@ -7,6 +7,8 @@ An example for Colaxy packages
 This project uses Riverpod for state management. Screenshots are captured based on Riverpod state and automatically fed into Fastlane.
 Language, theme, and layout are all switched automatically. By looking at this example project, you can see how much the Colaxy project simplifies development for developers.
 
+> If you use this example, you can run this first: `flutter create --platform=android,ios,linux,macos,web,windows .`
+
 ## We use riverpod to manage status
 
 1. Add riverpod libraries:
@@ -27,7 +29,41 @@ dart pub add easy_localization app_lang_selector
 
 ## A beautiful icon is good for your app.
 
-We use the colaxy_icons_launcher library to generate icons. We are planning to fork it and use pure_svg, so SVG-format images can also be generated as icons.
+We use the `colaxy_icons_launcher` library to generate icons. It is a fork of [icons_launcher](https://github.com/mrrhak/icons_launcher) with added support for SVG-format images, so you can generate icons directly from an SVG source instead of a raster image.
+
+SVG files are recommended because they are essentially text-based, which keeps your repository lightweight and your icon easy to tweak. Try to keep the SVG as simple and original as possible.
+
+1. Add the library:
+
+```bash
+dart pub add dev:colaxy_icons_launcher
+```
+
+2. Configure `flutter_icons` in your `pubspec.yaml`, pointing `image_path` to your SVG file:
+
+```yaml
+colaxy_icons_launcher:
+  image_path: 'assets/icon.svg'
+  platforms:
+    android:
+      enable: true
+    ios:
+      enable: true
+    web:
+      enable: true
+    macos:
+      enable: true
+    windows:
+      enable: true
+    linux:
+      enable: true
+```
+
+3. Generate the icons:
+
+```bash
+dart run colaxy_icons_launcher:create
+```
 
 ## Will you release your app to a store? Use Fastlane!
 
