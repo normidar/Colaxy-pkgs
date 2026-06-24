@@ -15,6 +15,32 @@ Packages with breaking changes:
 
 Packages with other changes:
 
+ - [`colaxy_localization` - `v0.1.0+1`](#colaxy_localization---v0101)
+ - [`colaxy_tutorial` - `v0.2.0+1`](#colaxy_tutorial---v0201)
+
+---
+
+#### `colaxy_localization` - `v0.1.0+1`
+
+ - **FIX**: move package to monorepo.
+
+#### `colaxy_tutorial` - `v0.2.0+1`
+
+ - **FIX**: move package to monorepo.
+
+
+## 2026-06-24
+
+### Changes
+
+---
+
+Packages with breaking changes:
+
+ - There are no breaking changes in this release.
+
+Packages with other changes:
+
  - [`colaxy_icons_launcher` - `v0.1.0+1`](#colaxy_icons_launcher---v0101)
 
 ---
