@@ -24,7 +24,48 @@ dart pub add riverpod_helper riverpod_annotation flutter_riverpod dev:riverpod_g
 1. Add libraries:
 
 ```bash
-dart pub add easy_localization app_lang_selector
+dart pub add easy_localization app_lang_selector dev:colaxy_localization
+```
+
+Here is what each library does:
+
+- `easy_localization` -> Automatically loads and displays your app's translated resources, using a syntax like `'your_context_key'.tr()`.
+- `app_lang_selector` -> Provides UI for letting users switch the app's language at runtime.
+- `dev:colaxy_localization` -> Manages the resources used by Fastlane and by `easy_localization` from a single, unified source.
+
+2. Initialize `easy_localization`
+
+Add the initialization code as shown below:
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await EasyLocalization.ensureInitialized();
+  ...
+}
+```
+
+3. Wrap your app with `EasyLocalization` and add `assets/localizations/{locale}.json` files for each locale you want to support:
+
+```dart
+EasyLocalization languageWidgetWrapper(Widget widget) {
+  return EasyLocalization(
+    supportedLocales: const [
+      Locale('ja', 'JP'),
+      Locale('en', 'US'),
+      Locale('zh', 'CN'),
+    ],
+    path: 'assets/localizations',
+    fallbackLocale: const Locale('en', 'US'),
+    child: widget,
+  );
+}
+```
+
+4. Run `colaxy_localization` to generate the Android/iOS native localization files and the Fastlane metadata from your `assets/localizations/*.json` files:
+
+```bash
+dart run colaxy_localization:gen
 ```
 
 ## A beautiful icon is good for your app.

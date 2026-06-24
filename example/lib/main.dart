@@ -8,10 +8,9 @@ import 'package:flutter/material.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await EasyLocalization.ensureInitialized();
 
-  EasyLocalization elw(Widget widget) {
+  EasyLocalization languageWidgetWrapper(Widget widget) {
     return EasyLocalization(
       supportedLocales: const [
         Locale('ja', 'JP'),
