@@ -2,7 +2,7 @@ name: colaxy_icons_launcher
 description: A command-line tool that simplifies the task of updating your Flutter app's launcher icon.
 maintainer: Mrr Hak
 repository: https://github.com/normidar/Colaxy-pkgs/tree/main/packages/colaxy_icons_launcher
-version: 0.1.0
+version: 0.1.0+1
 funding:
   - https://ko-fi.com/mrrhak
 screenshots:
