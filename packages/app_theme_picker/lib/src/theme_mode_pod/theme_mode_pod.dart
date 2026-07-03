@@ -14,6 +14,7 @@ class ThemeModePod extends _$ThemeModePod {
     if (themeMode != null) {
       return ThemeMode.values.firstWhere(
         (element) => element.name == themeMode,
+        orElse: () => ThemeMode.light,
       );
     }
     return ThemeMode.light;

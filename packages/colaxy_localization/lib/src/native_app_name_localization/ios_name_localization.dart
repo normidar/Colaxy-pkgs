@@ -90,7 +90,8 @@ class IOSNameLocalization {
 
       // 更新されたXMLをファイルに書き込む
       infoPlist.writeAsStringSync(
-          '${document.toXmlString(pretty: true, indent: '  ')}\n');
+        '${document.toXmlString(pretty: true, indent: '  ')}\n',
+      );
     } catch (e) {
       print('Error parsing or updating Info.plist: $e');
     }
@@ -188,7 +189,8 @@ class IOSNameLocalization {
 
       // 更新されたXMLをファイルに書き込む
       infoPlist.writeAsStringSync(
-          '${document.toXmlString(pretty: true, indent: '  ')}\n');
+        '${document.toXmlString(pretty: true, indent: '  ')}\n',
+      );
     } catch (e) {
       print('Error parsing or updating Info.plist: $e');
     }

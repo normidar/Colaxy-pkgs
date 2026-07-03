@@ -51,7 +51,7 @@ class AppLangSelectPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedLang = ref.watch<String?>(selectingLangProvider) ??
-        context.savedLocale?.languageCode ??
+        context.savedLocale?.toString() ??
         'system_system';
     return Scaffold(
       appBar: AppBar(title: Text('select_lang_page'.tr())),
@@ -116,14 +116,14 @@ class LangCode {
   factory LangCode.fromLocale(Locale locale) {
     return LangCode(
       languageCode: locale.languageCode,
-      countryCode: locale.countryCode!,
+      countryCode: locale.countryCode ?? '',
     );
   }
 
   factory LangCode.fromString(String langCode) {
     final parts = langCode.split('_');
     if (parts.length == 1) {
-      return const LangCode(languageCode: 'system', countryCode: 'system');
+      return LangCode(languageCode: parts[0], countryCode: '');
     }
     return LangCode(languageCode: parts[0], countryCode: parts[1]);
   }
@@ -145,11 +145,13 @@ class LangCode {
   }
 
   Locale toLocale() {
-    return Locale(languageCode, countryCode);
+    return countryCode.isEmpty
+        ? Locale(languageCode)
+        : Locale(languageCode, countryCode);
   }
 
   @override
   String toString() {
-    return '${languageCode}_$countryCode';
+    return countryCode.isEmpty ? languageCode : '${languageCode}_$countryCode';
   }
 }

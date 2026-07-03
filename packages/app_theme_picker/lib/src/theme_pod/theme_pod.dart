@@ -12,7 +12,11 @@ class ThemePod extends _$ThemePod {
   Future<FlexScheme> build() async {
     final themeIndex =
         await ref.read(prefsAliveIntPodProvider(_prefKey).future);
-    if (themeIndex != null) {
+    // Guard against out-of-range indices (e.g. a value saved by a version
+    // of flex_color_scheme with a different scheme list).
+    if (themeIndex != null &&
+        themeIndex >= 0 &&
+        themeIndex < FlexScheme.values.length) {
       return FlexScheme.values[themeIndex];
     }
     return FlexScheme.sakura;

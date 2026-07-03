@@ -1,5 +1,3 @@
-import 'package:colaxy_adaptive_scaffold/colaxy_adaptive_scaffold.dart'
-    show AdaptiveScaffold;
 import 'package:colaxy_adaptive_scaffold/src/adaptive_scaffold.dart'
     show AdaptiveScaffold;
 import 'package:flutter/material.dart';
