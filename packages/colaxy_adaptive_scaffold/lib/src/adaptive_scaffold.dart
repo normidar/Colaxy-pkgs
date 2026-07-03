@@ -142,7 +142,17 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialIndex;
+    assert(widget.items.isNotEmpty, 'items must contain at least one item');
+    _selectedIndex = widget.initialIndex.clamp(0, widget.items.length - 1);
+  }
+
+  @override
+  void didUpdateWidget(AdaptiveScaffold oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Keep the selection valid if the items list shrinks.
+    if (_selectedIndex >= widget.items.length) {
+      _selectedIndex = widget.items.length - 1;
+    }
   }
 
   void _onDestinationSelected(int index) {

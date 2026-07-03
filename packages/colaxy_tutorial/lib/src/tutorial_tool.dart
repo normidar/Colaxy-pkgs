@@ -71,6 +71,7 @@ class TutorialTool {
     for (final id in showedIds) {
       await prefs.remove('$packageName:$id');
     }
+    await prefs.remove('$packageName:showed_ids');
   }
 
   /// Saves the list of tutorial IDs that have been shown.
