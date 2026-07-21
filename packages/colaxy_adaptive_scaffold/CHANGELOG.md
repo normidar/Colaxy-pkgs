@@ -1,3 +1,13 @@
+## 0.0.1+4
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: update auto_exporter library.
+ - **FIX**: give example workspace members unique package names.
+ - **FIX**: include example apps as pub workspace members.
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: format and fix.
+ - **FIX**: use melos.
+
 ## 0.0.1+3
 
  - **FIX**: update auto_exporter library.

@@ -1,3 +1,8 @@
+## 0.2.0+2
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: move package to monorepo.
+
 ## 0.2.0+1
 
  - **FIX**: move package to monorepo.

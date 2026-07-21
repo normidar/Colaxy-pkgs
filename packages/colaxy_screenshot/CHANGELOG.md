@@ -1,3 +1,9 @@
+## 0.7.1
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+ - **FEAT**(colaxy_screenshot): release v0.7.0 with macOS support and window_manager migration.
+
 ## 0.7.0
 
 - Add macOS screenshot support (`enableMacos: true`) with 2560×1600 resolution for Mac App Store.

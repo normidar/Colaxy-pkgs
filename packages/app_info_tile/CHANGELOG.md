@@ -1,3 +1,8 @@
+## 0.1.0+3
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+
 ## 0.1.0+2
 
  - Update a dependency to the latest release.

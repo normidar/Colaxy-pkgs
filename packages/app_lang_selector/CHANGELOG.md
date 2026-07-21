@@ -1,3 +1,13 @@
+## 0.1.0+3
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: give example workspace members unique package names.
+ - **FIX**: bump app_lang_selector example SDK to ^3.5.0 for workspace support.
+ - **FIX**: include example apps as pub workspace members.
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: format and fix.
+ - **FIX**: use melos.
+
 ## 0.1.0+2
 
  - **FIX**: give example workspace members unique package names.

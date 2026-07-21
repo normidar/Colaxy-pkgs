@@ -3,6 +3,89 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 2026-07-21
+
+### Changes
+
+---
+
+Packages with breaking changes:
+
+ - [`colaxy_icons_launcher` - `v0.2.0`](#colaxy_icons_launcher---v020)
+
+Packages with other changes:
+
+ - [`app_info_tile` - `v0.1.0+3`](#app_info_tile---v0103)
+ - [`app_lang_selector` - `v0.1.0+3`](#app_lang_selector---v0103)
+ - [`app_theme_picker` - `v0.1.3+3`](#app_theme_picker---v0133)
+ - [`colaxy_adaptive_scaffold` - `v0.0.1+4`](#colaxy_adaptive_scaffold---v0014)
+ - [`colaxy_localization` - `v0.1.0+2`](#colaxy_localization---v0102)
+ - [`colaxy_screenshot` - `v0.7.1`](#colaxy_screenshot---v071)
+ - [`colaxy_tutorial` - `v0.2.0+2`](#colaxy_tutorial---v0202)
+ - [`riverpod_helper` - `v0.1.0+2`](#riverpod_helper---v0102)
+
+---
+
+#### `colaxy_icons_launcher` - `v0.2.0`
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: Fix repo link.
+ - **FIX**: add icons_launcher library.
+ - **BREAKING** **FEAT**: make svg image usable.
+
+#### `app_info_tile` - `v0.1.0+3`
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+
+#### `app_lang_selector` - `v0.1.0+3`
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: give example workspace members unique package names.
+ - **FIX**: bump app_lang_selector example SDK to ^3.5.0 for workspace support.
+ - **FIX**: include example apps as pub workspace members.
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: format and fix.
+ - **FIX**: use melos.
+
+#### `app_theme_picker` - `v0.1.3+3`
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+
+#### `colaxy_adaptive_scaffold` - `v0.0.1+4`
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: update auto_exporter library.
+ - **FIX**: give example workspace members unique package names.
+ - **FIX**: include example apps as pub workspace members.
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: format and fix.
+ - **FIX**: use melos.
+
+#### `colaxy_localization` - `v0.1.0+2`
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: move package to monorepo.
+
+#### `colaxy_screenshot` - `v0.7.1`
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+ - **FEAT**(colaxy_screenshot): release v0.7.0 with macOS support and window_manager migration.
+
+#### `colaxy_tutorial` - `v0.2.0+2`
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: move package to monorepo.
+
+#### `riverpod_helper` - `v0.1.0+2`
+
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+
+
 ## 2026-06-24
 
 ### Changes

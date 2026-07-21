@@ -1,3 +1,9 @@
+## 0.1.3+3
+
+ - **FIX**: resolve crash risks and stale state issues found in code review.
+ - **FIX**: reset repo link and homepage link.
+ - **FIX**: use melos.
+
 ## 0.1.3+2
 
  - Update a dependency to the latest release.
