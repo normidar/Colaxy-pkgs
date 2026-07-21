@@ -14,7 +14,7 @@ dependencies:
   app_lang_selector: ^0.1.0+2
   app_theme_picker: ^0.1.3+2
   colaxy_adaptive_scaffold: ^0.0.1+3
-  colaxy_screenshot: ^0.6.0+1
+  colaxy_screenshot: ^0.7.0
   riverpod_helper: ^0.1.0+1
   cupertino_icons: ^1.0.8
   easy_localization: ^3.0.8

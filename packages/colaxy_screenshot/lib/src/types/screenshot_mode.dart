@@ -1,6 +1,6 @@
 import 'package:device_frame_plus/device_frame_plus.dart';
 import 'package:flutter/widgets.dart';
-import 'package:window_size/window_size.dart';
+import 'package:window_manager/window_manager.dart';
 
 enum ScreenshotMode { phone, tablet, macos }
 
@@ -31,13 +31,13 @@ class ScreenshotModeInfo {
 
   final Size deviceSize;
 
-  void setWindowToSize() {
+  Future<void> setWindowToSize() async {
     const rate = 3.3;
-    setWindowMinSize(deviceSize / rate);
-    setWindowMaxSize(deviceSize / rate);
-    setWindowFrame(
-      Rect.fromLTWH(100, 100, deviceSize.width, deviceSize.height),
-    );
+    await windowManager.ensureInitialized();
+    await windowManager.setMinimumSize(deviceSize / rate);
+    await windowManager.setMaximumSize(deviceSize / rate);
+    await windowManager.setPosition(const Offset(100, 100));
+    await windowManager.setSize(deviceSize);
   }
 
   DeviceInfo toDeviceInfo() {

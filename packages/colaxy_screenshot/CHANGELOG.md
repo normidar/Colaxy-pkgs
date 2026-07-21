@@ -1,3 +1,11 @@
+## 0.7.0
+
+- Add macOS screenshot support (`enableMacos: true`) with 2560×1600 resolution for Mac App Store.
+- Add `enableIos` and `enableAndroid` flags to `ScreenshotConfig` for per-platform control.
+- Replace `window_size` with `window_manager` for Swift Package Manager compatibility on macOS.
+- Fix marketing layout to use mode-specific dimensions instead of a fixed 1080×1920 size.
+- Add full-screen capture mode.
+
 ## 0.6.0+1
 
  - **FIX**: reset repo link and homepage link.

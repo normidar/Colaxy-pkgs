@@ -10,7 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image/image.dart' hide Color, Image;
-import 'package:window_size/window_size.dart';
+import 'package:window_manager/window_manager.dart';
 
 /// Locale mapping for Android
 const _androidLocaleMap = {
@@ -73,7 +73,7 @@ class ScreenshotService {
     ];
     // Capture screenshots for each combination of device, locale, and page
     for (final mode in modes) {
-      mode.setWindowToSize();
+      await mode.setWindowToSize();
       for (final locale in config.supportedLocales) {
         for (final page in config.pages) {
           if (isFirst) {
@@ -171,7 +171,7 @@ class ScreenshotService {
         ),
       ),
     );
-    setWindowToSize(const Size(1024, 500));
+    await setWindowToSize(const Size(1024, 500));
     runApp(
       RepaintBoundary(
         key: _appKey,
@@ -194,13 +194,13 @@ class ScreenshotService {
         .writeAsBytesSync(encodePng(resizedImage));
   }
 
-  void setWindowToSize(Size deviceSize) {
+  Future<void> setWindowToSize(Size deviceSize) async {
     const rate = 3.3;
-    setWindowMinSize(deviceSize / rate);
-    setWindowMaxSize(deviceSize / rate);
-    setWindowFrame(
-      Rect.fromLTWH(100, 100, deviceSize.width, deviceSize.height),
-    );
+    await windowManager.ensureInitialized();
+    await windowManager.setMinimumSize(deviceSize / rate);
+    await windowManager.setMaximumSize(deviceSize / rate);
+    await windowManager.setPosition(const Offset(100, 100));
+    await windowManager.setSize(deviceSize);
   }
 
   /// Build the app widget with the given locale
