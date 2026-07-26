@@ -59,8 +59,7 @@ void main() {
       expect(hasWebConfig(platforms), isFalse);
     });
 
-    test('hasAndroidAdaptiveConfig needs foreground and background config',
-        () {
+    test('hasAndroidAdaptiveConfig needs foreground and background config', () {
       expect(
         hasAndroidAdaptiveConfig({
           'android': {
@@ -73,19 +72,13 @@ void main() {
       );
       expect(
         hasAndroidAdaptiveConfig({
-          'android': {
-            'enable': true,
-            'adaptive_foreground_image': 'fg.png',
-          },
+          'android': {'enable': true, 'adaptive_foreground_image': 'fg.png'},
         }),
         isFalse,
       );
       expect(
         hasAndroidAdaptiveConfig({
-          'android': {
-            'enable': true,
-            'adaptive_background_image': 'bg.png',
-          },
+          'android': {'enable': true, 'adaptive_background_image': 'bg.png'},
         }),
         isFalse,
       );

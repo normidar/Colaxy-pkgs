@@ -98,8 +98,7 @@ void main() {
           .fitLocale(appName: '我的应用', locale: 'zh-CN');
 
       expect(
-        File('android/app/src/main/res/values-zh-rCN/strings.xml')
-            .existsSync(),
+        File('android/app/src/main/res/values-zh-rCN/strings.xml').existsSync(),
         isTrue,
       );
     });
@@ -120,8 +119,7 @@ void main() {
 
   group('IOSNameLocalization', () {
     test('fitLocale writes InfoPlist.strings for a locale', () {
-      const IOSNameLocalization()
-          .fitLocale(appName: 'My App', locale: 'en-US');
+      const IOSNameLocalization().fitLocale(appName: 'My App', locale: 'en-US');
 
       final file = File('ios/Runner/en-US.lproj/InfoPlist.strings');
       expect(file.existsSync(), isTrue);
@@ -132,8 +130,7 @@ void main() {
     });
 
     test('fitLocale maps zh-CN to the zh-Hans folder', () {
-      const IOSNameLocalization()
-          .fitLocale(appName: '我的应用', locale: 'zh-CN');
+      const IOSNameLocalization().fitLocale(appName: '我的应用', locale: 'zh-CN');
 
       expect(
         File('ios/Runner/zh-Hans.lproj/InfoPlist.strings').existsSync(),
@@ -185,8 +182,8 @@ void main() {
       final xml = XmlDocument.parse(content);
       final dict = xml.rootElement.findElements('dict').first;
       final keys = dict.findElements('key').toList();
-      final localizationsKey = keys
-          .firstWhere((key) => key.innerText == 'CFBundleLocalizations');
+      final localizationsKey =
+          keys.firstWhere((key) => key.innerText == 'CFBundleLocalizations');
       final array = localizationsKey.nextElementSibling!;
       final locales =
           array.findElements('string').map((e) => e.innerText).toList();
@@ -244,8 +241,7 @@ void main() {
         'keyword1,keyword2',
       );
       expect(
-        File('fastlane/metadata/en-US/promotional_text.txt')
-            .readAsStringSync(),
+        File('fastlane/metadata/en-US/promotional_text.txt').readAsStringSync(),
         'Promo EN',
       );
       expect(
