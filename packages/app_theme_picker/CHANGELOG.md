@@ -1,3 +1,7 @@
+## 0.1.3+4
+
+ - **CHORE**: upgrade riverpod_generator to ^4.0.0 and riverpod_lint to ^3.1.0.
+
 ## 0.1.3+3
 
  - **FIX**: resolve crash risks and stale state issues found in code review.

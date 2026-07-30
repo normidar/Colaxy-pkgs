@@ -5,7 +5,7 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^3.0.3
   riverpod_annotation: ^4.0.0
-  riverpod_helper: ^0.1.0+2
+  riverpod_helper: ^0.1.0+3
 description: A Flutter package for easy language selection with beautiful UI and state management support.
 dev_dependencies:
   auto_exporter: any
@@ -31,5 +31,5 @@ topics:
   - internationalization
   - i18n
   - globalization
-version: 0.1.0+3
+version: 0.1.0+4
 resolution: workspace

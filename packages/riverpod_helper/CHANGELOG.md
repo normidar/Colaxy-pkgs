@@ -1,3 +1,7 @@
+## 0.1.0+3
+
+ - **CHORE**: upgrade riverpod_generator to ^4.0.0 and riverpod_lint to ^3.1.0.
+
 ## 0.1.0+2
 
  - **FIX**: reset repo link and homepage link.

@@ -7,7 +7,7 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^3.0.3
   riverpod_annotation: ^4.0.0
-  riverpod_helper: ^0.1.0+2
+  riverpod_helper: ^0.1.0+3
 description: A customizable Flutter theme picker with FlexColorScheme color schemes, light/dark/system modes, persistent settings, and Riverpod state management.
 dev_dependencies:
   auto_exporter: any
@@ -33,5 +33,5 @@ topics:
   - style
   - picker
   - easy-localization
-version: 0.1.3+3
+version: 0.1.3+4
 resolution: workspace
