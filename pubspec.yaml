@@ -51,10 +51,10 @@ melos:
       run: melos run analyze && melos run format
       description: Run analyze and format on all packages.
 
-    publish:dry-run:
-      run: melos publish --dry-run
+    pub:check:
+      run: melos publish
       description: Validate packages and check for any issues before publishing to pub.dev (does not actually upload).
 
-    publish:
-      run: melos publish
+    pub:release:
+      run: melos publish --no-dry-run
       description: Publish all updated packages in the workspace to pub.dev.
