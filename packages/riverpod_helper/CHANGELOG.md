@@ -14,11 +14,17 @@
   so storing a value reached through a `dynamic`/`Object` variable works.
 - `RiverpodErrorView` no longer shows a raw stack trace to end users in release
   builds, and no longer calls `print` from `build`.
+- Writing a value updates the provider state directly instead of calling
+  `ref.invalidateSelf()`, which re-read SharedPreferences and bounced the
+  provider through `AsyncLoading` on every write.
+- The map pods report which key holds invalid JSON instead of throwing an
+  unattributed `FormatException`/`CastError`.
 
 ### Added
 - `Prefs.update` accepts an async updater.
 - `reportRiverpodError`, for sending a provider error to `FlutterError`.
 - Tests for `Prefs`.
+- `PrefsAliveMapPod`. A map was the only type with no keep-alive variant.
 
 ## 0.1.0+3
 

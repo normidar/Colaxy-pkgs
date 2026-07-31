@@ -14,16 +14,16 @@ final prefsAliveStrLstPodProvider = PrefsAliveStrLstPodFamily._();
 
 final class PrefsAliveStrLstPodProvider
     extends $AsyncNotifierProvider<PrefsAliveStrLstPod, List<String>?> {
-  PrefsAliveStrLstPodProvider._(
-      {required PrefsAliveStrLstPodFamily super.from,
-      required String super.argument})
-      : super(
-          retry: null,
-          name: r'prefsAliveStrLstPodProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  PrefsAliveStrLstPodProvider._({
+    required PrefsAliveStrLstPodFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'prefsAliveStrLstPodProvider',
+         isAutoDispose: false,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$prefsAliveStrLstPodHash();
@@ -51,25 +51,29 @@ final class PrefsAliveStrLstPodProvider
 }
 
 String _$prefsAliveStrLstPodHash() =>
-    r'7b7d22b4924acd09bb9cf3559e4040460f336050';
+    r'7b4e67a4f76975b88b132debd0614a0e3df7937c';
 
 final class PrefsAliveStrLstPodFamily extends $Family
     with
-        $ClassFamilyOverride<PrefsAliveStrLstPod, AsyncValue<List<String>?>,
-            List<String>?, FutureOr<List<String>?>, String> {
+        $ClassFamilyOverride<
+          PrefsAliveStrLstPod,
+          AsyncValue<List<String>?>,
+          List<String>?,
+          FutureOr<List<String>?>,
+          String
+        > {
   PrefsAliveStrLstPodFamily._()
-      : super(
-          retry: null,
-          name: r'prefsAliveStrLstPodProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: false,
-        );
+    : super(
+        retry: null,
+        name: r'prefsAliveStrLstPodProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: false,
+      );
 
   PrefsAliveStrLstPodProvider call(
     String key,
-  ) =>
-      PrefsAliveStrLstPodProvider._(argument: key, from: this);
+  ) => PrefsAliveStrLstPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsAliveStrLstPodProvider';
@@ -86,15 +90,19 @@ abstract class _$PrefsAliveStrLstPod extends $AsyncNotifier<List<String>?> {
   @override
   void runBuild() {
     final ref = this.ref as $Ref<AsyncValue<List<String>?>, List<String>?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<List<String>?>, List<String>?>,
-        AsyncValue<List<String>?>,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<List<String>?>, List<String>?>,
+              AsyncValue<List<String>?>,
+              Object?,
+              Object?
+            >;
     element.handleCreate(
-        ref,
-        () => build(
-              _$args,
-            ));
+      ref,
+      () => build(
+        _$args,
+      ),
+    );
   }
 }

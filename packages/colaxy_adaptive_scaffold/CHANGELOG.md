@@ -1,5 +1,9 @@
 ## 0.1.0
 
+### Breaking
+- The drawer header is no longer rendered by default. It previously showed a
+  hardcoded, untranslatable `'Menu'`; pass `drawerTitle` to bring it back.
+
 ### Fixed
 - Pages keep their state when switching destinations. Only the selected page
   was built before, so scroll positions and form input were discarded on every
@@ -10,13 +14,12 @@
   `Colors.grey[300]`.
 - `MediaQuery.sizeOf` is used instead of `MediaQuery.of(...).size`.
 
-### Breaking
-- The drawer header is no longer rendered by default. It previously showed a
-  hardcoded, untranslatable `'Menu'`; pass `drawerTitle` to bring it back.
-
 ### Added
 - `AdaptiveScaffold.onDestinationSelected` and `AdaptiveScaffold.drawerTitle`.
 - `NavigationItem.selectedIcon` and `NavigationItem.tooltip`.
+- `appBar`, shown in every layout. Previously only the drawer layout had one, so
+  resizing the window made the app bar appear and disappear.
+- `railLeading` and `railTrailing`.
 
 ## 0.0.1+4
 

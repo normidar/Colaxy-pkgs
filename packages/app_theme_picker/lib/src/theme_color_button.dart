@@ -27,7 +27,8 @@ class ThemeColorButton extends StatelessWidget {
       waitDuration: const Duration(milliseconds: 700),
       child: IntrinsicWidth(
         child: FlexThemeModeOptionButton(
-          semanticLabel: 'Set to color scheme '
+          semanticLabel:
+              'Set to color scheme '
               '${schemeData.name}',
           setFocusOnTap: true,
           // The buttons are colorful and need custom light/dark mode

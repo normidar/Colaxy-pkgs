@@ -17,6 +17,7 @@
 
 ### Added
 - `AppInfoTile.appName`, `applicationIcon` and `applicationLegalese`.
+- Widget tests covering the dialog, the app-name fallback and the license page.
 
 ## 0.1.0+4
 

@@ -14,12 +14,15 @@ class PrefsAliveStrLstPod extends _$PrefsAliveStrLstPod {
   Future<void> removeValue() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(key);
-    ref.invalidateSelf();
+    // Set the new state directly rather than `ref.invalidateSelf()`: that
+    // re-read SharedPreferences and put the provider back into AsyncLoading,
+    // so every write made dependent widgets flicker.
+    state = const AsyncData(null);
   }
 
   Future<void> setValue(List<String> value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(key, value);
-    ref.invalidateSelf();
+    state = AsyncData(value);
   }
 }

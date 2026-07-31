@@ -7,7 +7,17 @@ import 'package:flutter/services.dart';
 Future<Map<String, String>> getJsonConfig() async {
   final configString = await rootBundle.loadString('assets/config.json');
   final jsonConfig = jsonDecode(configString) as Map<String, dynamic>;
-  return jsonConfig.cast<String, String>();
+  // `cast` is lazy: a non-String value used to surface as a CastError from some
+  // unrelated line much later. Convert eagerly and name the offending key.
+  return <String, String>{
+    for (final entry in jsonConfig.entries)
+      entry.key: entry.value is String
+          ? entry.value as String
+          : throw StateError(
+              'assets/config.json: "${entry.key}" must be a string, '
+              'got ${entry.value.runtimeType}.',
+            ),
+  };
 }
 
 /// Reset config file

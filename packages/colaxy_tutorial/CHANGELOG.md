@@ -6,10 +6,26 @@
   reappeared.
 - `showTutorial` awaits its delay instead of scheduling fire-and-forget work,
   so callers can await it and a failed save is no longer swallowed.
+- `TutorialContent` and the tutorial page chrome take their colours from the
+  theme. Hardcoded white backgrounds with black text were unreadable under a
+  dark theme.
+- `guardTutorialPage` falls through to the next page if reading the "shown" flag
+  fails, instead of sitting on a spinner forever.
+- The stored `showed_ids` list is de-duplicated and sorted rather than growing
+  unboundedly.
 
 ### Added
 - Tests. This package previously had no `test/` directory at all, so it was
   silently skipped by the test runner.
+- A page indicator on multi-page tutorials.
+- `TutorialTool.highlightColor` and `TutorialTool.contentTextStyle`.
+
+### Changed
+- `VersionRecorder` documents that it stores build numbers, and exposes
+  `recordedBuildNumbers()`.
+
+### Removed
+- `DecideShowingConfig` and friends, which were never referenced or exported.
 
 ## 0.2.0+2
 

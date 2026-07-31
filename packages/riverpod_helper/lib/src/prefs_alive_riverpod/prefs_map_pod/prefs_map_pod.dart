@@ -6,8 +6,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 part 'prefs_map_pod.g.dart';
 
-@riverpod
-class PrefsMapPod extends _$PrefsMapPod {
+/// A keep-alive JSON map stored in SharedPreferences.
+///
+/// The auto-dispose family had a map pod but this one did not, so a map was the
+/// only type you could not keep alive.
+@Riverpod(keepAlive: true)
+class PrefsAliveMapPod extends _$PrefsAliveMapPod {
   @override
   Future<Map<String, dynamic>?> build(String key) async {
     final prefs = await SharedPreferences.getInstance();
@@ -17,9 +21,6 @@ class PrefsMapPod extends _$PrefsMapPod {
   Future<void> removeValue() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(key);
-    // Set the new state directly rather than `ref.invalidateSelf()`: that
-    // re-read SharedPreferences and put the provider back into AsyncLoading,
-    // so every write made dependent widgets flicker.
     state = const AsyncData(null);
   }
 

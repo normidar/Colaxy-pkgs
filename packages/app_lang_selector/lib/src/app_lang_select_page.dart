@@ -7,9 +7,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Display names for the languages this package knows about, keyed by locale.
 ///
+/// This is only a lookup table for rendering each entry in the *host app's*
+/// `supportedLocales`; it does not mean this package ships a translation for
+/// every one of them. The selector page itself is translated into the locales
+/// under `assets/localizations/` ([bundledLocales]) — for anything else the
+/// page chrome falls back to easy_localization's `fallbackLocale`.
+///
 /// Wrapped in an unmodifiable map: it is public API, and callers must not be
 /// able to mutate the shared table.
 final langsNameMap = Map<LangCode, String>.unmodifiable(_langsNameMap);
+
+/// The locales this package ships its own translations for.
+final bundledLocales = <LangCode>{
+  const LangCode(languageCode: 'ar', countryCode: 'AE'),
+  const LangCode(languageCode: 'de', countryCode: 'DE'),
+  const LangCode(languageCode: 'en', countryCode: 'US'),
+  const LangCode(languageCode: 'es', countryCode: 'ES'),
+  const LangCode(languageCode: 'fr', countryCode: 'FR'),
+  const LangCode(languageCode: 'it', countryCode: 'IT'),
+  const LangCode(languageCode: 'ja', countryCode: 'JP'),
+  const LangCode(languageCode: 'ko', countryCode: 'KR'),
+  const LangCode(languageCode: 'pt', countryCode: 'PT'),
+  const LangCode(languageCode: 'ru', countryCode: 'RU'),
+  const LangCode(languageCode: 'tr', countryCode: 'TR'),
+  const LangCode(languageCode: 'vi', countryCode: 'VN'),
+  const LangCode(languageCode: 'zh', countryCode: 'CN'),
+};
 
 final _langsNameMap = <LangCode, String>{
   const LangCode(languageCode: 'en', countryCode: 'US'): 'English',
@@ -58,7 +81,8 @@ class AppLangSelectPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedLang = ref.watch<String?>(selectingLangProvider) ??
+    final selectedLang =
+        ref.watch<String?>(selectingLangProvider) ??
         context.savedLocale?.toString() ??
         LangCode.system.toString();
     return Scaffold(

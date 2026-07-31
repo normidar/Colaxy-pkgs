@@ -15,15 +15,15 @@ final themePodProvider = ThemePodProvider._();
 final class ThemePodProvider
     extends $AsyncNotifierProvider<ThemePod, FlexScheme> {
   ThemePodProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'themePodProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'themePodProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$themePodHash();
@@ -41,11 +41,14 @@ abstract class _$ThemePod extends $AsyncNotifier<FlexScheme> {
   @override
   void runBuild() {
     final ref = this.ref as $Ref<AsyncValue<FlexScheme>, FlexScheme>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<FlexScheme>, FlexScheme>,
-        AsyncValue<FlexScheme>,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<FlexScheme>, FlexScheme>,
+              AsyncValue<FlexScheme>,
+              Object?,
+              Object?
+            >;
     element.handleCreate(ref, build);
   }
 }

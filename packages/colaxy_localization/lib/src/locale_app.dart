@@ -25,7 +25,7 @@ class LocaleApp {
   /// [mainLocale] is the locale written to the platform default slots
   /// (`values/strings.xml`, `Info.plist`). Defaults to [defaultMainLocale].
   List<LocaleUnit> getLocaleUnits({String mainLocale = defaultMainLocale}) {
-    const AndroidNameLocalization().updateManifestAppName();
+    AndroidNameLocalization(rootPath: rootPath).updateManifestAppName();
 
     final appsDir = Directory(localizationsDir);
     if (!appsDir.existsSync()) {
@@ -60,8 +60,9 @@ class LocaleApp {
       main.isMainLocale = true;
     }
 
-    const IOSNameLocalization()
-        .fitAppSupportLocales(localeUnits.map((e) => e.locale).toList());
+    IOSNameLocalization(
+      rootPath: rootPath,
+    ).fitAppSupportLocales(localeUnits.map((e) => e.locale).toList());
 
     return localeUnits;
   }

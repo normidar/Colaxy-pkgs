@@ -6,18 +6,18 @@ import 'package:test/test.dart';
 
 /// The minimum set of keys `fitAllToFastlane` needs.
 Map<String, String> _validJson({Map<String, String> overrides = const {}}) => {
-      'app_name': 'Demo',
-      'store_app_name': 'Demo',
-      'store_description': 'A description.',
-      'store_ios_subtitle': 'Subtitle',
-      'store_android_short_description': 'Short description',
-      'store_release_note': 'Notes',
-      'store_ios_keywords': 'notes,todo,list',
-      'store_ios_promotional_text': 'Promo',
-      'store_ios_support_url': 'https://example.com/support',
-      'store_ios_privacy_url': 'https://example.com/privacy',
-      ...overrides,
-    };
+  'app_name': 'Demo',
+  'store_app_name': 'Demo',
+  'store_description': 'A description.',
+  'store_ios_subtitle': 'Subtitle',
+  'store_android_short_description': 'Short description',
+  'store_release_note': 'Notes',
+  'store_ios_keywords': 'notes,todo,list',
+  'store_ios_promotional_text': 'Promo',
+  'store_ios_support_url': 'https://example.com/support',
+  'store_ios_privacy_url': 'https://example.com/privacy',
+  ...overrides,
+};
 
 late Directory _root;
 

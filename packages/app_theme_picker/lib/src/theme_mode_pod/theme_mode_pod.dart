@@ -11,13 +11,15 @@ class ThemeModePod extends _$ThemeModePod {
   @override
   Future<ThemeMode> build() async {
     final themeMode = await ref.read(prefsAliveStringPodProvider(_key).future);
+    // Defaults to `system` so a fresh install follows the platform setting
+    // instead of forcing light mode.
     if (themeMode != null) {
       return ThemeMode.values.firstWhere(
         (element) => element.name == themeMode,
-        orElse: () => ThemeMode.light,
+        orElse: () => ThemeMode.system,
       );
     }
-    return ThemeMode.light;
+    return ThemeMode.system;
   }
 
   Future<void> changeThemeMode(ThemeMode themeMode) async {

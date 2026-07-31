@@ -15,15 +15,15 @@ final themeModePodProvider = ThemeModePodProvider._();
 final class ThemeModePodProvider
     extends $AsyncNotifierProvider<ThemeModePod, ThemeMode> {
   ThemeModePodProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'themeModePodProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'themeModePodProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$themeModePodHash();
@@ -41,11 +41,14 @@ abstract class _$ThemeModePod extends $AsyncNotifier<ThemeMode> {
   @override
   void runBuild() {
     final ref = this.ref as $Ref<AsyncValue<ThemeMode>, ThemeMode>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<ThemeMode>, ThemeMode>,
-        AsyncValue<ThemeMode>,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<ThemeMode>, ThemeMode>,
+              AsyncValue<ThemeMode>,
+              Object?,
+              Object?
+            >;
     element.handleCreate(ref, build);
   }
 }

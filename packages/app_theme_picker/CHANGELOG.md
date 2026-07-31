@@ -1,3 +1,23 @@
+## 0.3.0
+
+### Breaking
+- Removed the ~80 `<Name>ThemeMock` classes and matching `<name>ThemeOverride`
+  values. Use `themeOverride(FlexScheme.x)` / `themeModeOverride(ThemeMode.x)`,
+  or `FixedThemePod` / `FixedThemeModePod` directly. They were shipped in `lib/`
+  and so ended up in every app's binary.
+- `availableSchemes` is `Set<FlexScheme>` instead of `Set<String>`. Scheme names
+  were compared as strings, so a typo silently filtered out everything.
+- `ThemeModePod` defaults to `ThemeMode.system` instead of `ThemeMode.light`.
+- The default scheme is `FlexScheme.material`, and is now configurable through
+  the `defaultFlexScheme` variable (it was hardcoded to `sakura`).
+
+### Fixed
+- The `AppBar` on `PickThemePage` no longer tries to render a scrollable error
+  view as its title.
+
+### Changed
+- `PickThemePage.size` defaults to 70, matching `ThemePickTile`.
+
 ## 0.2.0
 
 ### Breaking

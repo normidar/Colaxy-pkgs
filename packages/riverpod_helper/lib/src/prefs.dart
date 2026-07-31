@@ -9,12 +9,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class UnsupportedPrefsTypeError extends ArgumentError {
   /// Creates an error describing the unsupported [type].
   UnsupportedPrefsTypeError(this.type)
-      : super.value(
-          type,
-          'type',
-          'SharedPreferences cannot store this type. Supported types are '
-              'bool, int, double, String and List<String>.',
-        );
+    : super.value(
+        type,
+        'type',
+        'SharedPreferences cannot store this type. Supported types are '
+            'bool, int, double, String and List<String>.',
+      );
 
   /// The type that was rejected.
   final Object? type;

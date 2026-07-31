@@ -50,6 +50,12 @@ import 'package:flutter/material.dart';
 ///
 /// - **[onDestinationSelected]**: Called when the selection changes.
 ///
+/// - **[appBar]**: App bar shown in every layout, so the chrome does not
+///   appear and disappear as the window is resized.
+///
+/// - **[railLeading]** / **[railTrailing]**: Widgets above and below the
+///   destinations in the rail.
+///
 /// ## Example
 ///
 /// ```dart
@@ -93,6 +99,9 @@ class AdaptiveScaffold extends StatefulWidget {
     this.floatingActionButton,
     this.drawerTitle,
     this.onDestinationSelected,
+    this.appBar,
+    this.railLeading,
+    this.railTrailing,
     super.key,
   });
 
@@ -159,6 +168,20 @@ class AdaptiveScaffold extends StatefulWidget {
   /// notification, e.g. for analytics or to sync external state.
   final ValueChanged<int>? onDestinationSelected;
 
+  /// App bar shown in every layout.
+  ///
+  /// Without this, only the drawer layout gets an app bar, so resizing the
+  /// window makes one appear and disappear. Provide one to keep the chrome
+  /// stable across layouts; the drawer layout falls back to an app bar titled
+  /// with the current destination when this is null.
+  final PreferredSizeWidget? appBar;
+
+  /// Widget shown above the destinations in the [NavigationRail].
+  final Widget? railLeading;
+
+  /// Widget shown below the destinations in the [NavigationRail].
+  final Widget? railTrailing;
+
   @override
   State<AdaptiveScaffold> createState() => _AdaptiveScaffoldState();
 }
@@ -200,6 +223,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
   Widget build(BuildContext context) {
     if (widget.items.isEmpty) {
       return Scaffold(
+        appBar: widget.appBar,
         body: const SizedBox.shrink(),
         floatingActionButton: widget.floatingActionButton,
       );
@@ -223,6 +247,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
     if (useRail) {
       // Use NavigationRail for wider/landscape layouts
       return Scaffold(
+        appBar: widget.appBar,
         body: Row(
           children: [
             NavigationRail(
@@ -238,6 +263,8 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
               selectedIndex: _selectedIndex,
               onDestinationSelected: _onDestinationSelected,
               labelType: NavigationRailLabelType.all,
+              leading: widget.railLeading,
+              trailing: widget.railTrailing,
             ),
             VerticalDivider(width: 1, thickness: 1, color: theme.dividerColor),
             Expanded(child: body),
@@ -251,9 +278,9 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
       final drawerTitle = widget.drawerTitle;
       // Use Drawer for portrait layouts with many items
       return Scaffold(
-        appBar: AppBar(
-          title: Text(widget.items[_selectedIndex].name),
-        ),
+        appBar:
+            widget.appBar ??
+            AppBar(title: Text(widget.items[_selectedIndex].name)),
         drawer: Drawer(
           child: ListView(
             padding: EdgeInsets.zero,
@@ -296,6 +323,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
 
     // Use BottomNavigationBar for taller/portrait layouts
     return Scaffold(
+      appBar: widget.appBar,
       body: body,
       bottomNavigationBar: NavigationBar(
         destinations: widget.items

@@ -10,7 +10,7 @@ dev_dependencies:
     sdk: flutter
   very_good_analysis: ^10.3.0
 environment:
-  flutter: ">=1.17.0"
+  flutter: '>=3.32.0'
   sdk: ^3.8.0
 homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_adaptive_scaffold
 repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_adaptive_scaffold

@@ -4,7 +4,11 @@ import 'package:colaxy_localization/src/cli_logger.dart';
 import 'package:xml/xml.dart';
 
 class IOSNameLocalization {
-  const IOSNameLocalization();
+  /// Creates an iOS name localizer rooted at [rootPath].
+  const IOSNameLocalization({this.rootPath = '.'});
+
+  /// The app's project directory.
+  final String rootPath;
 
   static final _iosLocaleMap = {
     'zh-CN': 'zh-Hans',
@@ -12,7 +16,8 @@ class IOSNameLocalization {
     'ja-JP': 'ja',
   };
 
-  String get resourceFolder => 'ios/Runner';
+  /// `ios/Runner`
+  String get resourceFolder => '$rootPath/ios/Runner';
 
   void fitAppSupportLocales(List<String> locales) {
     final infoPlistPath = '$resourceFolder/Info.plist';
@@ -44,10 +49,9 @@ class IOSNameLocalization {
       }
 
       // iOSのロケール形式に変換
-      final iosLocales = locales
-          .map((locale) => _iosLocaleMap[locale] ?? locale)
-          .toList()
-        ..sort();
+      final iosLocales =
+          locales.map((locale) => _iosLocaleMap[locale] ?? locale).toList()
+            ..sort();
 
       if (localizationsKeyIndex >= 0) {
         // 既存のCFBundleLocalizationsを更新

@@ -13,6 +13,9 @@
 
 ### Added
 - `LangCode.system`, the sentinel for "follow the system language".
+- `bundledLocales`, the set of locales this package ships translations for.
+  `langsNameMap` covers far more languages than that and only drives the labels
+  for the host app's `supportedLocales`; the two are now documented as distinct.
 
 ### Changed
 - `langsNameMap` is now unmodifiable.

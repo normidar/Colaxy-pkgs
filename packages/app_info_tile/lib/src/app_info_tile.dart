@@ -39,27 +39,27 @@ class AppInfoTile extends ConsumerWidget {
     final appInfo = ref.watch(appInfoPodProvider);
     return switch (appInfo) {
       AsyncData(:final value) => ListTile(
-          leading: const Icon(Icons.info),
-          title: const Text('app_info_tile:title').tr(),
-          onTap: () => showDialog<void>(
-            context: context,
-            builder: (con) => _buildAlertDialog(
-              packageInfo: value,
-              context: con,
-            ),
+        leading: const Icon(Icons.info),
+        title: const Text('app_info_tile:title').tr(),
+        onTap: () => showDialog<void>(
+          context: context,
+          builder: (con) => _buildAlertDialog(
+            packageInfo: value,
+            context: con,
           ),
         ),
+      ),
       // Keep the same shape as the loaded tile so the surrounding list does not
       // jump once the package info resolves.
       AsyncLoading() => const ListTile(
-          leading: Icon(Icons.info),
-          title: LinearProgressIndicator(),
-        ),
+        leading: Icon(Icons.info),
+        title: LinearProgressIndicator(),
+      ),
       AsyncError(:final error, :final stackTrace) => RiverpodErrorView(
-          widgetName: '$AppInfoTile',
-          error: error,
-          stackTrace: stackTrace,
-        ),
+        widgetName: '$AppInfoTile',
+        error: error,
+        stackTrace: stackTrace,
+      ),
     };
   }
 

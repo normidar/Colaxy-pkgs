@@ -14,16 +14,16 @@ final darkThemeDataProvider = DarkThemeDataFamily._();
 
 final class DarkThemeDataProvider
     extends $AsyncNotifierProvider<DarkThemeData, ThemeData> {
-  DarkThemeDataProvider._(
-      {required DarkThemeDataFamily super.from,
-      required String? super.argument})
-      : super(
-          retry: null,
-          name: r'darkThemeDataProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  DarkThemeDataProvider._({
+    required DarkThemeDataFamily super.from,
+    required String? super.argument,
+  }) : super(
+         retry: null,
+         name: r'darkThemeDataProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$darkThemeDataHash();
@@ -54,21 +54,25 @@ String _$darkThemeDataHash() => r'49ea6d5e543f189ff632fbf3115299b4bb1c8cc8';
 
 final class DarkThemeDataFamily extends $Family
     with
-        $ClassFamilyOverride<DarkThemeData, AsyncValue<ThemeData>, ThemeData,
-            FutureOr<ThemeData>, String?> {
+        $ClassFamilyOverride<
+          DarkThemeData,
+          AsyncValue<ThemeData>,
+          ThemeData,
+          FutureOr<ThemeData>,
+          String?
+        > {
   DarkThemeDataFamily._()
-      : super(
-          retry: null,
-          name: r'darkThemeDataProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+    : super(
+        retry: null,
+        name: r'darkThemeDataProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   DarkThemeDataProvider call([
     String? fontFamily,
-  ]) =>
-      DarkThemeDataProvider._(argument: fontFamily, from: this);
+  ]) => DarkThemeDataProvider._(argument: fontFamily, from: this);
 
   @override
   String toString() => r'darkThemeDataProvider';
@@ -85,15 +89,19 @@ abstract class _$DarkThemeData extends $AsyncNotifier<ThemeData> {
   @override
   void runBuild() {
     final ref = this.ref as $Ref<AsyncValue<ThemeData>, ThemeData>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<ThemeData>, ThemeData>,
-        AsyncValue<ThemeData>,
-        Object?,
-        Object?>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<ThemeData>, ThemeData>,
+              AsyncValue<ThemeData>,
+              Object?,
+              Object?
+            >;
     element.handleCreate(
-        ref,
-        () => build(
-              _$args,
-            ));
+      ref,
+      () => build(
+        _$args,
+      ),
+    );
   }
 }

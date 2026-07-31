@@ -9,12 +9,12 @@ import 'package:flutter_test/flutter_test.dart';
 void _stubAssets(Map<String, Map<String, String>> assets) {
   TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
       .setMockMessageHandler('flutter/assets', (message) async {
-    final key = utf8.decode(message!.buffer.asUint8List());
-    final data = assets[key];
-    if (data == null) return null;
-    final bytes = Uint8List.fromList(utf8.encode(json.encode(data)));
-    return bytes.buffer.asByteData();
-  });
+        final key = utf8.decode(message!.buffer.asUint8List());
+        final data = assets[key];
+        if (data == null) return null;
+        final bytes = Uint8List.fromList(utf8.encode(json.encode(data)));
+        return bytes.buffer.asByteData();
+      });
   addTearDown(
     () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMessageHandler('flutter/assets', null),

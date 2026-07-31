@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:characters/characters.dart';
 import 'package:colaxy_localization/colaxy_localization.dart';
 import 'package:colaxy_localization/src/cli_logger.dart';
 
@@ -29,6 +30,10 @@ class LocaleUnit {
   };
 
   static const _blockedKeywords = ['google', 'apple', 'android', 'ios'];
+
+  // Store limits count user-perceived characters. `String.length` counts UTF-16
+  // code units, so an emoji or a combining sequence inflated the count and a
+  // valid string was rejected (or an over-long one slipped through).
 
   bool isMainLocale = false;
 
@@ -92,7 +97,7 @@ class LocaleUnit {
 
   void _fitAppNameAndroid() {
     final appName = _getAppName();
-    const androidNameLocalization = AndroidNameLocalization();
+    final androidNameLocalization = AndroidNameLocalization(rootPath: rootPath);
     if (isMainLocale) {
       androidNameLocalization.fitLocale(appName: appName);
     } else {
@@ -102,7 +107,7 @@ class LocaleUnit {
 
   void _fitAppNameIos() {
     final appName = _getAppName();
-    const iosNameLocalization = IOSNameLocalization();
+    final iosNameLocalization = IOSNameLocalization(rootPath: rootPath);
     if (isMainLocale) {
       iosNameLocalization.fitLocale(appName: appName);
     } else {
@@ -113,8 +118,9 @@ class LocaleUnit {
   void _fitAppNameToFastlane() {
     final appName = _getAppStoreName();
 
-    final fastlaneAndroidAppNameFile =
-        File('$metadataDir/android/$locale/title.txt');
+    final fastlaneAndroidAppNameFile = File(
+      '$metadataDir/android/$locale/title.txt',
+    );
     final fastlaneIosAppNameFile = File('$metadataDir/$iosLocale/name.txt');
 
     fastlaneAndroidAppNameFile
@@ -129,16 +135,19 @@ class LocaleUnit {
     final description = _getDescription();
     var androidDescription = description;
     var iosDescription = description;
-    final fastlaneAndroidDescriptionFile =
-        File('$metadataDir/android/$locale/full_description.txt');
-    final fastlaneIosDescriptionFile =
-        File('$metadataDir/$iosLocale/description.txt');
+    final fastlaneAndroidDescriptionFile = File(
+      '$metadataDir/android/$locale/full_description.txt',
+    );
+    final fastlaneIosDescriptionFile = File(
+      '$metadataDir/$iosLocale/description.txt',
+    );
 
     final minimumVersion = LocaleApp(rootPath: rootPath).getMinimumVersion();
     CliLogger.info('minimumVersion: $minimumVersion');
 
     if (minimumVersion != null) {
-      androidDescription = '$androidDescription\n\n'
+      androidDescription =
+          '$androidDescription\n\n'
           '[Minimum supported app version: $minimumVersion]';
       iosDescription = '$iosDescription\n\n[:mav: $minimumVersion]';
     }
@@ -188,10 +197,12 @@ class LocaleUnit {
 
   void _fitStoreReleaseNoteToFastlane() {
     final storeReleaseNote = _getStoreReleaseNote();
-    final fastlaneAndroidStoreReleaseNoteFile =
-        File('$metadataDir/android/$locale/changelogs/default.txt');
-    final fastlaneIosStoreReleaseNoteFile =
-        File('$metadataDir/$iosLocale/release_notes.txt');
+    final fastlaneAndroidStoreReleaseNoteFile = File(
+      '$metadataDir/android/$locale/changelogs/default.txt',
+    );
+    final fastlaneIosStoreReleaseNoteFile = File(
+      '$metadataDir/$iosLocale/release_notes.txt',
+    );
 
     fastlaneAndroidStoreReleaseNoteFile
       ..createSync(recursive: true)
@@ -203,7 +214,7 @@ class LocaleUnit {
 
   String _getAndroidShortDescription() {
     final shortDescription = _require('store_android_short_description');
-    if (shortDescription.length > 80) {
+    if (shortDescription.characters.length > 80) {
       throw StateError('$locale short_description is too long');
     }
     return shortDescription;
@@ -213,7 +224,7 @@ class LocaleUnit {
   /// iOS、Androidの両方で使用されます。
   String _getAppName() {
     final appName = _require('app_name');
-    if (appName.length > 30) {
+    if (appName.characters.length > 30) {
       throw StateError('$locale app_name is too long');
     }
     return appName;
@@ -221,7 +232,7 @@ class LocaleUnit {
 
   String _getAppStoreName() {
     final appStoreName = _require('store_app_name');
-    if (appStoreName.length > 30) {
+    if (appStoreName.characters.length > 30) {
       throw StateError('$locale store_app_name is too long');
     }
     return appStoreName;
@@ -231,7 +242,7 @@ class LocaleUnit {
   /// iOS、Androidの両方で使用されます。
   String _getDescription() {
     final description = _require('store_description');
-    if (description.length > 4000) {
+    if (description.characters.length > 4000) {
       throw StateError('$locale description is too long');
     }
     return description;
@@ -239,7 +250,7 @@ class LocaleUnit {
 
   String _getIosPrivacyUrl() {
     final privacyUrl = _require('store_ios_privacy_url');
-    if (privacyUrl.length > 255) {
+    if (privacyUrl.characters.length > 255) {
       throw StateError('$locale privacy_url is too long');
     }
     return privacyUrl;
@@ -247,7 +258,7 @@ class LocaleUnit {
 
   String _getIosSubtitle() {
     final subtitle = _require('store_ios_subtitle');
-    if (subtitle.length > 30) {
+    if (subtitle.characters.length > 30) {
       throw StateError('$locale subtitle is too long');
     }
     return subtitle;
@@ -255,7 +266,7 @@ class LocaleUnit {
 
   String _getIosSupportUrl() {
     final supportUrl = _require('store_ios_support_url');
-    if (supportUrl.length > 255) {
+    if (supportUrl.characters.length > 255) {
       throw StateError('$locale support_url is too long');
     }
     return supportUrl;
@@ -272,7 +283,7 @@ class LocaleUnit {
   /// iOS側のキーワードを取得します、これは100文字以内である必要があります。
   String _getStoreKeywords() {
     final storeKeywords = _require('store_ios_keywords');
-    if (storeKeywords.length > 100) {
+    if (storeKeywords.characters.length > 100) {
       throw StateError('$locale store_keywords is too long');
     }
     // Matched case-insensitively and on whole words: `contains('ios')` both
@@ -297,7 +308,7 @@ class LocaleUnit {
   /// iOS側のプロモーションテキストを取得します、これは170文字以内である必要があります。
   String _getStorePromotionalText() {
     final promotionalText = _require('store_ios_promotional_text');
-    if (promotionalText.length > 170) {
+    if (promotionalText.characters.length > 170) {
       throw StateError('$locale store_promotional_text is too long');
     }
     return promotionalText;
