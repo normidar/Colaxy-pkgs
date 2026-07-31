@@ -10,11 +10,11 @@ part of 'prefs_bool_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsAliveBoolPod)
-const prefsAliveBoolPodProvider = PrefsAliveBoolPodFamily._();
+final prefsAliveBoolPodProvider = PrefsAliveBoolPodFamily._();
 
 final class PrefsAliveBoolPodProvider
     extends $AsyncNotifierProvider<PrefsAliveBoolPod, bool?> {
-  const PrefsAliveBoolPodProvider._(
+  PrefsAliveBoolPodProvider._(
       {required PrefsAliveBoolPodFamily super.from,
       required String super.argument})
       : super(
@@ -56,7 +56,7 @@ final class PrefsAliveBoolPodFamily extends $Family
     with
         $ClassFamilyOverride<PrefsAliveBoolPod, AsyncValue<bool?>, bool?,
             FutureOr<bool?>, String> {
-  const PrefsAliveBoolPodFamily._()
+  PrefsAliveBoolPodFamily._()
       : super(
           retry: null,
           name: r'prefsAliveBoolPodProvider',
@@ -84,15 +84,16 @@ abstract class _$PrefsAliveBoolPod extends $AsyncNotifier<bool?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<bool?>, bool?>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<bool?>, bool?>,
         AsyncValue<bool?>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(
+        ref,
+        () => build(
+              _$args,
+            ));
   }
 }

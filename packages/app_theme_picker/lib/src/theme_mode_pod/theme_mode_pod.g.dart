@@ -10,11 +10,11 @@ part of 'theme_mode_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(ThemeModePod)
-const themeModePodProvider = ThemeModePodProvider._();
+final themeModePodProvider = ThemeModePodProvider._();
 
 final class ThemeModePodProvider
     extends $AsyncNotifierProvider<ThemeModePod, ThemeMode> {
-  const ThemeModePodProvider._()
+  ThemeModePodProvider._()
       : super(
           from: null,
           argument: null,
@@ -33,20 +33,19 @@ final class ThemeModePodProvider
   ThemeModePod create() => ThemeModePod();
 }
 
-String _$themeModePodHash() => r'3a893b73ccb25b9d2cc7861103245335acc3caaa';
+String _$themeModePodHash() => r'5642cb227774d0f6f32c7c73008f1fa87be7bdc1';
 
 abstract class _$ThemeModePod extends $AsyncNotifier<ThemeMode> {
   FutureOr<ThemeMode> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref = this.ref as $Ref<AsyncValue<ThemeMode>, ThemeMode>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<ThemeMode>, ThemeMode>,
         AsyncValue<ThemeMode>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, build);
   }
 }

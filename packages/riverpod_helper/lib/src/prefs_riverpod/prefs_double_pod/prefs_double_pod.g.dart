@@ -10,11 +10,11 @@ part of 'prefs_double_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsDoublePod)
-const prefsDoublePodProvider = PrefsDoublePodFamily._();
+final prefsDoublePodProvider = PrefsDoublePodFamily._();
 
 final class PrefsDoublePodProvider
     extends $AsyncNotifierProvider<PrefsDoublePod, double?> {
-  const PrefsDoublePodProvider._(
+  PrefsDoublePodProvider._(
       {required PrefsDoublePodFamily super.from,
       required String super.argument})
       : super(
@@ -56,7 +56,7 @@ final class PrefsDoublePodFamily extends $Family
     with
         $ClassFamilyOverride<PrefsDoublePod, AsyncValue<double?>, double?,
             FutureOr<double?>, String> {
-  const PrefsDoublePodFamily._()
+  PrefsDoublePodFamily._()
       : super(
           retry: null,
           name: r'prefsDoublePodProvider',
@@ -84,15 +84,16 @@ abstract class _$PrefsDoublePod extends $AsyncNotifier<double?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<double?>, double?>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<double?>, double?>,
         AsyncValue<double?>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(
+        ref,
+        () => build(
+              _$args,
+            ));
   }
 }

@@ -1,3 +1,9 @@
+## 0.2.0
+
+### Breaking
+- Namespaced the bundled translation keys with `app_theme_picker:`. The generic
+  `theme` and `tile_title` keys collided with host app keys.
+
 ## 0.1.3+4
 
  - **CHORE**: upgrade riverpod_generator to ^4.0.0 and riverpod_lint to ^3.1.0.

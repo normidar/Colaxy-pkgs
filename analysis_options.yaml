@@ -1,0 +1,33 @@
+# Shared analyzer configuration for every package in this workspace.
+#
+# Package-level `analysis_options.yaml` files do `include: ../../analysis_options.yaml`
+# and only add their own overrides on top, so the baseline cannot drift between
+# packages.
+#
+# NOTE on riverpod_lint: every package used to declare `analyzer.plugins:
+# - custom_lint`, but no package ever depended on custom_lint, and riverpod_lint
+# 3.x has since dropped custom_lint for Dart's native `analysis_server_plugin`.
+# Those declarations therefore did nothing and have been removed.
+#
+# Re-enabling the lints means adding a top-level `plugins:` block *here* — a pub
+# workspace only honours plugin declarations at its root:
+#
+#   plugins:
+#     riverpod_lint: ^3.1.0
+#
+# That is intentionally not enabled yet: on Dart 3.12.2 it makes `dart analyze`
+# hang instead of terminating, so it needs to be validated against a newer
+# Dart / riverpod_lint before CI can depend on it.
+include: package:very_good_analysis/analysis_options.yaml
+
+analyzer:
+  exclude:
+    - "**/build/**"
+    - "**/*.freezed.dart"
+    - "**/*.g.dart"
+  errors:
+    sort_constructors_first: ignore
+    public_member_api_docs: ignore
+    use_setters_to_change_properties: ignore
+    flutter_style_todos: ignore
+    invalid_annotation_target: ignore

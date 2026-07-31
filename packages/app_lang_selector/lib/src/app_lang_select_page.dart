@@ -1,9 +1,17 @@
+import 'dart:async';
+
 import 'package:app_lang_selector/src/selecting_lang/selecting_lang.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final langsNameMap = {
+/// Display names for the languages this package knows about, keyed by locale.
+///
+/// Wrapped in an unmodifiable map: it is public API, and callers must not be
+/// able to mutate the shared table.
+final langsNameMap = Map<LangCode, String>.unmodifiable(_langsNameMap);
+
+final _langsNameMap = <LangCode, String>{
   const LangCode(languageCode: 'en', countryCode: 'US'): 'English',
   const LangCode(languageCode: 'ja', countryCode: 'JP'): '日本語',
   const LangCode(languageCode: 'zh', countryCode: 'CN'): '简体中文',
@@ -52,61 +60,53 @@ class AppLangSelectPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedLang = ref.watch<String?>(selectingLangProvider) ??
         context.savedLocale?.toString() ??
-        'system_system';
+        LangCode.system.toString();
     return Scaffold(
-      appBar: AppBar(title: Text('select_lang_page'.tr())),
-      body: ListView(
-        children: [
-          ListTile(
-            onTap: () async {
-              Intl.defaultLocale = context.locale.languageCode;
-              await context.resetLocale();
-              ref
-                  .read<SelectingLang>(selectingLangProvider.notifier)
-                  .setLang('system_system');
-            },
-            leading: Radio(
-              value: 'system_system',
-              groupValue: selectedLang,
-              onChanged: (v) async {
-                Intl.defaultLocale = context.locale.languageCode;
-                await context.resetLocale();
-                ref
-                    .read<SelectingLang>(selectingLangProvider.notifier)
-                    .setLang('system_system');
-              },
+      appBar: AppBar(title: Text('app_lang_selector:select_lang_page'.tr())),
+      // `Radio.groupValue`/`Radio.onChanged` were deprecated in Flutter 3.32 in
+      // favour of a `RadioGroup` ancestor. Going through RadioListTile also
+      // means the selection logic lives in one place instead of being copied
+      // into each tile's `onTap` and each radio's `onChanged`.
+      body: RadioGroup<LangCode>(
+        groupValue: LangCode.fromString(selectedLang),
+        onChanged: (value) => unawaited(_select(context, ref, value)),
+        child: ListView(
+          children: [
+            RadioListTile<LangCode>(
+              value: LangCode.system,
+              title: Text('app_lang_selector:follow_system'.tr()),
             ),
-            title: Text('follow_system'.tr()),
-          ),
-          ...context.supportedLocales.map(
-            (e) => ListTile(
-              title:
-                  Text(langsNameMap[LangCode.fromLocale(e)] ?? e.languageCode),
-              leading: Radio<LangCode>(
+            ...context.supportedLocales.map(
+              (e) => RadioListTile<LangCode>(
                 value: LangCode.fromLocale(e),
-                groupValue: LangCode.fromString(selectedLang),
-                onChanged: (value) async {
-                  if (value != null) {
-                    Intl.defaultLocale = value.languageCode;
-                    await context.setLocale(value.toLocale());
-                    ref
-                        .read<SelectingLang>(selectingLangProvider.notifier)
-                        .setLang(value.toString());
-                  }
-                },
+                title: Text(
+                  langsNameMap[LangCode.fromLocale(e)] ?? e.languageCode,
+                ),
               ),
-              onTap: () async {
-                Intl.defaultLocale = e.languageCode;
-                await context.setLocale(e);
-                ref
-                    .read<SelectingLang>(selectingLangProvider.notifier)
-                    .setLang(LangCode.fromLocale(e).toString());
-              },
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+  }
+
+  /// Applies [value] as the app's language and remembers the choice.
+  Future<void> _select(
+    BuildContext context,
+    WidgetRef ref,
+    LangCode? value,
+  ) async {
+    if (value == null) return;
+    if (value == LangCode.system) {
+      Intl.defaultLocale = context.locale.languageCode;
+      await context.resetLocale();
+    } else {
+      Intl.defaultLocale = value.languageCode;
+      await context.setLocale(value.toLocale());
+    }
+    ref
+        .read<SelectingLang>(selectingLangProvider.notifier)
+        .setLang(value.toString());
   }
 }
 
@@ -128,20 +128,28 @@ class LangCode {
     return LangCode(languageCode: parts[0], countryCode: parts[1]);
   }
 
+  /// Sentinel meaning "follow the system language" rather than a real locale.
+  ///
+  /// Its [toString] is `system_system`, which is the value that has always been
+  /// persisted for this option.
+  static const system = LangCode(
+    languageCode: 'system',
+    countryCode: 'system',
+  );
+
   final String languageCode;
 
   final String countryCode;
 
   @override
-  int get hashCode => languageCode.hashCode ^ countryCode.hashCode;
+  int get hashCode => Object.hash(languageCode, countryCode);
 
   @override
   bool operator ==(Object other) {
-    if (other is LangCode) {
-      return languageCode == other.languageCode &&
-          countryCode == other.countryCode;
-    }
-    return false;
+    if (identical(this, other)) return true;
+    return other is LangCode &&
+        languageCode == other.languageCode &&
+        countryCode == other.countryCode;
   }
 
   Locale toLocale() {

@@ -32,6 +32,34 @@ const _iOSLocaleMap = {
   'tr': 'tr',
 };
 
+/// Resolves the store directory name for [locale], or explains what is missing.
+///
+/// These maps only cover a handful of languages. Reading them with `!` turned
+/// every unmapped locale into a bare null-check crash halfway through a capture
+/// run, so look them up through here instead.
+String _storeLocaleName(
+  Map<String, String> map,
+  Locale locale,
+  String platform,
+) {
+  final name = map[locale.languageCode];
+  if (name == null) {
+    throw ArgumentError.value(
+      locale.languageCode,
+      'locale',
+      'colaxy_screenshot has no $platform store locale mapped for this '
+          'language. Supported: ${map.keys.join(', ')}.',
+    );
+  }
+  return name;
+}
+
+String _iosLocaleName(Locale locale) =>
+    _storeLocaleName(_iOSLocaleMap, locale, 'iOS');
+
+String _androidLocaleName(Locale locale) =>
+    _storeLocaleName(_androidLocaleMap, locale, 'Android');
+
 /// Main screenshot service
 class ScreenshotService {
   ScreenshotService({required this.config, required this.appPath});
@@ -58,44 +86,55 @@ class ScreenshotService {
 
   /// Run the screenshot workflow
   Future<void> executeScreenshots() async {
-    if (config.enableAndroid) {
-      await getFeatureGraphicScreenshot();
-    }
+    // Fail before capturing anything rather than partway through a long run.
+    _validateLocales();
 
-    final defaultDelay = config.captureDelay;
-    var isFirst = true;
-    final modes = [
-      if (config.enableIos || config.enableAndroid) ...[
-        ScreenshotModeInfo.phone,
-        ScreenshotModeInfo.tablet,
-      ],
-      if (config.enableMacos) ScreenshotModeInfo.macos,
-    ];
-    // Capture screenshots for each combination of device, locale, and page
-    for (final mode in modes) {
-      await mode.setWindowToSize();
-      for (final locale in config.supportedLocales) {
-        for (final page in config.pages) {
-          if (isFirst) {
-            config.captureDelay = const Duration(seconds: 3);
+    try {
+      if (config.enableAndroid) {
+        await getFeatureGraphicScreenshot();
+      }
+
+      var isFirst = true;
+      final modes = [
+        if (config.enableIos || config.enableAndroid) ...[
+          ScreenshotModeInfo.phone,
+          ScreenshotModeInfo.tablet,
+        ],
+        if (config.enableMacos) ScreenshotModeInfo.macos,
+      ];
+      // Capture screenshots for each combination of device, locale, and page
+      for (final mode in modes) {
+        await mode.setWindowToSize();
+        for (final locale in config.supportedLocales) {
+          for (final page in config.pages) {
+            await _capturePageScreenshot(
+              locale: locale,
+              page: page,
+              modeInfo: mode,
+              // The very first capture has to wait for the app to warm up.
+              delay: isFirst ? config.firstCaptureDelay : config.captureDelay,
+            );
             isFirst = false;
           }
-          await _capturePageScreenshot(
-            locale: locale,
-            page: page,
-            modeInfo: mode,
-          );
-          config.captureDelay = defaultDelay;
         }
       }
+    } finally {
+      // Always restore the config file. Leaving `launch_mode: screenshot` in
+      // place means the next normal launch silently starts capturing again.
+      await resetJsonConfig();
     }
-
-    // reset config file
-    await resetJsonConfig();
 
     // exit the app
     debugPrint('Screenshots taken, exiting the app...');
     exit(0);
+  }
+
+  /// Verifies every configured locale can be mapped to a store directory.
+  void _validateLocales() {
+    for (final locale in config.supportedLocales) {
+      if (config.enableIos || config.enableMacos) _iosLocaleName(locale);
+      if (config.enableAndroid) _androidLocaleName(locale);
+    }
   }
 
   /// Feature Graphic Page generate
@@ -138,7 +177,7 @@ class ScreenshotService {
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(60),
                               child: Image.asset(
-                                'assets/app_icons/icon.png',
+                                config.featureGraphicIconAsset,
                                 width: 400,
                                 height: 400,
                                 fit: BoxFit.cover,
@@ -264,7 +303,9 @@ class ScreenshotService {
       child: Container(
         width: modeInfo.deviceSize.width,
         height: modeInfo.deviceSize.height,
-        color: const ui.Color.fromARGB(255, 216, 255, 239),
+        // Per-page settings win over the run-wide config; both used to be
+        // ignored in favour of hardcoded values.
+        color: page.backgroundColor ?? config.backgroundColor,
         child: Column(
           children: [
             // Title area at the top
@@ -280,13 +321,9 @@ class ScreenshotService {
               ),
               child: Text(
                 page.titleTextKey.tr(),
-                style: const TextStyle(
-                  color: ui.Color.fromARGB(255, 25, 178, 255),
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                  decoration: TextDecoration.none,
-                ),
+                style: page.titleStyle ??
+                    config.titleStyle ??
+                    kDefaultScreenshotTitleStyle,
                 textAlign: TextAlign.center,
               ),
             ),
@@ -311,6 +348,7 @@ class ScreenshotService {
     required Locale locale,
     required ScreenshotPageInfo page,
     required ScreenshotModeInfo modeInfo,
+    required Duration delay,
   }) async {
     // Launch the app with runApp
     final app =
@@ -319,7 +357,7 @@ class ScreenshotService {
     runApp(app);
 
     // Wait until the app finishes rendering
-    await Future<void>.delayed(config.captureDelay);
+    await Future<void>.delayed(delay);
 
     // Wait for the frame callback to ensure rendering is complete
     await WidgetsBinding.instance.endOfFrame;
@@ -351,7 +389,7 @@ class ScreenshotService {
     switch (modeInfo.mode) {
       case ScreenshotMode.phone:
         if (config.enableIos) {
-          final iOSLocaleName = _iOSLocaleMap[locale.languageCode]!;
+          final iOSLocaleName = _iosLocaleName(locale);
           final iphonePath = '$appPath/fastlane/screenshots/$iOSLocaleName';
           Directory(iphonePath).createSync(recursive: true);
           _deleteExistingScreenshots(
@@ -363,7 +401,7 @@ class ScreenshotService {
               .writeAsBytesSync(encodePng(resizedImage));
         }
         if (config.enableAndroid) {
-          final androidLocaleName = _androidLocaleMap[locale.languageCode]!;
+          final androidLocaleName = _androidLocaleName(locale);
           final androidPhonePath =
               '$appPath/fastlane/metadata/android/$androidLocaleName/images/phoneScreenshots';
           final androidSevenInchPath =
@@ -378,7 +416,7 @@ class ScreenshotService {
 
       case ScreenshotMode.tablet:
         if (config.enableIos) {
-          final iOSLocaleName = _iOSLocaleMap[locale.languageCode]!;
+          final iOSLocaleName = _iosLocaleName(locale);
           final ipadPath = '$appPath/fastlane/screenshots/$iOSLocaleName';
           Directory(ipadPath).createSync(recursive: true);
           _deleteExistingScreenshots(
@@ -390,7 +428,7 @@ class ScreenshotService {
               .writeAsBytesSync(encodePng(resizedImage));
         }
         if (config.enableAndroid) {
-          final androidLocaleName = _androidLocaleMap[locale.languageCode]!;
+          final androidLocaleName = _androidLocaleName(locale);
           final androidTenInchPath =
               '$appPath/fastlane/metadata/android/$androidLocaleName/images/tenInchScreenshots';
           Directory(androidTenInchPath).createSync(recursive: true);
@@ -400,7 +438,7 @@ class ScreenshotService {
 
       case ScreenshotMode.macos:
         // save to macOS screenshot folder
-        final macLocaleName = _iOSLocaleMap[locale.languageCode]!;
+        final macLocaleName = _iosLocaleName(locale);
         final macPath = '$appPath/fastlane/screenshots/$macLocaleName';
         Directory(macPath).createSync(recursive: true);
 

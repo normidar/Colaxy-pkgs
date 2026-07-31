@@ -10,11 +10,11 @@ part of 'prefs_map_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsMapPod)
-const prefsMapPodProvider = PrefsMapPodFamily._();
+final prefsMapPodProvider = PrefsMapPodFamily._();
 
 final class PrefsMapPodProvider
     extends $AsyncNotifierProvider<PrefsMapPod, Map<String, dynamic>?> {
-  const PrefsMapPodProvider._(
+  PrefsMapPodProvider._(
       {required PrefsMapPodFamily super.from, required String super.argument})
       : super(
           retry: null,
@@ -55,7 +55,7 @@ final class PrefsMapPodFamily extends $Family
     with
         $ClassFamilyOverride<PrefsMapPod, AsyncValue<Map<String, dynamic>?>,
             Map<String, dynamic>?, FutureOr<Map<String, dynamic>?>, String> {
-  const PrefsMapPodFamily._()
+  PrefsMapPodFamily._()
       : super(
           retry: null,
           name: r'prefsMapPodProvider',
@@ -83,9 +83,6 @@ abstract class _$PrefsMapPod extends $AsyncNotifier<Map<String, dynamic>?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref
         as $Ref<AsyncValue<Map<String, dynamic>?>, Map<String, dynamic>?>;
     final element = ref.element as $ClassProviderElement<
@@ -93,6 +90,10 @@ abstract class _$PrefsMapPod extends $AsyncNotifier<Map<String, dynamic>?> {
         AsyncValue<Map<String, dynamic>?>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(
+        ref,
+        () => build(
+              _$args,
+            ));
   }
 }

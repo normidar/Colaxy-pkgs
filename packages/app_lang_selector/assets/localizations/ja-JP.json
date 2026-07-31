@@ -1,5 +1,5 @@
 {
-    "select_lang_page": "言語選択",
-    "follow_system": "システムに従う",
-    "select_lang": "言語を選択"
+  "app_lang_selector:select_lang_page": "言語選択",
+  "app_lang_selector:follow_system": "システムに従う",
+  "app_lang_selector:select_lang": "言語を選択"
 }

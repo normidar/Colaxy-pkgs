@@ -10,11 +10,11 @@ part of 'app_info_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(AppInfoPod)
-const appInfoPodProvider = AppInfoPodProvider._();
+final appInfoPodProvider = AppInfoPodProvider._();
 
 final class AppInfoPodProvider
     extends $AsyncNotifierProvider<AppInfoPod, PackageInfo> {
-  const AppInfoPodProvider._()
+  AppInfoPodProvider._()
       : super(
           from: null,
           argument: null,
@@ -40,13 +40,12 @@ abstract class _$AppInfoPod extends $AsyncNotifier<PackageInfo> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref = this.ref as $Ref<AsyncValue<PackageInfo>, PackageInfo>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<PackageInfo>, PackageInfo>,
         AsyncValue<PackageInfo>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, build);
   }
 }

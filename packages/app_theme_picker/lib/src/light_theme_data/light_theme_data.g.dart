@@ -10,11 +10,11 @@ part of 'light_theme_data.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(LightThemeData)
-const lightThemeDataProvider = LightThemeDataFamily._();
+final lightThemeDataProvider = LightThemeDataFamily._();
 
 final class LightThemeDataProvider
     extends $AsyncNotifierProvider<LightThemeData, ThemeData> {
-  const LightThemeDataProvider._(
+  LightThemeDataProvider._(
       {required LightThemeDataFamily super.from,
       required String? super.argument})
       : super(
@@ -56,7 +56,7 @@ final class LightThemeDataFamily extends $Family
     with
         $ClassFamilyOverride<LightThemeData, AsyncValue<ThemeData>, ThemeData,
             FutureOr<ThemeData>, String?> {
-  const LightThemeDataFamily._()
+  LightThemeDataFamily._()
       : super(
           retry: null,
           name: r'lightThemeDataProvider',
@@ -84,15 +84,16 @@ abstract class _$LightThemeData extends $AsyncNotifier<ThemeData> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<ThemeData>, ThemeData>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<ThemeData>, ThemeData>,
         AsyncValue<ThemeData>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(
+        ref,
+        () => build(
+              _$args,
+            ));
   }
 }

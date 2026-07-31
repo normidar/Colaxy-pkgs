@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:colaxy_tutorial/colaxy_tutorial.dart';
@@ -147,12 +148,14 @@ class TutorialTool {
       imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
     );
 
-    Future.delayed(const Duration(milliseconds: 300), () async {
-      if (buildContext.mounted) {
-        tutorialCoachMark.show(context: buildContext);
-        await saveShowedIds(toShowIds);
-      }
-    });
+    // Give the target widgets a frame to settle before highlighting them.
+    // This used to be a fire-and-forget `Future.delayed`, so callers could not
+    // await the result and a failed `saveShowedIds` was swallowed.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (buildContext.mounted) {
+      tutorialCoachMark.show(context: buildContext);
+      await saveShowedIds(toShowIds);
+    }
   }
 
   /// By condition maybe show or not.
@@ -230,7 +233,7 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
             top: MediaQuery.of(context).padding.top + 16,
             right: 16,
             child: TextButton(
-              onPressed: _finish,
+              onPressed: () => unawaited(_finish()),
               style: TextButton.styleFrom(
                 backgroundColor: Colors.black.withValues(alpha: 0.3),
                 padding: const EdgeInsets.symmetric(
@@ -255,7 +258,7 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
               bottom: MediaQuery.of(context).padding.bottom + 24,
               right: 24,
               child: ElevatedButton(
-                onPressed: _finish,
+                onPressed: () => unawaited(_finish()),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blue,
                   foregroundColor: Colors.white,
@@ -294,11 +297,15 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
     _pageController = PageController();
   }
 
-  void _finish() {
-    TutorialTool.saveShowedIds([widget.id]);
+  Future<void> _finish() async {
+    // Persist *before* navigating. This used to be fire-and-forget, so leaving
+    // the page could race the write and the tutorial would show again.
+    await TutorialTool.saveShowedIds([widget.id]);
+    if (!mounted) return;
+
     final nextPage = widget.nextPage;
     if (nextPage != null) {
-      Navigator.of(context).pushReplacement(
+      await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (context) => nextPage,
         ),

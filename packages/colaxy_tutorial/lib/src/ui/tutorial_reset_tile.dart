@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_lang_selector/app_lang_selector.dart' hide packageName;
 import 'package:colaxy_tutorial/colaxy_tutorial.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -13,14 +15,17 @@ class TutorialResetTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final _ = ref.watch(selectingLangProvider);
+    // Watched so the tile re-translates when the language changes.
+    ref.watch(selectingLangProvider);
     return ListTile(
       leading: const Icon(Icons.tungsten_rounded),
       title: const Text('$packageName:tile_title').tr(),
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (context) => const TutorialSettingsPage(),
+        unawaited(
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => const TutorialSettingsPage(),
+            ),
           ),
         );
       },

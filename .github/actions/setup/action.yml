@@ -1,0 +1,27 @@
+name: Set up workspace
+description: >-
+  Installs the toolchain declared in mise.toml, activates Melos and resolves the
+  pub workspace. Shared by every CI job so they stay in sync.
+
+runs:
+  using: composite
+  steps:
+    # Installs the Flutter/Dart toolchain declared in mise.toml so CI stays
+    # in sync with local development.
+    - name: Set up toolchain (mise)
+      uses: jdx/mise-action@v2
+      with:
+        install: true
+        cache: true
+
+    - name: Activate Melos
+      shell: bash
+      run: |
+        dart pub global activate melos
+        echo "$HOME/.pub-cache/bin" >> "$GITHUB_PATH"
+
+    # Most members are Flutter packages, so resolve with `flutter pub get`. As a
+    # pub workspace, a single resolve at the root covers every member package.
+    - name: Resolve workspace dependencies
+      shell: bash
+      run: flutter pub get

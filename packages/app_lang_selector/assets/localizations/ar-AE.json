@@ -1,5 +1,5 @@
 {
-    "select_lang_page": "اختيار اللغة",
-    "follow_system": "اتبع النظام",
-    "select_lang": "اختر اللغة"
+  "app_lang_selector:select_lang_page": "اختيار اللغة",
+  "app_lang_selector:follow_system": "اتبع النظام",
+  "app_lang_selector:select_lang": "اختر اللغة"
 }

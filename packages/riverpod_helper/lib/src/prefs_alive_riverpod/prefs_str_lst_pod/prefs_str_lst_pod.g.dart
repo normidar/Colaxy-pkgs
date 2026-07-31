@@ -10,11 +10,11 @@ part of 'prefs_str_lst_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsAliveStrLstPod)
-const prefsAliveStrLstPodProvider = PrefsAliveStrLstPodFamily._();
+final prefsAliveStrLstPodProvider = PrefsAliveStrLstPodFamily._();
 
 final class PrefsAliveStrLstPodProvider
     extends $AsyncNotifierProvider<PrefsAliveStrLstPod, List<String>?> {
-  const PrefsAliveStrLstPodProvider._(
+  PrefsAliveStrLstPodProvider._(
       {required PrefsAliveStrLstPodFamily super.from,
       required String super.argument})
       : super(
@@ -57,7 +57,7 @@ final class PrefsAliveStrLstPodFamily extends $Family
     with
         $ClassFamilyOverride<PrefsAliveStrLstPod, AsyncValue<List<String>?>,
             List<String>?, FutureOr<List<String>?>, String> {
-  const PrefsAliveStrLstPodFamily._()
+  PrefsAliveStrLstPodFamily._()
       : super(
           retry: null,
           name: r'prefsAliveStrLstPodProvider',
@@ -85,15 +85,16 @@ abstract class _$PrefsAliveStrLstPod extends $AsyncNotifier<List<String>?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<List<String>?>, List<String>?>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<List<String>?>, List<String>?>,
         AsyncValue<List<String>?>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(
+        ref,
+        () => build(
+              _$args,
+            ));
   }
 }

@@ -1,0 +1,15 @@
+# Each package used to carry its own `.github/dependabot.yml`, but Dependabot
+# only reads the one at the repository root, so none of them ever ran.
+# This is a pub workspace: a single root `pubspec.yaml` resolves every member,
+# so one `pub` entry covers all packages.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "monthly"

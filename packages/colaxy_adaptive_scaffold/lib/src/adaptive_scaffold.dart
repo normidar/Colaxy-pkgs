@@ -1,30 +1,38 @@
 import 'package:colaxy_adaptive_scaffold/src/navigation_item.dart';
 import 'package:flutter/material.dart';
 
-/// A scaffold that adapts between a [BottomNavigationBar] and a [NavigationRail]
+/// A scaffold that adapts between a [NavigationBar] and a [NavigationRail]
 /// based on the screen aspect ratio (width/height).
 ///
 /// This widget automatically determines the best navigation layout based on
 /// the device's aspect ratio:
-/// - **Portrait/Narrow screens** (aspect ratio < threshold): Uses [NavigationBar] at the bottom
-/// - **Landscape/Wide screens** (aspect ratio >= threshold): Uses [NavigationRail] on the left side
+/// - **Portrait/Narrow screens** (aspect ratio < threshold): Uses
+///   [NavigationBar] at the bottom
+/// - **Landscape/Wide screens** (aspect ratio >= threshold): Uses
+///   [NavigationRail] on the left side
 ///
-/// The widget manages navigation state internally, so you don't need to handle
-/// [selectedIndex] or [onDestinationSelected] callbacks yourself.
+/// The widget manages navigation state internally, so you don't need to track
+/// the selected index yourself. Pass [onDestinationSelected] if you want to be
+/// notified of changes.
+///
+/// Every page stays alive in an [IndexedStack], so switching destinations
+/// preserves each page's state.
 ///
 /// ## Parameters
 ///
 /// ### Required Parameters
 ///
-/// - **[items]**: A list of [NavigationItem] objects defining each navigation destination.
-///   Each item contains a name (label), icon, and the page widget to display.
+/// - **[items]**: A list of [NavigationItem] objects defining each navigation
+///   destination. Each item contains a name (label), icon, and the page widget
+///   to display.
 ///
 /// ### Optional Parameters
 ///
-/// - **[initialIndex]**: The initially selected navigation item index (default: 0).
-///   Must be a valid index within the [items] list.
+/// - **[initialIndex]**: The initially selected navigation item index
+///   (default: 0). Must be a valid index within the [items] list.
 ///
-/// - **[aspectRatioThreshold]**: The aspect ratio threshold for switching layouts (default: 1.2).
+/// - **[aspectRatioThreshold]**: The aspect ratio threshold for switching
+///   layouts (default: 1.2).
 ///   - If `width/height >= threshold`: Shows [NavigationRail] (side navigation)
 ///   - If `width/height < threshold`: Shows [NavigationBar] (bottom navigation)
 ///   - Common values:
@@ -34,9 +42,13 @@ import 'package:flutter/material.dart';
 ///
 /// - **[floatingActionButton]**: An optional [FloatingActionButton] to display.
 ///
-/// - **[maxBottomNavigationItems]**: Maximum navigation items for bottom navigation (default: 4).
-///   In portrait mode, if the number of items exceeds this value, a [Drawer] menu
-///   will be used instead of [NavigationBar].
+/// - **[maxBottomNavigationItems]**: Maximum navigation items for bottom
+///   navigation (default: 4). In portrait mode, if the number of items exceeds
+///   this value, a [Drawer] menu will be used instead of [NavigationBar].
+///
+/// - **[drawerTitle]**: Heading shown in the drawer (default: no header).
+///
+/// - **[onDestinationSelected]**: Called when the selection changes.
 ///
 /// ## Example
 ///
@@ -79,6 +91,8 @@ class AdaptiveScaffold extends StatefulWidget {
     this.heightThresholdForLabels = 600,
     this.maxBottomNavigationItems = 4,
     this.floatingActionButton,
+    this.drawerTitle,
+    this.onDestinationSelected,
     super.key,
   });
 
@@ -132,6 +146,19 @@ class AdaptiveScaffold extends StatefulWidget {
   /// (bottom and side navigation).
   final Widget? floatingActionButton;
 
+  /// The heading shown in the [Drawer] header.
+  ///
+  /// Only used when the drawer layout is active (see
+  /// [maxBottomNavigationItems]). Defaults to no header at all, so nothing
+  /// untranslated is ever shown — pass a localized string to display one.
+  final String? drawerTitle;
+
+  /// Called whenever the user selects a different destination.
+  ///
+  /// The scaffold still manages the selection itself; this is only a
+  /// notification, e.g. for analytics or to sync external state.
+  final ValueChanged<int>? onDestinationSelected;
+
   @override
   State<AdaptiveScaffold> createState() => _AdaptiveScaffoldState();
 }
@@ -143,34 +170,55 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
   void initState() {
     super.initState();
     assert(widget.items.isNotEmpty, 'items must contain at least one item');
-    _selectedIndex = widget.initialIndex.clamp(0, widget.items.length - 1);
+    _selectedIndex = _clampIndex(widget.initialIndex);
   }
 
   @override
   void didUpdateWidget(AdaptiveScaffold oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Keep the selection valid if the items list shrinks.
-    if (_selectedIndex >= widget.items.length) {
-      _selectedIndex = widget.items.length - 1;
-    }
+    _selectedIndex = _clampIndex(_selectedIndex);
+  }
+
+  /// Clamps [index] into range, tolerating an empty [AdaptiveScaffold.items].
+  ///
+  /// `clamp(0, -1)` throws, so an empty list would take down the whole app in
+  /// release builds where the `assert` is stripped.
+  int _clampIndex(int index) {
+    if (widget.items.isEmpty) return 0;
+    return index.clamp(0, widget.items.length - 1);
   }
 
   void _onDestinationSelected(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    widget.onDestinationSelected?.call(index);
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
+    if (widget.items.isEmpty) {
+      return Scaffold(
+        body: const SizedBox.shrink(),
+        floatingActionButton: widget.floatingActionButton,
+      );
+    }
+
+    final theme = Theme.of(context);
+    final size = MediaQuery.sizeOf(context);
     final aspectRatio = size.width / size.height;
     final useRail = aspectRatio >= widget.aspectRatioThreshold;
     final useDrawer =
         !useRail && widget.items.length > widget.maxBottomNavigationItems;
 
-    // Get the current page to display
-    final currentPage = widget.items[_selectedIndex].page;
+    // Every page is kept alive in an IndexedStack so switching destinations
+    // preserves each page's state (scroll offset, form input, ...) instead of
+    // rebuilding it from scratch.
+    final body = IndexedStack(
+      index: _selectedIndex,
+      children: widget.items.map((item) => item.page).toList(),
+    );
 
     if (useRail) {
       // Use NavigationRail for wider/landscape layouts
@@ -182,6 +230,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
                   .map(
                     (item) => NavigationRailDestination(
                       icon: item.icon,
+                      selectedIcon: item.selectedIcon,
                       label: Text(item.name),
                     ),
                   )
@@ -190,8 +239,8 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
               onDestinationSelected: _onDestinationSelected,
               labelType: NavigationRailLabelType.all,
             ),
-            VerticalDivider(width: 1, thickness: 1, color: Colors.grey[300]),
-            Expanded(child: currentPage),
+            VerticalDivider(width: 1, thickness: 1, color: theme.dividerColor),
+            Expanded(child: body),
           ],
         ),
         floatingActionButton: widget.floatingActionButton,
@@ -199,6 +248,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
     }
 
     if (useDrawer) {
+      final drawerTitle = widget.drawerTitle;
       // Use Drawer for portrait layouts with many items
       return Scaffold(
         appBar: AppBar(
@@ -208,24 +258,28 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primaryContainer,
-                ),
-                child: Text(
-                  'Menu',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+              if (drawerTitle != null)
+                DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                  ),
+                  child: Text(
+                    drawerTitle,
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
                   ),
                 ),
-              ),
               ...widget.items.asMap().entries.map((entry) {
                 final index = entry.key;
                 final item = entry.value;
+                final selected = _selectedIndex == index;
                 return ListTile(
-                  leading: item.icon,
+                  leading: selected
+                      ? item.selectedIcon ?? item.icon
+                      : item.icon,
                   title: Text(item.name),
-                  selected: _selectedIndex == index,
+                  selected: selected,
                   onTap: () {
                     _onDestinationSelected(index);
                     Navigator.pop(context); // Close drawer
@@ -235,19 +289,21 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
             ],
           ),
         ),
-        body: currentPage,
+        body: body,
         floatingActionButton: widget.floatingActionButton,
       );
     }
 
     // Use BottomNavigationBar for taller/portrait layouts
     return Scaffold(
-      body: currentPage,
+      body: body,
       bottomNavigationBar: NavigationBar(
         destinations: widget.items
             .map(
               (item) => NavigationDestination(
                 icon: item.icon,
+                selectedIcon: item.selectedIcon,
+                tooltip: item.tooltip,
                 label: item.name,
               ),
             )

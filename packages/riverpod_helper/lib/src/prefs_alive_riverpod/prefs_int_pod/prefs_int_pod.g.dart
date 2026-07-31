@@ -10,11 +10,11 @@ part of 'prefs_int_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsAliveIntPod)
-const prefsAliveIntPodProvider = PrefsAliveIntPodFamily._();
+final prefsAliveIntPodProvider = PrefsAliveIntPodFamily._();
 
 final class PrefsAliveIntPodProvider
     extends $AsyncNotifierProvider<PrefsAliveIntPod, int?> {
-  const PrefsAliveIntPodProvider._(
+  PrefsAliveIntPodProvider._(
       {required PrefsAliveIntPodFamily super.from,
       required String super.argument})
       : super(
@@ -56,7 +56,7 @@ final class PrefsAliveIntPodFamily extends $Family
     with
         $ClassFamilyOverride<PrefsAliveIntPod, AsyncValue<int?>, int?,
             FutureOr<int?>, String> {
-  const PrefsAliveIntPodFamily._()
+  PrefsAliveIntPodFamily._()
       : super(
           retry: null,
           name: r'prefsAliveIntPodProvider',
@@ -84,15 +84,16 @@ abstract class _$PrefsAliveIntPod extends $AsyncNotifier<int?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<int?>, int?>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<AsyncValue<int?>, int?>,
         AsyncValue<int?>,
         Object?,
         Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(
+        ref,
+        () => build(
+              _$args,
+            ));
   }
 }

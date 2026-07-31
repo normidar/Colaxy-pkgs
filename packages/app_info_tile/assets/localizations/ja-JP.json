@@ -1,5 +1,5 @@
 {
-  "license_hint": "[VIEW LICENSE]をクリックしてライセンス情報を確認できます。",
-  "app_info_tile_title": "アプリ情報",
-  "view_license": "VIEW LICENSE"
+  "app_info_tile:license_hint": "[VIEW LICENSE]をクリックしてライセンス情報を確認できます。",
+  "app_info_tile:title": "アプリ情報",
+  "app_info_tile:view_license": "VIEW LICENSE"
 }

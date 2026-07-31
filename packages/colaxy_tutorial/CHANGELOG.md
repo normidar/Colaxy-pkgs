@@ -1,3 +1,16 @@
+## 0.3.0
+
+### Fixed
+- The "shown" flag is persisted before navigating away from a tutorial page.
+  The write was fire-and-forget and could lose the race, so the tutorial
+  reappeared.
+- `showTutorial` awaits its delay instead of scheduling fire-and-forget work,
+  so callers can await it and a failed save is no longer swallowed.
+
+### Added
+- Tests. This package previously had no `test/` directory at all, so it was
+  silently skipped by the test runner.
+
 ## 0.2.0+2
 
  - **FIX**: resolve crash risks and stale state issues found in code review.

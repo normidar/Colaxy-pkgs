@@ -1,3 +1,24 @@
+## 0.8.0
+
+### Breaking
+- `ScreenshotConfig.captureDelay` is now `final`. The run used to mutate it in
+  place to lengthen the first capture; use `firstCaptureDelay` instead.
+
+### Fixed
+- A locale with no store mapping is reported up front, naming the locale and
+  the supported set, instead of crashing partway through a run on `!`.
+- The config file is restored in a `finally` block. If a run threw, the app was
+  left in `launch_mode: screenshot` and would start capturing again on the next
+  normal launch.
+- `backgroundColor` and `titleStyle` (on both `ScreenshotConfig` and
+  `ScreenshotPageInfo`) are actually applied; they were previously ignored in
+  favour of hardcoded values. The defaults match the old hardcoded ones.
+
+### Added
+- `ScreenshotConfig.firstCaptureDelay` and
+  `ScreenshotConfig.featureGraphicIconAsset` (the icon path was hardcoded to
+  `assets/app_icons/icon.png`).
+
 ## 0.7.1
 
  - **FIX**: reset repo link and homepage link.

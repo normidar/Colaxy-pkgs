@@ -10,11 +10,11 @@ part of 'selecting_lang.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(SelectingLang)
-const selectingLangProvider = SelectingLangProvider._();
+final selectingLangProvider = SelectingLangProvider._();
 
 final class SelectingLangProvider
     extends $NotifierProvider<SelectingLang, String?> {
-  const SelectingLangProvider._()
+  SelectingLangProvider._()
       : super(
           from: null,
           argument: null,
@@ -48,10 +48,9 @@ abstract class _$SelectingLang extends $Notifier<String?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref = this.ref as $Ref<String?, String?>;
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<String?, String?>, String?, Object?, Object?>;
-    element.handleValue(ref, created);
+    element.handleCreate(ref, build);
   }
 }

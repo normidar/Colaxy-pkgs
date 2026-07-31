@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_theme_picker/src/theme_color_button.dart';
 import 'package:app_theme_picker/src/theme_mode_button.dart';
 import 'package:app_theme_picker/src/theme_pod/theme_pod.dart';
@@ -28,7 +30,7 @@ class PickThemePage extends ConsumerWidget {
         backgroundColor: Theme.of(context).primaryColor.withAlpha(100),
         title: switch (theme) {
           AsyncData(:final value) => Text(
-              '${value.name} ${'theme'.tr()}',
+              '${value.name} ${'app_theme_picker:theme'.tr()}',
             ),
           AsyncLoading() => const Text('loading...'),
           AsyncError(:final error, :final stackTrace) => RiverpodErrorView(
@@ -69,11 +71,11 @@ class PickThemePage extends ConsumerWidget {
                       }).map(
                         (data) => ThemeColorButton(
                           schemeData: data.value,
-                          onTap: () {
+                          onTap: () => unawaited(
                             ref
                                 .read(themePodProvider.notifier)
-                                .changeTheme(data.key);
-                          },
+                                .changeTheme(data.key),
+                          ),
                           size: size,
                           selected: value == data.key,
                         ),

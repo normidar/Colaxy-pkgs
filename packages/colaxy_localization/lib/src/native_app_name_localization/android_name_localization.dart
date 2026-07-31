@@ -1,5 +1,6 @@
 import 'dart:io' show File;
 
+import 'package:colaxy_localization/src/cli_logger.dart';
 import 'package:xml/xml.dart';
 
 class AndroidNameLocalization {
@@ -25,8 +26,14 @@ class AndroidNameLocalization {
   void fitLocale({required String appName, String? locale}) {
     var localeFile = File('$resFolder/values/strings.xml');
     if (locale != null) {
-      print('locale: $locale');
-      final localeFolderName = _androidLocaleMap[locale]!;
+      CliLogger.info('locale: $locale');
+      final localeFolderName = _androidLocaleMap[locale];
+      if (localeFolderName == null) {
+        throw StateError(
+          'No Android resource folder mapped for locale "$locale". '
+          'Supported: ${_androidLocaleMap.keys.join(', ')}.',
+        );
+      }
       localeFile = File('$resFolder/values-$localeFolderName/strings.xml');
     }
 

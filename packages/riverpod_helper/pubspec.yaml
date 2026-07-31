@@ -8,20 +8,19 @@ dependencies:
   shared_preferences: ^2.0.0
 description: A helpful tool for riverpod developer.
 dev_dependencies:
-  auto_exporter: any
+  auto_exporter: ^4.1.1
   build_runner: ^2.0.0
   build_test: ^3.3.3
-  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
   riverpod_generator: ^4.0.0
-  riverpod_lint: ^3.1.0
-  very_good_analysis: any
+  very_good_analysis: ^10.3.0
 environment:
   flutter: '>=1.17.0'
   sdk: ^3.5.0
 homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/riverpod_helper
 repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/riverpod_helper
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
 name: riverpod_helper
 topics:
   - state
@@ -29,5 +28,5 @@ topics:
   - preferences
   - state-management
   - helper
-version: 0.1.0+3
+version: 0.2.0
 resolution: workspace

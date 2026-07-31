@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:app_lang_selector/app_lang_selector.dart';
 import 'package:app_theme_picker/app_theme_picker.dart';
 import 'package:easy_localization/easy_localization.dart';
@@ -14,16 +16,19 @@ class ThemePickTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final _ = ref.watch(selectingLangProvider);
+    // Watched so the tile re-translates when the language changes.
+    ref.watch(selectingLangProvider);
     return ListTile(
       leading: const Icon(Icons.palette),
-      title: const Text('tile_title').tr(),
+      title: const Text('app_theme_picker:tile_title').tr(),
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (context) => PickThemePage(
-              availableSchemes: availableSchemes,
-              size: size,
+        unawaited(
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => PickThemePage(
+                availableSchemes: availableSchemes,
+                size: size,
+              ),
             ),
           ),
         );

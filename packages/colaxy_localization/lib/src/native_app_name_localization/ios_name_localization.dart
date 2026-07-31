@@ -1,5 +1,6 @@
 import 'dart:io' show File;
 
+import 'package:colaxy_localization/src/cli_logger.dart';
 import 'package:xml/xml.dart';
 
 class IOSNameLocalization {
@@ -18,7 +19,7 @@ class IOSNameLocalization {
     final infoPlist = File(infoPlistPath);
 
     if (!infoPlist.existsSync()) {
-      print('Info.plist file not found at: $infoPlistPath');
+      CliLogger.error('Info.plist file not found at: $infoPlistPath');
       return;
     }
 
@@ -57,43 +58,47 @@ class IOSNameLocalization {
 
           // 各ロケールを配列に追加
           for (final locale in iosLocales) {
-            arrayElement.children.add(XmlText('\n\t\t'));
-            final stringElement = XmlElement(XmlName('string'));
-            stringElement.innerText = locale;
-            arrayElement.children.add(stringElement);
+            final stringElement = XmlElement(XmlName('string'))
+              ..innerText = locale;
+            arrayElement.children
+              ..add(XmlText('\n\t\t'))
+              ..add(stringElement);
           }
           arrayElement.children.add(XmlText('\n\t'));
         }
       } else {
         // CFBundleLocalizationsキーが存在しない場合は追加する
         // 辞書の最後に追加
-        dict.children.add(XmlText('\n\t'));
-
-        final keyElement = XmlElement(XmlName('key'));
-        keyElement.innerText = 'CFBundleLocalizations';
-        dict.children.add(keyElement);
-
-        dict.children.add(XmlText('\n\t'));
+        final keyElement = XmlElement(XmlName('key'))
+          ..innerText = 'CFBundleLocalizations';
+        dict.children
+          ..add(XmlText('\n\t'))
+          ..add(keyElement)
+          ..add(XmlText('\n\t'));
 
         final arrayElement = XmlElement(XmlName('array'));
         for (final locale in iosLocales) {
-          arrayElement.children.add(XmlText('\n\t\t'));
-          final stringElement = XmlElement(XmlName('string'));
-          stringElement.innerText = locale;
-          arrayElement.children.add(stringElement);
+          final stringElement = XmlElement(XmlName('string'))
+            ..innerText = locale;
+          arrayElement.children
+            ..add(XmlText('\n\t\t'))
+            ..add(stringElement);
         }
         arrayElement.children.add(XmlText('\n\t'));
 
-        dict.children.add(arrayElement);
-        dict.children.add(XmlText('\n'));
+        dict.children
+          ..add(arrayElement)
+          ..add(XmlText('\n'));
       }
 
       // 更新されたXMLをファイルに書き込む
       infoPlist.writeAsStringSync(
         '${document.toXmlString(pretty: true, indent: '  ')}\n',
       );
-    } catch (e) {
-      print('Error parsing or updating Info.plist: $e');
+    } on XmlException catch (e) {
+      // Previously caught everything and only printed, so `gen` still exited 0
+      // with an unmodified Info.plist.
+      throw StateError('Failed to parse $infoPlistPath: $e');
     }
   }
 
@@ -114,8 +119,10 @@ class IOSNameLocalization {
     }
 
     // InfoPlist.stringsファイルを作成して書き込む
-    final content = '''CFBundleDisplayName = "$appName";
+    const template = '''
+CFBundleDisplayName = "%s";
 ''';
+    final content = template.replaceFirst('%s', appName);
     localeFile.writeAsStringSync(content);
   }
 
@@ -124,7 +131,7 @@ class IOSNameLocalization {
     final infoPlist = File(infoPlistPath);
 
     if (!infoPlist.existsSync()) {
-      print('Info.plist file not found at: $infoPlistPath');
+      CliLogger.error('Info.plist file not found at: $infoPlistPath');
       return;
     }
 
@@ -170,19 +177,20 @@ class IOSNameLocalization {
           final bundleNameStringElement =
               keys[bundleNameKeyIndex].nextElementSibling;
           if (bundleNameStringElement != null) {
-            final keyElement = XmlElement(XmlName('key'));
-            keyElement.innerText = 'CFBundleDisplayName';
+            final keyElement = XmlElement(XmlName('key'))
+              ..innerText = 'CFBundleDisplayName';
 
-            final stringElement = XmlElement(XmlName('string'));
-            stringElement.innerText = appName;
+            final stringElement = XmlElement(XmlName('string'))
+              ..innerText = appName;
 
             // CFBundleName文字列の後に追加
             final insertIndex =
                 dict.children.indexOf(bundleNameStringElement) + 1;
-            dict.children.insert(insertIndex, XmlText('\n\t'));
-            dict.children.insert(insertIndex + 1, keyElement);
-            dict.children.insert(insertIndex + 2, XmlText('\n\t'));
-            dict.children.insert(insertIndex + 3, stringElement);
+            dict.children
+              ..insert(insertIndex, XmlText('\n\t'))
+              ..insert(insertIndex + 1, keyElement)
+              ..insert(insertIndex + 2, XmlText('\n\t'))
+              ..insert(insertIndex + 3, stringElement);
           }
         }
       }
@@ -191,8 +199,10 @@ class IOSNameLocalization {
       infoPlist.writeAsStringSync(
         '${document.toXmlString(pretty: true, indent: '  ')}\n',
       );
-    } catch (e) {
-      print('Error parsing or updating Info.plist: $e');
+    } on XmlException catch (e) {
+      // Previously caught everything and only printed, so `gen` still exited 0
+      // with an unmodified Info.plist.
+      throw StateError('Failed to parse $infoPlistPath: $e');
     }
   }
 }

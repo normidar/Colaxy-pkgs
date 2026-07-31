@@ -1,3 +1,22 @@
+## 0.2.0
+
+### Breaking
+- Namespaced the bundled translation keys with `app_lang_selector:`.
+- `PkgsAssetLoader` now merges the app's translations *over* the packages'.
+  Previously a package key silently overrode a key of the same name defined by
+  the app.
+
+### Fixed
+- Migrated off the `Radio.groupValue`/`Radio.onChanged` pair deprecated in
+  Flutter 3.32; the page now uses a `RadioGroup` with `RadioListTile`.
+- `LangCode.hashCode` uses `Object.hash` instead of XOR.
+
+### Added
+- `LangCode.system`, the sentinel for "follow the system language".
+
+### Changed
+- `langsNameMap` is now unmodifiable.
+
 ## 0.1.0+4
 
  - **CHORE**: upgrade riverpod_generator to ^4.0.0 and riverpod_lint to ^3.1.0.

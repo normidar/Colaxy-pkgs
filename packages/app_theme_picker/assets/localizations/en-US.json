@@ -1,4 +1,4 @@
 {
-  "theme": "theme",
-  "tile_title": "Theme Selection"
+  "app_theme_picker:theme": "theme",
+  "app_theme_picker:tile_title": "Theme Selection"
 }

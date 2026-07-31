@@ -1,3 +1,25 @@
+## 0.2.0
+
+### Breaking
+- `Prefs.updateForcePipe` requires a `defaultValue`. It previously cast a
+  missing value to `T`, which always threw on the first call for a key.
+- `Prefs.get`/`Prefs.getOrNull` throw `UnsupportedPrefsTypeError` for types
+  SharedPreferences cannot store, instead of falling through to an unchecked
+  cast that failed later and elsewhere.
+
+### Fixed
+- Regenerated the `.g.dart` files. The committed ones were generated against an
+  older riverpod and did not compile against riverpod 3.x.
+- `Prefs.set` dispatches on the runtime value rather than the static type `T`,
+  so storing a value reached through a `dynamic`/`Object` variable works.
+- `RiverpodErrorView` no longer shows a raw stack trace to end users in release
+  builds, and no longer calls `print` from `build`.
+
+### Added
+- `Prefs.update` accepts an async updater.
+- `reportRiverpodError`, for sending a provider error to `FlutterError`.
+- Tests for `Prefs`.
+
 ## 0.1.0+3
 
  - **CHORE**: upgrade riverpod_generator to ^4.0.0 and riverpod_lint to ^3.1.0.

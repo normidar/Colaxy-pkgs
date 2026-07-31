@@ -1,4 +1,4 @@
 {
-  "theme": "테마",
-  "tile_title": "테마 선택"
+  "app_theme_picker:theme": "테마",
+  "app_theme_picker:tile_title": "테마 선택"
 }
