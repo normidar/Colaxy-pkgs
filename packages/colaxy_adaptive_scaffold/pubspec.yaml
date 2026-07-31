@@ -6,15 +6,15 @@ description: A Flutter package for adaptive navigation.
 dev_dependencies:
   auto_exporter: ^4.1.1
   build_runner: ^2.0.0
-  flutter_lints: any
   flutter_test:
     sdk: flutter
-  very_good_analysis: any
+  very_good_analysis: ^10.3.0
 environment:
-  flutter: ">=1.17.0"
+  flutter: '>=3.32.0'
   sdk: ^3.8.0
 homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_adaptive_scaffold
 repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_adaptive_scaffold
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
 name: colaxy_adaptive_scaffold
 topics:
   - adaptive
@@ -22,5 +22,5 @@ topics:
   - navigation
   - material
   - flutter
-version: 0.0.1+4
+version: 0.1.0
 resolution: workspace

@@ -10,20 +10,20 @@ part of 'prefs_double_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsAliveDoublePod)
-const prefsAliveDoublePodProvider = PrefsAliveDoublePodFamily._();
+final prefsAliveDoublePodProvider = PrefsAliveDoublePodFamily._();
 
 final class PrefsAliveDoublePodProvider
     extends $AsyncNotifierProvider<PrefsAliveDoublePod, double?> {
-  const PrefsAliveDoublePodProvider._(
-      {required PrefsAliveDoublePodFamily super.from,
-      required String super.argument})
-      : super(
-          retry: null,
-          name: r'prefsAliveDoublePodProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  PrefsAliveDoublePodProvider._({
+    required PrefsAliveDoublePodFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'prefsAliveDoublePodProvider',
+         isAutoDispose: false,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$prefsAliveDoublePodHash();
@@ -51,25 +51,29 @@ final class PrefsAliveDoublePodProvider
 }
 
 String _$prefsAliveDoublePodHash() =>
-    r'6466f094a5ffb7d3e8541de89d925bc06f116e8a';
+    r'efb26efdc4218ccccc8e8cd5a00684a5a08c5bda';
 
 final class PrefsAliveDoublePodFamily extends $Family
     with
-        $ClassFamilyOverride<PrefsAliveDoublePod, AsyncValue<double?>, double?,
-            FutureOr<double?>, String> {
-  const PrefsAliveDoublePodFamily._()
-      : super(
-          retry: null,
-          name: r'prefsAliveDoublePodProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: false,
-        );
+        $ClassFamilyOverride<
+          PrefsAliveDoublePod,
+          AsyncValue<double?>,
+          double?,
+          FutureOr<double?>,
+          String
+        > {
+  PrefsAliveDoublePodFamily._()
+    : super(
+        retry: null,
+        name: r'prefsAliveDoublePodProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: false,
+      );
 
   PrefsAliveDoublePodProvider call(
     String key,
-  ) =>
-      PrefsAliveDoublePodProvider._(argument: key, from: this);
+  ) => PrefsAliveDoublePodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsAliveDoublePodProvider';
@@ -85,15 +89,20 @@ abstract class _$PrefsAliveDoublePod extends $AsyncNotifier<double?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<double?>, double?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<double?>, double?>,
-        AsyncValue<double?>,
-        Object?,
-        Object?>;
-    element.handleValue(ref, created);
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<double?>, double?>,
+              AsyncValue<double?>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(
+      ref,
+      () => build(
+        _$args,
+      ),
+    );
   }
 }

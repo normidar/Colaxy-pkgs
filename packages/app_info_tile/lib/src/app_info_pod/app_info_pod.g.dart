@@ -10,20 +10,20 @@ part of 'app_info_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(AppInfoPod)
-const appInfoPodProvider = AppInfoPodProvider._();
+final appInfoPodProvider = AppInfoPodProvider._();
 
 final class AppInfoPodProvider
     extends $AsyncNotifierProvider<AppInfoPod, PackageInfo> {
-  const AppInfoPodProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'appInfoPodProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  AppInfoPodProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appInfoPodProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$appInfoPodHash();
@@ -40,13 +40,15 @@ abstract class _$AppInfoPod extends $AsyncNotifier<PackageInfo> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref = this.ref as $Ref<AsyncValue<PackageInfo>, PackageInfo>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<PackageInfo>, PackageInfo>,
-        AsyncValue<PackageInfo>,
-        Object?,
-        Object?>;
-    element.handleValue(ref, created);
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<PackageInfo>, PackageInfo>,
+              AsyncValue<PackageInfo>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
   }
 }

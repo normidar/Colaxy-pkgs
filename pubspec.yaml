@@ -8,6 +8,8 @@ environment:
 
 dev_dependencies:
   melos: 8.2.2
+  # Needed so the root analysis_options.yaml can `include:` it.
+  very_good_analysis: ^10.3.0
 
 workspace:
   - packages/*
@@ -35,17 +37,44 @@ melos:
       run: melos exec -- dart fix --apply
       description: Run dart fix on all packages.
 
+    # Flutter packages must use `flutter test`; `dart test` cannot load the
+    # flutter_test bindings. Pure Dart packages use `dart test`. `melos run
+    # test` fans out to both so neither group is silently skipped.
     test:
+      run: melos run test:dart && melos run test:flutter
+      description: Run tests on all packages (Dart and Flutter).
+
+    test:dart:
       run: melos exec -- dart test
-      description: Run tests on all packages.
+      description: Run tests on pure Dart packages.
       packageFilters:
         dirExists: test
+        flutter: false
+
+    test:flutter:
+      run: melos exec -- flutter test
+      description: Run tests on Flutter packages.
+      packageFilters:
+        dirExists: test
+        flutter: true
 
     test:coverage:
-      run: melos exec -- dart test --coverage=coverage
+      run: melos run test:coverage:dart && melos run test:coverage:flutter
       description: Run tests with coverage on all packages.
+
+    test:coverage:dart:
+      run: melos exec -- dart test --coverage=coverage
+      description: Run tests with coverage on pure Dart packages.
       packageFilters:
         dirExists: test
+        flutter: false
+
+    test:coverage:flutter:
+      run: melos exec -- flutter test --coverage
+      description: Run tests with coverage on Flutter packages.
+      packageFilters:
+        dirExists: test
+        flutter: true
 
     lint:
       run: melos run analyze && melos run format

@@ -1,31 +1,30 @@
 ---
 dependencies:
-  app_lang_selector: ^0.1.0+3
+  app_lang_selector: ^0.2.0
   easy_localization: ^3.0.7
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.0.0
   package_info_plus: ^9.0.0
   riverpod_annotation: ^4.0.0
-  riverpod_helper: ^0.1.0+3
+  riverpod_helper: ^0.2.0
 description: A Flutter widget for displaying app information (name, version, build number) and licenses, with Riverpod integration and multi-language support.
 dev_dependencies:
-  auto_exporter: any
+  auto_exporter: ^4.1.1
   build_runner: ^2.0.0
-  flutter_lints: any
   flutter_test:
     sdk: flutter
   riverpod_generator: ^4.0.0
-  riverpod_lint: ^3.1.0
-  very_good_analysis: any
+  very_good_analysis: ^10.3.0
 environment:
-  flutter: '>=1.17.0'
-  sdk: ^3.5.0
+  flutter: '>=3.32.0'
+  sdk: ^3.8.0
 flutter:
   assets:
     - assets/localizations/
 homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_info_tile
 repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_info_tile
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
 name: app_info_tile
 topics:
   - app-info
@@ -33,5 +32,5 @@ topics:
   - package-info
   - app
   - easy-localization
-version: 0.1.0+4
+version: 0.2.0
 resolution: workspace

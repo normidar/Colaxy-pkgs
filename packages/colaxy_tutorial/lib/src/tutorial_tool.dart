@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:colaxy_tutorial/colaxy_tutorial.dart';
@@ -10,6 +11,16 @@ import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 class TutorialTool {
   /// Controls whether tutorials should be visible globally.
   static bool tutorialVisible = true;
+
+  /// Backdrop colour of the highlighted area in [showTutorial].
+  static Color highlightColor = const Color.fromARGB(255, 195, 226, 240);
+
+  /// Text style applied to tutorial content in [showTutorial].
+  static TextStyle contentTextStyle = const TextStyle(
+    fontWeight: FontWeight.bold,
+    color: Colors.black,
+    fontSize: 21,
+  );
 
   /// Guard a tutorial page.
   ///
@@ -28,11 +39,18 @@ class TutorialTool {
         final showed = prefs.getBool(key) ?? false;
         return showed;
       }(),
-      builder: (context, snapshot) => switch (snapshot.data) {
-        true => nextPage,
-        false => _TutorialPageView(pages: pages, nextPage: nextPage, id: id),
-        null =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      builder: (context, snapshot) {
+        // A failed read used to leave `snapshot.data` null forever, so the app
+        // sat on a spinner. Falling through to `nextPage` is the safe default:
+        // at worst the tutorial is shown once more than necessary.
+        if (snapshot.hasError) return nextPage;
+        return switch (snapshot.data) {
+          true => nextPage,
+          false => _TutorialPageView(pages: pages, nextPage: nextPage, id: id),
+          null => const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          ),
+        };
       },
     );
   }
@@ -81,10 +99,9 @@ class TutorialTool {
       await prefs.setBool('$packageName:$id', true);
     }
     const key = '$packageName:showed_ids';
-    await prefs.setStringList(
-      key,
-      <String>{...ids, ...(prefs.getStringList(key) ?? [])}.toList(),
-    );
+    // Sorted so the stored list is stable, and de-duplicated via the set.
+    final all = <String>{...ids, ...?prefs.getStringList(key)}.toList()..sort();
+    await prefs.setStringList(key, all);
   }
 
   /// Shows a tutorial with the specified data sets.
@@ -110,8 +127,7 @@ class TutorialTool {
       toShowIds.add(dataSet.id);
       targets.add(
         TargetFocus(
-          // チュートリアルの背景色
-          color: const Color.fromARGB(255, 195, 226, 240),
+          color: highlightColor,
           identify: dataSet.id,
           keyTarget: dataSet.key,
           alignSkip: Alignment.topRight,
@@ -121,11 +137,7 @@ class TutorialTool {
             TargetContent(
               align: dataSet.align.contentAlign,
               builder: (context, _) => DefaultTextStyle(
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  fontSize: 21,
-                ),
+                style: contentTextStyle,
                 child: dataSet.builder(context),
               ),
             ),
@@ -147,12 +159,14 @@ class TutorialTool {
       imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
     );
 
-    Future.delayed(const Duration(milliseconds: 300), () async {
-      if (buildContext.mounted) {
-        tutorialCoachMark.show(context: buildContext);
-        await saveShowedIds(toShowIds);
-      }
-    });
+    // Give the target widgets a frame to settle before highlighting them.
+    // This used to be a fire-and-forget `Future.delayed`, so callers could not
+    // await the result and a failed `saveShowedIds` was swallowed.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    if (buildContext.mounted) {
+      tutorialCoachMark.show(context: buildContext);
+      await saveShowedIds(toShowIds);
+    }
   }
 
   /// By condition maybe show or not.
@@ -214,6 +228,7 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
   @override
   Widget build(BuildContext context) {
     final isLastPage = _currentPage == widget.pages.length - 1;
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Stack(
@@ -230,9 +245,10 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
             top: MediaQuery.of(context).padding.top + 16,
             right: 16,
             child: TextButton(
-              onPressed: _finish,
+              onPressed: () => unawaited(_finish()),
               style: TextButton.styleFrom(
-                backgroundColor: Colors.black.withValues(alpha: 0.3),
+                backgroundColor: theme.colorScheme.scrim.withValues(alpha: 0.3),
+                foregroundColor: theme.colorScheme.onInverseSurface,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 8,
@@ -241,7 +257,6 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
               child: Text(
                 '$packageName:skip'.tr(),
                 style: const TextStyle(
-                  color: Colors.white,
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                 ),
@@ -249,16 +264,42 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
             ),
           ),
 
+          // Page indicator (bottom-centre)
+          if (widget.pages.length > 1)
+            Positioned(
+              bottom: MediaQuery.of(context).padding.bottom + 40,
+              left: 0,
+              right: 0,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  for (var i = 0; i < widget.pages.length; i++)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: i == _currentPage ? 24 : 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(
+                          alpha: i == _currentPage ? 1 : 0.35,
+                        ),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
           // Start button (bottom-right, only on last page)
           if (isLastPage)
             Positioned(
               bottom: MediaQuery.of(context).padding.bottom + 24,
               right: 24,
               child: ElevatedButton(
-                onPressed: _finish,
+                onPressed: () => unawaited(_finish()),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 32,
                     vertical: 16,
@@ -294,11 +335,15 @@ class _TutorialPageViewState extends State<_TutorialPageView> {
     _pageController = PageController();
   }
 
-  void _finish() {
-    TutorialTool.saveShowedIds([widget.id]);
+  Future<void> _finish() async {
+    // Persist *before* navigating. This used to be fire-and-forget, so leaving
+    // the page could race the write and the tutorial would show again.
+    await TutorialTool.saveShowedIds([widget.id]);
+    if (!mounted) return;
+
     final nextPage = widget.nextPage;
     if (nextPage != null) {
-      Navigator.of(context).pushReplacement(
+      await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (context) => nextPage,
         ),

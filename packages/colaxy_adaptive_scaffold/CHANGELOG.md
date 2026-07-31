@@ -1,3 +1,28 @@
+## 0.1.0
+
+### Breaking
+- The drawer header is no longer rendered by default. It previously showed a
+  hardcoded, untranslatable `'Menu'`; pass `drawerTitle` to bring it back.
+
+### Fixed
+- Pages keep their state when switching destinations. Only the selected page
+  was built before, so scroll positions and form input were discarded on every
+  switch; pages now live in an `IndexedStack`.
+- An empty `items` list no longer throws from `initialIndex.clamp(0, -1)` in
+  release builds.
+- The rail divider uses `Theme.dividerColor` instead of a hardcoded
+  `Colors.grey[300]`.
+- `MediaQuery.sizeOf` is used instead of `MediaQuery.of(...).size`.
+
+### Added
+- `AdaptiveScaffold.onDestinationSelected` and `AdaptiveScaffold.drawerTitle`.
+- `NavigationItem.selectedIcon` and `NavigationItem.tooltip`.
+- `appBar`, shown in every layout. Previously only the drawer layout had one, so
+  resizing the window made the app bar appear and disappear.
+- `railLeading` and `railTrailing`.
+- `lazy` (default true): a page is built the first time it is selected rather
+  than all pages up front. An `IndexedStack` builds every child, which would
+  otherwise run each page's `initState` at launch.
 ## 0.0.1+4
 
  - **FIX**: resolve crash risks and stale state issues found in code review.

@@ -22,7 +22,10 @@ class PkgsAssetLoader extends AssetLoader {
           ((await loadPackage(package, locale)) as Map<String, dynamic>?) ?? {};
       packageDatas = {...packageDatas, ...packageData};
     }
-    final mergedData = {...localeData, ...packageDatas};
+    // The app's own translations win over the packages'. Packages ship
+    // namespaced keys, but if one does collide the app must still be able to
+    // override it.
+    final mergedData = {...packageDatas, ...localeData};
     EasyLocalization.logger.debug('Merged data: $mergedData');
     return mergedData;
   }

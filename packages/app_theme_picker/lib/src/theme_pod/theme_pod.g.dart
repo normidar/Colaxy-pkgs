@@ -10,20 +10,20 @@ part of 'theme_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(ThemePod)
-const themePodProvider = ThemePodProvider._();
+final themePodProvider = ThemePodProvider._();
 
 final class ThemePodProvider
     extends $AsyncNotifierProvider<ThemePod, FlexScheme> {
-  const ThemePodProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'themePodProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  ThemePodProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'themePodProvider',
+        isAutoDispose: false,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
 
   @override
   String debugGetCreateSourceHash() => _$themePodHash();
@@ -33,20 +33,22 @@ final class ThemePodProvider
   ThemePod create() => ThemePod();
 }
 
-String _$themePodHash() => r'909b65632ef14653f7378f9a3e0cd1fb5fe3540b';
+String _$themePodHash() => r'8e30a02d4c081b80f0d210ebca43eccf844fb0d9';
 
 abstract class _$ThemePod extends $AsyncNotifier<FlexScheme> {
   FutureOr<FlexScheme> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build();
     final ref = this.ref as $Ref<AsyncValue<FlexScheme>, FlexScheme>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<FlexScheme>, FlexScheme>,
-        AsyncValue<FlexScheme>,
-        Object?,
-        Object?>;
-    element.handleValue(ref, created);
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<FlexScheme>, FlexScheme>,
+              AsyncValue<FlexScheme>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
   }
 }

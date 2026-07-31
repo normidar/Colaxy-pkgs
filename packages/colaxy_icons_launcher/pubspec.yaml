@@ -1,7 +1,8 @@
+homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_icons_launcher
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
 name: colaxy_icons_launcher
 description: A command-line tool that simplifies the task of updating your Flutter app's launcher icon.
-maintainer: Mrr Hak
-repository: https://github.com/normidar/Colaxy-pkgs/tree/main/packages/colaxy_icons_launcher
+repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_icons_launcher
 version: 0.2.0
 funding:
   - https://ko-fi.com/mrrhak

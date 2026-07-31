@@ -10,20 +10,20 @@ part of 'prefs_int_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsAliveIntPod)
-const prefsAliveIntPodProvider = PrefsAliveIntPodFamily._();
+final prefsAliveIntPodProvider = PrefsAliveIntPodFamily._();
 
 final class PrefsAliveIntPodProvider
     extends $AsyncNotifierProvider<PrefsAliveIntPod, int?> {
-  const PrefsAliveIntPodProvider._(
-      {required PrefsAliveIntPodFamily super.from,
-      required String super.argument})
-      : super(
-          retry: null,
-          name: r'prefsAliveIntPodProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  PrefsAliveIntPodProvider._({
+    required PrefsAliveIntPodFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'prefsAliveIntPodProvider',
+         isAutoDispose: false,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$prefsAliveIntPodHash();
@@ -50,25 +50,29 @@ final class PrefsAliveIntPodProvider
   }
 }
 
-String _$prefsAliveIntPodHash() => r'396f00773eec0d7ca28af80b35bfff3a24c3f8dc';
+String _$prefsAliveIntPodHash() => r'd586abb5ee4b2a341c61d8dcdb0781f2fa03595d';
 
 final class PrefsAliveIntPodFamily extends $Family
     with
-        $ClassFamilyOverride<PrefsAliveIntPod, AsyncValue<int?>, int?,
-            FutureOr<int?>, String> {
-  const PrefsAliveIntPodFamily._()
-      : super(
-          retry: null,
-          name: r'prefsAliveIntPodProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: false,
-        );
+        $ClassFamilyOverride<
+          PrefsAliveIntPod,
+          AsyncValue<int?>,
+          int?,
+          FutureOr<int?>,
+          String
+        > {
+  PrefsAliveIntPodFamily._()
+    : super(
+        retry: null,
+        name: r'prefsAliveIntPodProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: false,
+      );
 
   PrefsAliveIntPodProvider call(
     String key,
-  ) =>
-      PrefsAliveIntPodProvider._(argument: key, from: this);
+  ) => PrefsAliveIntPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsAliveIntPodProvider';
@@ -84,15 +88,20 @@ abstract class _$PrefsAliveIntPod extends $AsyncNotifier<int?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<int?>, int?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<int?>, int?>,
-        AsyncValue<int?>,
-        Object?,
-        Object?>;
-    element.handleValue(ref, created);
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<int?>, int?>,
+              AsyncValue<int?>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(
+      ref,
+      () => build(
+        _$args,
+      ),
+    );
   }
 }

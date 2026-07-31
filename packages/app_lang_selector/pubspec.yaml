@@ -5,25 +5,24 @@ dependencies:
     sdk: flutter
   flutter_riverpod: ^3.0.3
   riverpod_annotation: ^4.0.0
-  riverpod_helper: ^0.1.0+3
+  riverpod_helper: ^0.2.0
 description: A Flutter package for easy language selection with beautiful UI and state management support.
 dev_dependencies:
-  auto_exporter: any
+  auto_exporter: ^4.1.1
   build_runner: ^2.4.12
-  flutter_lints: ^6.0.0
   flutter_test:
     sdk: flutter
   riverpod_generator: ^4.0.0
-  riverpod_lint: ^3.1.0
-  very_good_analysis: any
+  very_good_analysis: ^10.3.0
 environment:
-  flutter: '>=1.17.0'
-  sdk: ^3.5.0
+  flutter: '>=3.32.0'
+  sdk: ^3.8.0
 flutter:
   assets:
     - assets/localizations/
 homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_lang_selector
-issue_tracker: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_lang_selector/issues
+repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/app_lang_selector
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
 name: app_lang_selector
 topics:
   - language
@@ -31,5 +30,5 @@ topics:
   - internationalization
   - i18n
   - globalization
-version: 0.1.0+4
+version: 0.2.0
 resolution: workspace

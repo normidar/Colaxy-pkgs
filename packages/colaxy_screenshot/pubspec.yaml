@@ -12,17 +12,17 @@ dependencies:
   window_manager: ^0.5.2
 description: Automated app store screenshot generation for iOS, Android, and macOS across multiple devices and languages, with Fastlane integration.
 dev_dependencies:
-  auto_exporter: ^4.0.0
+  auto_exporter: ^4.1.1
   build_runner: ^2.0.0
-  flutter_lints: any
   flutter_test:
     sdk: flutter
-  very_good_analysis: any
+  very_good_analysis: ^10.3.0
 environment:
-  flutter: '>=1.17.0'
-  sdk: ^3.5.0
+  flutter: '>=3.32.0'
+  sdk: ^3.8.0
 homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_screenshot
 repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_screenshot
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
 name: colaxy_screenshot
 topics:
   - screenshot
@@ -30,5 +30,5 @@ topics:
   - automation
   - image
   - png
-version: 0.7.1
+version: 0.8.0
 resolution: workspace

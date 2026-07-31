@@ -1,3 +1,36 @@
+## 0.8.0
+
+### Breaking
+- `ScreenshotConfig.captureDelay` is now `final`. The run used to mutate it in
+  place to lengthen the first capture; use `firstCaptureDelay` instead.
+
+### Fixed
+- A locale with no store mapping is reported up front, naming the locale and
+  the supported set, instead of crashing partway through a run on `!`.
+- The config file is restored in a `finally` block. If a run threw, the app was
+  left in `launch_mode: screenshot` and would start capturing again on the next
+  normal launch.
+- `backgroundColor` and `titleStyle` (on both `ScreenshotConfig` and
+  `ScreenshotPageInfo`) are actually applied; they were previously ignored in
+  favour of hardcoded values. The defaults match the old hardcoded ones.
+- The `!` chains around capturing and decoding now raise errors naming the page,
+  mode and locale instead of "Null check operator used on a null value".
+- `getJsonConfig` reports which key in `assets/config.json` is not a string,
+  rather than surfacing a `CastError` from an unrelated line later on.
+
+### Added
+- `ScreenshotConfig.firstCaptureDelay` and
+  `ScreenshotConfig.featureGraphicIconAsset` (the icon path was hardcoded to
+  `assets/app_icons/icon.png`).
+
+### Changed
+- `ScreenshotModeInfo.all` includes macOS and its entries are `const`; they were
+  mutable statics and the list omitted macOS.
+- Window resizing lives in one place (`resizeWindowTo`); it was duplicated with a
+  separate copy of the `3.3` scale factor in each.
+- iOS/macOS store device slots are named constants
+  (`kIosPhoneDeviceName`, `kIosTabletDeviceName`, `kMacDeviceName`).
+
 ## 0.7.1
 
  - **FIX**: reset repo link and homepage link.

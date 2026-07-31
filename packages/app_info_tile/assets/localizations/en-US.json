@@ -1,5 +1,5 @@
 {
-  "license_hint": "You can view the license information by clicking [VIEW LICENSE].",
-  "app_info_tile_title": "About",
-  "view_license": "VIEW LICENSE"
+  "app_info_tile:license_hint": "You can view the license information by clicking [VIEW LICENSE].",
+  "app_info_tile:title": "About",
+  "app_info_tile:view_license": "VIEW LICENSE"
 }

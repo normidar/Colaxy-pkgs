@@ -1,5 +1,5 @@
 {
-    "select_lang_page": "Language Selection",
-    "follow_system": "Follow System",
-    "select_lang": "Select Language"
+  "app_lang_selector:select_lang_page": "Language Selection",
+  "app_lang_selector:follow_system": "Follow System",
+  "app_lang_selector:select_lang": "Select Language"
 }

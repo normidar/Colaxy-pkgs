@@ -1,3 +1,24 @@
+## 0.2.0
+
+### Breaking
+- Namespaced the bundled translation keys with `app_info_tile:` so they cannot
+  collide with the host app's keys (`app_info_tile_title` is now
+  `app_info_tile:title`).
+- `AppInfoTile.getAlertDialog` is now private.
+
+### Fixed
+- The dialog no longer depends on the host app defining an `app_name`
+  translation key; it falls back to the platform-reported app name. Pass
+  `appName` to override.
+- The loading state renders as a `ListTile` instead of a centered spinner, so a
+  settings list no longer jumps when the package info resolves.
+- The license button uses the theme's primary color instead of a hardcoded
+  `Colors.blue`.
+
+### Added
+- `AppInfoTile.appName`, `applicationIcon` and `applicationLegalese`.
+- Widget tests covering the dialog, the app-name fallback and the license page.
+
 ## 0.1.0+4
 
  - **CHORE**: upgrade riverpod_generator to ^4.0.0 and riverpod_lint to ^3.1.0.

@@ -4,7 +4,7 @@ import 'package:tutorial_coach_mark/tutorial_coach_mark.dart';
 sealed class TutorialAlign {
   /// Creates a tutorial alignment with the specified content alignment.
   const TutorialAlign._({required ContentAlign contentAlign})
-      : _contentAlign = contentAlign;
+    : _contentAlign = contentAlign;
 
   /// Aligns tutorial content to the bottom of the focus area.
   static TutorialAlign get bottom => const _TutorialAlignBottom();

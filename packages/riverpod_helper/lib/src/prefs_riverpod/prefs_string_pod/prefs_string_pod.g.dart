@@ -10,20 +10,20 @@ part of 'prefs_string_pod.dart';
 // ignore_for_file: type=lint, type=warning
 
 @ProviderFor(PrefsStringPod)
-const prefsStringPodProvider = PrefsStringPodFamily._();
+final prefsStringPodProvider = PrefsStringPodFamily._();
 
 final class PrefsStringPodProvider
     extends $AsyncNotifierProvider<PrefsStringPod, String?> {
-  const PrefsStringPodProvider._(
-      {required PrefsStringPodFamily super.from,
-      required String super.argument})
-      : super(
-          retry: null,
-          name: r'prefsStringPodProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
+  PrefsStringPodProvider._({
+    required PrefsStringPodFamily super.from,
+    required String super.argument,
+  }) : super(
+         retry: null,
+         name: r'prefsStringPodProvider',
+         isAutoDispose: true,
+         dependencies: null,
+         $allTransitiveDependencies: null,
+       );
 
   @override
   String debugGetCreateSourceHash() => _$prefsStringPodHash();
@@ -50,25 +50,29 @@ final class PrefsStringPodProvider
   }
 }
 
-String _$prefsStringPodHash() => r'c4d543d152b20c7e6d18f589e016ec0744ab6f59';
+String _$prefsStringPodHash() => r'f6f85f04947d418e4b42d2769b0c9654d89a9bd2';
 
 final class PrefsStringPodFamily extends $Family
     with
-        $ClassFamilyOverride<PrefsStringPod, AsyncValue<String?>, String?,
-            FutureOr<String?>, String> {
-  const PrefsStringPodFamily._()
-      : super(
-          retry: null,
-          name: r'prefsStringPodProvider',
-          dependencies: null,
-          $allTransitiveDependencies: null,
-          isAutoDispose: true,
-        );
+        $ClassFamilyOverride<
+          PrefsStringPod,
+          AsyncValue<String?>,
+          String?,
+          FutureOr<String?>,
+          String
+        > {
+  PrefsStringPodFamily._()
+    : super(
+        retry: null,
+        name: r'prefsStringPodProvider',
+        dependencies: null,
+        $allTransitiveDependencies: null,
+        isAutoDispose: true,
+      );
 
   PrefsStringPodProvider call(
     String key,
-  ) =>
-      PrefsStringPodProvider._(argument: key, from: this);
+  ) => PrefsStringPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsStringPodProvider';
@@ -84,15 +88,20 @@ abstract class _$PrefsStringPod extends $AsyncNotifier<String?> {
   @$mustCallSuper
   @override
   void runBuild() {
-    final created = build(
-      _$args,
-    );
     final ref = this.ref as $Ref<AsyncValue<String?>, String?>;
-    final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<String?>, String?>,
-        AsyncValue<String?>,
-        Object?,
-        Object?>;
-    element.handleValue(ref, created);
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<String?>, String?>,
+              AsyncValue<String?>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(
+      ref,
+      () => build(
+        _$args,
+      ),
+    );
   }
 }
