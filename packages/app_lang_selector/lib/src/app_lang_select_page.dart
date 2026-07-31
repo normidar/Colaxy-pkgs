@@ -128,6 +128,9 @@ class AppLangSelectPage extends ConsumerWidget {
       Intl.defaultLocale = value.languageCode;
       await context.setLocale(value.toLocale());
     }
+    // This runs unawaited, so `ref` may outlive the page if it was popped
+    // during the locale change; reading a disposed ref throws into the zone.
+    if (!context.mounted) return;
     ref
         .read<SelectingLang>(selectingLangProvider.notifier)
         .setLang(value.toString());

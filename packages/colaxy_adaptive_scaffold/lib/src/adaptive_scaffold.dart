@@ -15,8 +15,9 @@ import 'package:flutter/material.dart';
 /// the selected index yourself. Pass [onDestinationSelected] if you want to be
 /// notified of changes.
 ///
-/// Every page stays alive in an [IndexedStack], so switching destinations
-/// preserves each page's state.
+/// Pages stay alive in an [IndexedStack], so switching destinations preserves
+/// each page's state. By default a page is only built the first time it is
+/// selected — see [AdaptiveScaffold.lazy].
 ///
 /// ## Parameters
 ///
@@ -55,6 +56,9 @@ import 'package:flutter/material.dart';
 ///
 /// - **[railLeading]** / **[railTrailing]**: Widgets above and below the
 ///   destinations in the rail.
+///
+/// - **[lazy]**: Build each page on first selection rather than all of them up
+///   front (default: true).
 ///
 /// ## Example
 ///
@@ -102,6 +106,7 @@ class AdaptiveScaffold extends StatefulWidget {
     this.appBar,
     this.railLeading,
     this.railTrailing,
+    this.lazy = true,
     super.key,
   });
 
@@ -182,6 +187,17 @@ class AdaptiveScaffold extends StatefulWidget {
   /// Widget shown below the destinations in the [NavigationRail].
   final Widget? railTrailing;
 
+  /// Whether a page is built only once it is first selected.
+  ///
+  /// Pages live in an [IndexedStack] so their state survives switching
+  /// destinations, but an [IndexedStack] builds every child up front — which
+  /// would run the `initState` of every page (and any request it starts) at
+  /// launch. With [lazy] on, a page is built the first time it is selected and
+  /// kept alive from then on.
+  ///
+  /// Set to false to build every page immediately, e.g. to warm them up.
+  final bool lazy;
+
   @override
   State<AdaptiveScaffold> createState() => _AdaptiveScaffoldState();
 }
@@ -189,11 +205,18 @@ class AdaptiveScaffold extends StatefulWidget {
 class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
   late int _selectedIndex;
 
+  /// Indices that have been selected at least once.
+  ///
+  /// Used to keep unvisited pages out of the [IndexedStack] until they are
+  /// needed; see [AdaptiveScaffold.lazy].
+  final _visited = <int>{};
+
   @override
   void initState() {
     super.initState();
     assert(widget.items.isNotEmpty, 'items must contain at least one item');
     _selectedIndex = _clampIndex(widget.initialIndex);
+    _visited.add(_selectedIndex);
   }
 
   @override
@@ -201,6 +224,10 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
     super.didUpdateWidget(oldWidget);
     // Keep the selection valid if the items list shrinks.
     _selectedIndex = _clampIndex(_selectedIndex);
+    if (widget.items.length != oldWidget.items.length) {
+      _visited.removeWhere((i) => i >= widget.items.length);
+    }
+    _visited.add(_selectedIndex);
   }
 
   /// Clamps [index] into range, tolerating an empty [AdaptiveScaffold.items].
@@ -215,6 +242,7 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
   void _onDestinationSelected(int index) {
     setState(() {
       _selectedIndex = index;
+      _visited.add(index);
     });
     widget.onDestinationSelected?.call(index);
   }
@@ -236,12 +264,20 @@ class _AdaptiveScaffoldState extends State<AdaptiveScaffold> {
     final useDrawer =
         !useRail && widget.items.length > widget.maxBottomNavigationItems;
 
-    // Every page is kept alive in an IndexedStack so switching destinations
+    // Pages are kept alive in an IndexedStack so switching destinations
     // preserves each page's state (scroll offset, form input, ...) instead of
-    // rebuilding it from scratch.
+    // rebuilding it from scratch. Unvisited pages are held back until they are
+    // selected, so an IndexedStack does not run every page's initState at
+    // launch (see AdaptiveScaffold.lazy).
     final body = IndexedStack(
       index: _selectedIndex,
-      children: widget.items.map((item) => item.page).toList(),
+      children: [
+        for (var i = 0; i < widget.items.length; i++)
+          if (!widget.lazy || _visited.contains(i))
+            widget.items[i].page
+          else
+            const SizedBox.shrink(),
+      ],
     );
 
     if (useRail) {

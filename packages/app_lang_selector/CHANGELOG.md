@@ -10,7 +10,8 @@
 - Migrated off the `Radio.groupValue`/`Radio.onChanged` pair deprecated in
   Flutter 3.32; the page now uses a `RadioGroup` with `RadioListTile`.
 - `LangCode.hashCode` uses `Object.hash` instead of XOR.
-
+- The language selection no longer reads a possibly-disposed `ref` after
+  awaiting the locale change.
 ### Added
 - `LangCode.system`, the sentinel for "follow the system language".
 - `bundledLocales`, the set of locales this package ships translations for.

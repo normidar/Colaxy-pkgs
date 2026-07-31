@@ -46,19 +46,25 @@ class Prefs {
   static Future<T?> getOrNull<T>(String key) async {
     final prefs = await SharedPreferences.getInstance();
     // There is no value to pattern match on when reading, so the stored type
-    // has to be selected from the type argument.
-    // ignore: switch_on_type
-    return switch (T) {
-      const (bool) => prefs.getBool(key) as T?,
-      const (int) => prefs.getInt(key) as T?,
-      const (double) => prefs.getDouble(key) as T?,
-      const (String) => prefs.getString(key) as T?,
-      const (List<String>) => prefs.getStringList(key) as T?,
-      // Previously this fell through to `prefs.get(key) as T?`, which turned an
-      // unsupported type into a confusing CastError at some later point.
-      _ => throw UnsupportedPrefsTypeError(T),
-    };
+    // has to be selected from the type argument. `_typeIs` accepts both `X` and
+    // `X?`, because `getOrNull<String?>` is a reasonable thing to write and an
+    // exact match against `String` would reject it.
+    if (_typeIs<T, bool>()) return prefs.getBool(key) as T?;
+    if (_typeIs<T, int>()) return prefs.getInt(key) as T?;
+    if (_typeIs<T, double>()) return prefs.getDouble(key) as T?;
+    if (_typeIs<T, String>()) return prefs.getString(key) as T?;
+    if (_typeIs<T, List<String>>()) return prefs.getStringList(key) as T?;
+    // Previously this fell through to `prefs.get(key) as T?`, which turned an
+    // unsupported type into a confusing CastError at some later point.
+    throw UnsupportedPrefsTypeError(T);
   }
+
+  /// Whether `T` is `S` or `S?`.
+  ///
+  /// Comparing `T == S` cannot see through nullability, and there is no way to
+  /// write a `Type` literal for `S?`; going through a generic list makes the
+  /// subtype check the compiler already knows how to do.
+  static bool _typeIs<T, S>() => <T>[] is List<S?>;
 
   /// Get value if exists, otherwise set [defaultValue] and return it.
   static Future<T> getOrSet<T>(String key, T defaultValue) async {

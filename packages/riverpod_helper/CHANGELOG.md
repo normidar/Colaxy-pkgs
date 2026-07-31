@@ -19,7 +19,9 @@
   provider through `AsyncLoading` on every write.
 - The map pods report which key holds invalid JSON instead of throwing an
   unattributed `FormatException`/`CastError`.
-
+- `Prefs.get`/`getOrNull` accept a nullable type argument. Rejecting
+  `getOrNull<String?>` as unsupported was a regression against the previous
+  unchecked fallback.
 ### Added
 - `Prefs.update` accepts an async updater.
 - `reportRiverpodError`, for sending a provider error to `FlutterError`.

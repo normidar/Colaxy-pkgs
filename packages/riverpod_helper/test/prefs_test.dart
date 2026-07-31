@@ -59,6 +59,15 @@ void main() {
       expect(await Prefs.getOrNull<String>('missing'), isNull);
     });
 
+    test('accepts a nullable type argument', () async {
+      // `getOrNull<String?>` is a natural thing to write. Matching `T` against
+      // `String` exactly used to reject it as an unsupported type.
+      await Prefs.set('s', 'hello');
+      expect(await Prefs.getOrNull<String?>('s'), 'hello');
+      expect(await Prefs.getOrNull<int?>('missing'), isNull);
+      expect(await Prefs.get<List<String>?>('missing', const []), isEmpty);
+    });
+
     test('reading an unsupported type throws instead of a CastError', () async {
       // Previously this fell through to `prefs.get(key) as T?`.
       expect(

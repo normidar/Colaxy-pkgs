@@ -131,6 +131,31 @@ void main() {
     expect(_CountingPageState.initCounts['Page0'], 1);
   });
 
+  testWidgets('only builds a page once it is first selected', (tester) async {
+    await _pump(tester, AdaptiveScaffold(items: _items(3)), size: _portrait);
+
+    // An IndexedStack builds every child, which would run each page's
+    // initState (and anything it kicks off) at launch.
+    expect(_CountingPageState.initCounts.keys, ['Page0']);
+
+    await tester.tap(find.text('Item2'));
+    await tester.pumpAndSettle();
+
+    expect(_CountingPageState.initCounts.keys, ['Page0', 'Page2']);
+    // Page0 is still alive, not rebuilt.
+    expect(_CountingPageState.initCounts['Page0'], 1);
+  });
+
+  testWidgets('lazy: false builds every page up front', (tester) async {
+    await _pump(
+      tester,
+      AdaptiveScaffold(items: _items(3), lazy: false),
+      size: _portrait,
+    );
+
+    expect(_CountingPageState.initCounts.keys, ['Page0', 'Page1', 'Page2']);
+  });
+
   testWidgets('reports selection changes through onDestinationSelected', (
     tester,
   ) async {

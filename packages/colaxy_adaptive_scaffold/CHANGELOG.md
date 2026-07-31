@@ -7,7 +7,7 @@
 ### Fixed
 - Pages keep their state when switching destinations. Only the selected page
   was built before, so scroll positions and form input were discarded on every
-  switch; all pages now live in an `IndexedStack`.
+  switch; pages now live in an `IndexedStack`.
 - An empty `items` list no longer throws from `initialIndex.clamp(0, -1)` in
   release builds.
 - The rail divider uses `Theme.dividerColor` instead of a hardcoded
@@ -20,7 +20,9 @@
 - `appBar`, shown in every layout. Previously only the drawer layout had one, so
   resizing the window made the app bar appear and disappear.
 - `railLeading` and `railTrailing`.
-
+- `lazy` (default true): a page is built the first time it is selected rather
+  than all pages up front. An `IndexedStack` builds every child, which would
+  otherwise run each page's `initState` at launch.
 ## 0.0.1+4
 
  - **FIX**: resolve crash risks and stale state issues found in code review.
