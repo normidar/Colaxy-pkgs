@@ -68,7 +68,7 @@ String _androidLocaleName(Locale locale) =>
 const kIosPhoneDeviceName = 'iphone65';
 
 /// App Store Connect device slot for tablet screenshots.
-const kIosTabletDeviceName = 'ipadPro129';
+const kIosTabletDeviceName = 'ipadPro13';
 
 /// App Store Connect device slot for macOS screenshots.
 const kMacDeviceName = 'mac';

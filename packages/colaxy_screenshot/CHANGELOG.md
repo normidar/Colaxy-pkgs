@@ -1,3 +1,12 @@
+## 0.8.1
+
+### Changed
+- iPad screenshots now target Apple's 13" iPad Pro requirement instead of the
+  retired 12.9" one: `ScreenshotModeInfo.tablet.deviceSize` is `2064×2752`
+  (was `2048×2732`), and `kIosTabletDeviceName` is `ipadPro13` (was
+  `ipadPro129`), which changes the output file names under
+  `fastlane/screenshots/<locale>/`.
+
 ## 0.8.0
 
 ### Breaking

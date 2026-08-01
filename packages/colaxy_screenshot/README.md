@@ -171,7 +171,7 @@ your_app/
 │   ├── screenshots/
 │   │   ├── en-US/
 │   │   │   ├── 1_iphone65_1.welcome.png
-│   │   │   ├── 1_ipadPro129_1.welcome.png
+│   │   │   ├── 1_ipadPro13_1.welcome.png
 │   │   │   └── 1_mac_1.welcome.png        # enableMacos: true のみ
 │   │   ├── ja/
 │   │   └── zh-Hans/
@@ -192,8 +192,8 @@ your_app/
 
 ### Tablet Screenshots
 
-- **iOS**: iPad Pro 11" (2048×2732)
-- **Android**: 10-inch tablet screenshots (2048×2732)
+- **iOS**: iPad Pro 13" (2064×2752)
+- **Android**: 10-inch tablet screenshots (2064×2752)
 
 ### macOS Screenshots (`enableMacos: true`)
 

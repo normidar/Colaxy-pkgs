@@ -19,10 +19,10 @@ class ScreenshotModeInfo {
     deviceSize: Size(1284, 2778),
   );
 
-  /// iPad Pro 12.9" store dimensions.
+  /// iPad Pro 13" store dimensions.
   static const tablet = ScreenshotModeInfo(
     mode: ScreenshotMode.tablet,
-    deviceSize: Size(2048, 2732),
+    deviceSize: Size(2064, 2752),
   );
 
   /// Mac App Store dimensions.
