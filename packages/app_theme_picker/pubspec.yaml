@@ -1,6 +1,6 @@
 ---
 dependencies:
-  app_lang_selector: ^0.2.0
+  app_lang_selector: ^0.3.0
   easy_localization: ^3.0.7
   flex_color_scheme: ^8.2.0
   flutter:
@@ -34,5 +34,5 @@ topics:
   - style
   - picker
   - easy-localization
-version: 0.3.0
+version: 0.4.0
 resolution: workspace

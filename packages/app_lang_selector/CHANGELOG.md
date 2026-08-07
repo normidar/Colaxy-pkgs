@@ -1,3 +1,10 @@
+## 0.3.0
+
+### Added
+- `onLangChanged` callback, invoked after `SelectingLang.setLang` applies a
+  new language. Lets a host app observe language changes (e.g. for analytics)
+  without depending on Riverpod.
+
 ## 0.2.0
 
 ### Breaking

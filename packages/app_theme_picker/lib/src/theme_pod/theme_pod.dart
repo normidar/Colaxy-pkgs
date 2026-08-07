@@ -10,6 +10,12 @@ part 'theme_pod.g.dart';
 /// `defaultFlexScheme = FlexScheme.blue;`
 FlexScheme defaultFlexScheme = FlexScheme.material;
 
+/// Called after [ThemePod.changeTheme] persists a new scheme.
+///
+/// Assign this to observe theme changes (e.g. for analytics) without
+/// depending on Riverpod: `onThemeChanged = (scheme) => myLogger(scheme);`
+void Function(FlexScheme scheme)? onThemeChanged;
+
 @Riverpod(keepAlive: true)
 class ThemePod extends _$ThemePod {
   final _prefKey = 'app_theme_picker:theme';
@@ -34,5 +40,6 @@ class ThemePod extends _$ThemePod {
         .read(prefsAliveIntPodProvider(_prefKey).notifier)
         .setValue(theme.index);
     state = AsyncData(theme);
+    onThemeChanged?.call(theme);
   }
 }

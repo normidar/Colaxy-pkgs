@@ -1,3 +1,11 @@
+## 0.4.0
+
+### Added
+- `onThemeChanged` and `onThemeModeChanged` callbacks, invoked after
+  `ThemePod.changeTheme` / `ThemeModePod.changeThemeMode` persist a new value.
+  Lets a host app observe theme changes (e.g. for analytics) without
+  depending on Riverpod.
+
 ## 0.3.0
 
 ### Breaking

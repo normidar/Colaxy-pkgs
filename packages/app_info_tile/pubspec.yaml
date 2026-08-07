@@ -1,6 +1,6 @@
 ---
 dependencies:
-  app_lang_selector: ^0.2.0
+  app_lang_selector: ^0.3.0
   easy_localization: ^3.0.7
   flutter:
     sdk: flutter

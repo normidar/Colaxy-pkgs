@@ -11,8 +11,8 @@ dependencies:
   flutter:
     sdk: flutter
   app_info_tile: ^0.2.0
-  app_lang_selector: ^0.2.0
-  app_theme_picker: ^0.3.0
+  app_lang_selector: ^0.3.0
+  app_theme_picker: ^0.4.0
   colaxy_adaptive_scaffold: ^0.1.0
   colaxy_screenshot: ^0.8.0
   riverpod_helper: ^0.2.0
