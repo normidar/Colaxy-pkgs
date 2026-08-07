@@ -5,7 +5,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.0.3
-  package_info_plus: ^9.0.0
+  package_info_plus: ^10.2.1
   shared_preferences: ^2.2.3
   tutorial_coach_mark: ^1.2.12
 description: A tool for showing tutorials, developed on tutorial_coach_mark, more easier to use, more features.
