@@ -70,9 +70,8 @@ final class DarkThemeDataFamily extends $Family
         isAutoDispose: true,
       );
 
-  DarkThemeDataProvider call([
-    String? fontFamily,
-  ]) => DarkThemeDataProvider._(argument: fontFamily, from: this);
+  DarkThemeDataProvider call([String? fontFamily]) =>
+      DarkThemeDataProvider._(argument: fontFamily, from: this);
 
   @override
   String toString() => r'darkThemeDataProvider';
@@ -82,9 +81,7 @@ abstract class _$DarkThemeData extends $AsyncNotifier<ThemeData> {
   late final _$args = ref.$arg as String?;
   String? get fontFamily => _$args;
 
-  FutureOr<ThemeData> build([
-    String? fontFamily,
-  ]);
+  FutureOr<ThemeData> build([String? fontFamily]);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -97,11 +94,6 @@ abstract class _$DarkThemeData extends $AsyncNotifier<ThemeData> {
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }

@@ -70,9 +70,8 @@ final class PrefsDoublePodFamily extends $Family
         isAutoDispose: true,
       );
 
-  PrefsDoublePodProvider call(
-    String key,
-  ) => PrefsDoublePodProvider._(argument: key, from: this);
+  PrefsDoublePodProvider call(String key) =>
+      PrefsDoublePodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsDoublePodProvider';
@@ -82,9 +81,7 @@ abstract class _$PrefsDoublePod extends $AsyncNotifier<double?> {
   late final _$args = ref.$arg as String;
   String get key => _$args;
 
-  FutureOr<double?> build(
-    String key,
-  );
+  FutureOr<double?> build(String key);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -97,11 +94,6 @@ abstract class _$PrefsDoublePod extends $AsyncNotifier<double?> {
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }

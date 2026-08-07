@@ -70,9 +70,8 @@ final class PrefsMapPodFamily extends $Family
         isAutoDispose: true,
       );
 
-  PrefsMapPodProvider call(
-    String key,
-  ) => PrefsMapPodProvider._(argument: key, from: this);
+  PrefsMapPodProvider call(String key) =>
+      PrefsMapPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsMapPodProvider';
@@ -82,9 +81,7 @@ abstract class _$PrefsMapPod extends $AsyncNotifier<Map<String, dynamic>?> {
   late final _$args = ref.$arg as String;
   String get key => _$args;
 
-  FutureOr<Map<String, dynamic>?> build(
-    String key,
-  );
+  FutureOr<Map<String, dynamic>?> build(String key);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -102,11 +99,6 @@ abstract class _$PrefsMapPod extends $AsyncNotifier<Map<String, dynamic>?> {
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }

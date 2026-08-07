@@ -4,7 +4,7 @@ dependencies:
   flutter:
     sdk: flutter
   flutter_riverpod: ^3.0.3
-  riverpod_annotation: ^4.0.0
+  riverpod_annotation: ">=4.0.2 <4.0.3"
   shared_preferences: ^2.0.0
 description: A helpful tool for riverpod developer.
 dev_dependencies:
@@ -13,7 +13,7 @@ dev_dependencies:
   build_test: ^3.3.3
   flutter_test:
     sdk: flutter
-  riverpod_generator: ^4.0.0
+  riverpod_generator: ">=4.0.3 <4.0.4"
   very_good_analysis: ^10.3.0
 environment:
   flutter: '>=3.32.0'
@@ -28,5 +28,5 @@ topics:
   - preferences
   - state-management
   - helper
-version: 0.2.0
+version: 0.2.1
 resolution: workspace

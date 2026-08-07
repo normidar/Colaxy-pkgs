@@ -70,9 +70,8 @@ final class PrefsAliveBoolPodFamily extends $Family
         isAutoDispose: false,
       );
 
-  PrefsAliveBoolPodProvider call(
-    String key,
-  ) => PrefsAliveBoolPodProvider._(argument: key, from: this);
+  PrefsAliveBoolPodProvider call(String key) =>
+      PrefsAliveBoolPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsAliveBoolPodProvider';
@@ -82,9 +81,7 @@ abstract class _$PrefsAliveBoolPod extends $AsyncNotifier<bool?> {
   late final _$args = ref.$arg as String;
   String get key => _$args;
 
-  FutureOr<bool?> build(
-    String key,
-  );
+  FutureOr<bool?> build(String key);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -97,11 +94,6 @@ abstract class _$PrefsAliveBoolPod extends $AsyncNotifier<bool?> {
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }

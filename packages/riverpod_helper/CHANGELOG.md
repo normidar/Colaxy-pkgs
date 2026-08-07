@@ -1,3 +1,14 @@
+## 0.2.1
+
+### Fixed
+- Narrowed the `riverpod_annotation`/`riverpod_generator` version constraints
+  and regenerated the `.g.dart` files. `riverpod_annotation` exact-pins a
+  specific `riverpod` core release internally, and this package's previous
+  `^4.0.0` range let a host app's pub resolution drift to a newer
+  `riverpod_annotation` (and therefore a newer `riverpod` core) than the
+  committed generated code was built against, breaking compilation with
+  errors like `runBuild`/`handleValue` signature mismatches.
+
 ## 0.2.0
 
 ### Breaking

@@ -1,3 +1,14 @@
+## 0.3.1
+
+### Fixed
+- Bumped the `app_lang_selector` dependency to `^0.3.1` and `flutter_riverpod`'s
+  lower bound. `TutorialResetTile` pulls in `app_lang_selector`'s
+  `selectingLangProvider`, and the previously-published `app_lang_selector`
+  versions could resolve to a `riverpod` core newer than their generated code
+  supported, breaking compilation for any app using both this package and a
+  recent Riverpod release. See `app_lang_selector`'s 0.3.1 changelog for
+  details.
+
 ## 0.3.0
 
 ### Fixed

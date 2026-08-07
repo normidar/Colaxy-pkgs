@@ -92,9 +92,8 @@ final class PrefsAliveMapPodFamily extends $Family
   /// The auto-dispose family had a map pod but this one did not, so a map was the
   /// only type you could not keep alive.
 
-  PrefsAliveMapPodProvider call(
-    String key,
-  ) => PrefsAliveMapPodProvider._(argument: key, from: this);
+  PrefsAliveMapPodProvider call(String key) =>
+      PrefsAliveMapPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsAliveMapPodProvider';
@@ -110,9 +109,7 @@ abstract class _$PrefsAliveMapPod
   late final _$args = ref.$arg as String;
   String get key => _$args;
 
-  FutureOr<Map<String, dynamic>?> build(
-    String key,
-  );
+  FutureOr<Map<String, dynamic>?> build(String key);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -130,11 +127,6 @@ abstract class _$PrefsAliveMapPod
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }

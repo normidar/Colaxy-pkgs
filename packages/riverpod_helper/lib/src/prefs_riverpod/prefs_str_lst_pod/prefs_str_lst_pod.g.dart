@@ -70,9 +70,8 @@ final class PrefsStrLstPodFamily extends $Family
         isAutoDispose: true,
       );
 
-  PrefsStrLstPodProvider call(
-    String key,
-  ) => PrefsStrLstPodProvider._(argument: key, from: this);
+  PrefsStrLstPodProvider call(String key) =>
+      PrefsStrLstPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsStrLstPodProvider';
@@ -82,9 +81,7 @@ abstract class _$PrefsStrLstPod extends $AsyncNotifier<List<String>?> {
   late final _$args = ref.$arg as String;
   String get key => _$args;
 
-  FutureOr<List<String>?> build(
-    String key,
-  );
+  FutureOr<List<String>?> build(String key);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -97,11 +94,6 @@ abstract class _$PrefsStrLstPod extends $AsyncNotifier<List<String>?> {
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }

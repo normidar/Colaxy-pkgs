@@ -33,7 +33,7 @@ final class ThemeModePodProvider
   ThemeModePod create() => ThemeModePod();
 }
 
-String _$themeModePodHash() => r'5642cb227774d0f6f32c7c73008f1fa87be7bdc1';
+String _$themeModePodHash() => r'5366ade248562de667a485a9405b3ae1d5a52d85';
 
 abstract class _$ThemeModePod extends $AsyncNotifier<ThemeMode> {
   FutureOr<ThemeMode> build();

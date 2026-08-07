@@ -70,9 +70,8 @@ final class LightThemeDataFamily extends $Family
         isAutoDispose: true,
       );
 
-  LightThemeDataProvider call([
-    String? fontFamily,
-  ]) => LightThemeDataProvider._(argument: fontFamily, from: this);
+  LightThemeDataProvider call([String? fontFamily]) =>
+      LightThemeDataProvider._(argument: fontFamily, from: this);
 
   @override
   String toString() => r'lightThemeDataProvider';
@@ -82,9 +81,7 @@ abstract class _$LightThemeData extends $AsyncNotifier<ThemeData> {
   late final _$args = ref.$arg as String?;
   String? get fontFamily => _$args;
 
-  FutureOr<ThemeData> build([
-    String? fontFamily,
-  ]);
+  FutureOr<ThemeData> build([String? fontFamily]);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -97,11 +94,6 @@ abstract class _$LightThemeData extends $AsyncNotifier<ThemeData> {
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }

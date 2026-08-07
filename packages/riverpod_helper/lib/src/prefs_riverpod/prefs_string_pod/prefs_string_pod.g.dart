@@ -70,9 +70,8 @@ final class PrefsStringPodFamily extends $Family
         isAutoDispose: true,
       );
 
-  PrefsStringPodProvider call(
-    String key,
-  ) => PrefsStringPodProvider._(argument: key, from: this);
+  PrefsStringPodProvider call(String key) =>
+      PrefsStringPodProvider._(argument: key, from: this);
 
   @override
   String toString() => r'prefsStringPodProvider';
@@ -82,9 +81,7 @@ abstract class _$PrefsStringPod extends $AsyncNotifier<String?> {
   late final _$args = ref.$arg as String;
   String get key => _$args;
 
-  FutureOr<String?> build(
-    String key,
-  );
+  FutureOr<String?> build(String key);
   @$mustCallSuper
   @override
   void runBuild() {
@@ -97,11 +94,6 @@ abstract class _$PrefsStringPod extends $AsyncNotifier<String?> {
               Object?,
               Object?
             >;
-    element.handleCreate(
-      ref,
-      () => build(
-        _$args,
-      ),
-    );
+    element.handleCreate(ref, () => build(_$args));
   }
 }
