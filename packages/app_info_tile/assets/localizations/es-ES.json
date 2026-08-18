@@ -1,4 +1,5 @@
 {
+  "app_info_tile:flutter_version": "Flutter {version}",
   "app_info_tile:license_hint": "Puedes ver la información de la licencia haciendo clic en [VER LICENCIA].",
   "app_info_tile:title": "Información de la aplicación",
   "app_info_tile:view_license": "VER LICENCIA"

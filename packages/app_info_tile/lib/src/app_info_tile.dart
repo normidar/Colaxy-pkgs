@@ -2,13 +2,14 @@ import 'package:app_info_tile/app_info_tile.dart';
 import 'package:app_lang_selector/app_lang_selector.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_helper/riverpod_helper.dart';
 
 // app_info_tile
 
-/// A [ListTile] that opens a dialog showing the app's name and version, with a
-/// shortcut to the bundled license page.
+/// A [ListTile] that opens a dialog showing the app's name, version, and
+/// compiled Flutter version, with a shortcut to the bundled license page.
 class AppInfoTile extends ConsumerWidget {
   /// Creates an app info tile.
   const AppInfoTile({
@@ -68,6 +69,7 @@ class AppInfoTile extends ConsumerWidget {
     required BuildContext context,
   }) {
     final name = appName ?? packageInfo.appName;
+    const flutterVersion = FlutterVersion.version;
     return AlertDialog(
       title: Center(
         child: Column(
@@ -75,6 +77,12 @@ class AppInfoTile extends ConsumerWidget {
           children: [
             Text(name),
             Text('${packageInfo.version}-${packageInfo.buildNumber}'),
+            if (flutterVersion != null)
+              Text(
+                'app_info_tile:flutter_version'.tr(
+                  namedArgs: {'version': flutterVersion},
+                ),
+              ),
           ],
         ),
       ),

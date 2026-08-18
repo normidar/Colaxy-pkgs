@@ -10,7 +10,7 @@ A Flutter package that provides a simple and elegant way to display app informat
 
 ## Features
 
-- 📱 **App Information Display**: Shows app name, version, and build number
+- 📱 **App Information Display**: Shows app name, version, build number, and the Flutter version the app was compiled with
 - 📄 **License Viewer**: Integrated license page access
 - 🌐 **Multi-language Support**: Supports 7 languages (English, Japanese, Spanish, Korean, Portuguese, Turkish, Chinese)
 - ⚡ **Riverpod Integration**: Built with Flutter Riverpod for efficient state management

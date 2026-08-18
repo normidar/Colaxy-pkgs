@@ -1,3 +1,12 @@
+## 0.3.0
+
+### Added
+- The info dialog now also shows the Flutter version the app was compiled
+  with, via `FlutterVersion.version` (`package:flutter/services.dart`,
+  Flutter 3.32+). The line is omitted when `FlutterVersion.version` is `null`
+  (e.g. when the app wasn't built with `flutter run`/`flutter build`, which is
+  what populates it).
+
 ## 0.2.1
 
 ### Fixed
