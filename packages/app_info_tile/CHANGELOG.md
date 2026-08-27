@@ -1,3 +1,12 @@
+## 0.3.1
+
+### Changed
+- The compiled Flutter version line now reads "Powered by Flutter {version}",
+  fixed in English rather than translated (it names the framework, not app
+  copy), and renders in a smaller, muted style instead of the dialog's title
+  text style, so it reads as an aside rather than competing with the app name
+  and version above it.
+
 ## 0.3.0
 
 ### Added

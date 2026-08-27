@@ -78,9 +78,15 @@ class AppInfoTile extends ConsumerWidget {
             Text(name),
             Text('${packageInfo.version}-${packageInfo.buildNumber}'),
             if (flutterVersion != null)
-              Text(
-                'app_info_tile:flutter_version'.tr(
-                  namedArgs: {'version': flutterVersion},
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  // Not localized: "Powered by Flutter" is a brand name, not
+                  // app copy — it reads the same in every language.
+                  'Powered by Flutter $flutterVersion',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
           ],
