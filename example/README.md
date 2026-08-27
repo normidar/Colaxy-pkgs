@@ -9,6 +9,20 @@ Language, theme, and layout are all switched automatically. By looking at this e
 
 > If you use this example, you can run this first: `flutter create --platform=android,ios,linux,macos,web,windows .`
 
+## What this demo shows
+
+Running the app gives you an `AdaptiveScaffold` (`colaxy_adaptive_scaffold`) with three tabs:
+
+- **Home** — a welcome card and a checklist of which package backs each feature elsewhere in the app.
+- **Favorites** — a counter persisted with `riverpod_helper`'s `prefsAliveIntPodProvider` (backed by `SharedPreferences`). Close and reopen the app and the count is still there; the `AsyncError` branch is wired to `RiverpodErrorView`.
+- **Settings** — `app_theme_picker`'s `ThemePickTile` (color scheme + light/dark/system), `app_lang_selector`'s `AppLangSelectTile`, `colaxy_tutorial`'s `TutorialResetTile`, and `app_info_tile`'s `AppInfoTile`.
+
+On first launch, `colaxy_tutorial`'s `TutorialTool.guardTutorialPage` shows a two-page intro before the shell — resettable from Settings → Help.
+
+Resize the window to see `AdaptiveScaffold` switch between a bottom `NavigationBar` and a side `NavigationRail`.
+
+Source layout: `lib/main.dart` wires up `EasyLocalization` and hands off to `lib/src/example_app.dart`, which watches the theme providers and renders `lib/src/home_shell.dart`. Each tab lives under `lib/src/{home,favorites,settings}/`.
+
 ## We use riverpod to manage status
 
 1. Add riverpod libraries:

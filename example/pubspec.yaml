@@ -50,4 +50,6 @@ colaxy_icons_launcher:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/localizations/
 resolution: workspace
