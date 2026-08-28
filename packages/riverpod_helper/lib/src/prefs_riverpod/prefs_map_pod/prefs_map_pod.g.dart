@@ -50,7 +50,7 @@ final class PrefsMapPodProvider
   }
 }
 
-String _$prefsMapPodHash() => r'f18b263e33530f5c311fce67f1995cad131b29cf';
+String _$prefsMapPodHash() => r'37c8c99d63e1b503e04b6eaf4c48f5599399d723';
 
 final class PrefsMapPodFamily extends $Family
     with

@@ -1,3 +1,23 @@
+## 0.2.2
+
+### Fixed
+- `setValue`/`removeValue` on the auto-dispose prefs pods (`prefsBoolPod`,
+  `prefsIntPod`, `prefsDoublePod`, `prefsStringPod`, `prefsStrLstPod`,
+  `prefsMapPod`) threw `Cannot use the Ref of ... after it has been disposed`
+  when reached through `ref.read(somePodProvider(key).notifier)`. `ref.read`
+  does not subscribe, so the provider was disposed as soon as the write's first
+  `await` yielded, and the `state = ...` that followed ran against a dead
+  `Ref`. The write itself had already reached SharedPreferences by then, so the
+  setting looked like it had failed but came back on the next launch — and on
+  release/profile builds the exception was usually swallowed entirely. The
+  writes now take a `ref.keepAlive()` link for their duration and skip the
+  state update if the provider is gone anyway. The keep-alive pods
+  (`prefsAlive*Pod`) go through the same path.
+
+### Added
+- `writePrefsValue`, the guard the prefs pods write through. Useful if you
+  write your own pod against SharedPreferences and want the same behaviour.
+
 ## 0.2.1
 
 ### Fixed

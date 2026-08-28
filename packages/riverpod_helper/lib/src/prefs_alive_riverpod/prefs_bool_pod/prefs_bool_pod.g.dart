@@ -50,7 +50,7 @@ final class PrefsAliveBoolPodProvider
   }
 }
 
-String _$prefsAliveBoolPodHash() => r'08837cdb741cbd052a3212c3629190e10d4ebaff';
+String _$prefsAliveBoolPodHash() => r'cc776dcbdf639bd194ac552987ccb1173758c526';
 
 final class PrefsAliveBoolPodFamily extends $Family
     with

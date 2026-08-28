@@ -50,7 +50,7 @@ final class PrefsDoublePodProvider
   }
 }
 
-String _$prefsDoublePodHash() => r'1464ab19c4a8b405966f3775906b7aa321671925';
+String _$prefsDoublePodHash() => r'e7723bb108b5b280b07222b3b9ddab7e1230b712';
 
 final class PrefsDoublePodFamily extends $Family
     with

@@ -13,3 +13,4 @@ export 'package:riverpod_helper/src/prefs_riverpod/prefs_map_pod/prefs_map_pod.d
 export 'package:riverpod_helper/src/prefs_riverpod/prefs_str_lst_pod/prefs_str_lst_pod.dart';
 export 'package:riverpod_helper/src/prefs_riverpod/prefs_string_pod/prefs_string_pod.dart';
 export 'package:riverpod_helper/src/riverpod_error_view.dart';
+export 'package:riverpod_helper/src/write_prefs_value.dart';

@@ -62,7 +62,7 @@ final class PrefsAliveMapPodProvider
   }
 }
 
-String _$prefsAliveMapPodHash() => r'1bd2b095aaf1cc7c6d8f40ba350ef716b5d8ea7f';
+String _$prefsAliveMapPodHash() => r'0499e1349dec6eef6ce67e69f72e98a86d24b863';
 
 /// A keep-alive JSON map stored in SharedPreferences.
 ///

@@ -166,6 +166,62 @@ class MySwitch extends _$MySwitch {
 
 Yeah, that's it. It's simple, right?
 
+### Typed prefs pods
+
+For a plain "one key, one value" setting you don't need to write a pod at all.
+There is a family per SharedPreferences type, keyed by the preference key:
+
+| Type           | Auto-dispose         | Keep-alive                |
+| -------------- | -------------------- | ------------------------- |
+| `bool`         | `prefsBoolPod`       | `prefsAliveBoolPod`       |
+| `int`          | `prefsIntPod`        | `prefsAliveIntPod`        |
+| `double`       | `prefsDoublePod`     | `prefsAliveDoublePod`     |
+| `String`       | `prefsStringPod`     | `prefsAliveStringPod`     |
+| `List<String>` | `prefsStrLstPod`     | `prefsAliveStrLstPod`     |
+| JSON object    | `prefsMapPod`        | `prefsAliveMapPod`        |
+
+```dart
+class PdfScrollSwitch extends ConsumerWidget {
+  const PdfScrollSwitch({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pod = prefsBoolPodProvider('pdf_scroll_switch');
+    return switch (ref.watch(pod)) {
+      AsyncData(:final value) => Switch(
+          value: value ?? false,
+          onChanged: (v) => ref.read(pod.notifier).setValue(v),
+        ),
+      AsyncLoading() => const CircularProgressIndicator(),
+      AsyncError(:final error, :final stackTrace) => RiverpodErrorView(
+          widgetName: 'PdfScrollSwitch',
+          error: error,
+          stackTrace: stackTrace,
+        ),
+    };
+  }
+}
+```
+
+**Writing through `ref.read(...notifier)` is safe**, including from a notifier
+or callback that never watches the pod:
+
+```dart
+await ref.read(prefsBoolPodProvider(key).notifier).setValue(value);
+```
+
+`ref.read` does not subscribe, so an auto-dispose pod reached this way has no
+listener and is disposed part-way through the write. `setValue` and
+`removeValue` hold the pod alive for the duration of the write, so this neither
+throws nor drops the write. If the pod is disposed anyway — you held a notifier
+across an event loop turn, say — the value still reaches SharedPreferences and
+the next read of the pod picks it up; only the in-memory state update, which
+has no listener left to notify, is skipped.
+
+A write publishes the new value directly rather than calling
+`ref.invalidateSelf()`, so a widget watching the pod does not flash through
+`AsyncLoading` every time the setting changes.
+
 ## Additional features
 
 If you offten use prefs you can add this to your `.code-snippets` file.
