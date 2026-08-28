@@ -36,8 +36,10 @@ import 'package:meta/meta.dart';
 /// - **[packageName]**: The app's application ID, e.g. `com.example.app`.
 ///
 /// ### Optional
-/// - **`httpClient`**: The client backing `api`, closed by [close] when
-///   given (default: `null`, leaving lifetime to the caller).
+/// - **`httpClient`**: The client backing `api`, closed by [close] unless
+///   [ownsClient] says otherwise (default: `null`, leaving lifetime to the
+///   caller entirely).
+/// - **[ownsClient]**: Whether [close] closes `httpClient` (default: `true`).
 /// - **[retryPolicy]**: When to retry a throttled or transiently failing
 ///   request (default: `RetryPolicy()`, three attempts).
 /// - **[onLog]**: Receives one line per retry and wait (default: `null`,
@@ -48,6 +50,7 @@ class PlayReviewsApi implements StoreReviewsApi {
     required play.AndroidPublisherApi api,
     required this.packageName,
     http.Client? httpClient,
+    this.ownsClient = true,
     this.retryPolicy = const RetryPolicy(),
     this.onLog,
     @visibleForTesting Future<void> Function(Duration)? sleep,
@@ -63,6 +66,19 @@ class PlayReviewsApi implements StoreReviewsApi {
 
   /// The app's application ID.
   final String packageName;
+
+  /// Whether [close] should close the client this object was given.
+  ///
+  /// `true` suits the common case of one API over one authenticated client.
+  /// Pass `false` when several APIs share one — a single
+  /// `authenticate(scopes: [reportingScope, storageReadScope])` call covers
+  /// both Play statistics APIs, and letting the first `close()` shut it would
+  /// break the second.
+  ///
+  /// `AppStoreConnectClient` decides this for itself, because it creates the
+  /// client when it is not given one. Nothing here can: an authenticated
+  /// client always comes from the caller.
+  final bool ownsClient;
 
   /// When to retry a throttled or transiently failing request.
   final RetryPolicy retryPolicy;
@@ -161,7 +177,9 @@ class PlayReviewsApi implements StoreReviewsApi {
   }
 
   @override
-  void close() => _httpClient?.close();
+  void close() {
+    if (ownsClient) _httpClient?.close();
+  }
 
   void _validateBody(String body) {
     if (body.trim().isEmpty) {

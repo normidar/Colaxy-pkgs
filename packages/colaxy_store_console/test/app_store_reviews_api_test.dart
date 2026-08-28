@@ -240,14 +240,33 @@ void main() {
       expect(reply.state, ReviewReplyState.published);
     });
 
-    test('rejects an over-long body before spending a request', () async {
-      final recorder = _Recorder();
+    test('does not enforce a length Apple never published', () async {
+      // The widely-quoted 5,970 is community-measured; Apple's own spec
+      // leaves responseBody unconstrained. Blocking on it would reject
+      // replies the store would have taken, so the request goes out and
+      // Apple's answer is the authority.
+      final recorder = _Recorder()
+        ..enqueue({
+          'errors': [
+            {'status': '404', 'code': 'NOT_FOUND', 'title': 'Not found'},
+          ],
+        }, status: 404)
+        ..enqueue({
+          'data': {
+            'type': 'customerReviewResponses',
+            'id': 'resp-9',
+            'attributes': {'responseBody': 'x', 'state': 'PUBLISHED'},
+          },
+        });
 
+      await _api(recorder).reply('review-1', 'x' * 8000);
+
+      expect(recorder.requests, hasLength(2));
       expect(
-        () => _api(recorder).reply('review-1', 'x' * 5971),
-        throwsArgumentError,
+        AppStoreReviewsApi.advisoryReplyLength,
+        5970,
+        reason: 'still exposed for callers who want to warn',
       );
-      expect(recorder.requests, isEmpty);
     });
 
     test('rejects a blank body', () async {

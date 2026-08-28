@@ -90,11 +90,20 @@ class SalesReportCombination {
       frequencies: {SalesFrequency.monthly},
       versions: ['1_2'],
     ),
+    // Apple lists INSTALLS/DETAILED on two rows, with different versions per
+    // frequency. Merging them would default a yearly request to 1_2, which
+    // only monthly accepts.
     SalesReportCombination(
       type: SalesReportType.installs,
       subType: SalesReportSubType.detailed,
-      frequencies: {SalesFrequency.monthly, SalesFrequency.yearly},
-      versions: ['1_0', '1_1', '1_2'],
+      frequencies: {SalesFrequency.monthly},
+      versions: ['1_2'],
+    ),
+    SalesReportCombination(
+      type: SalesReportType.installs,
+      subType: SalesReportSubType.detailed,
+      frequencies: {SalesFrequency.yearly},
+      versions: ['1_0', '1_1'],
     ),
     SalesReportCombination(
       type: SalesReportType.installs,
@@ -149,23 +158,44 @@ class SalesReportCombination {
   /// The newest version, used when a query does not name one.
   String get latestVersion => versions.last;
 
-  /// The entry for [type] and [subType], or `null` if Apple has none.
+  /// The entry for [type] and [subType], narrowed by [frequency].
+  ///
+  /// [frequency] matters: a report type and sub-type can appear on more than
+  /// one row of Apple's table with a different version list each time.
+  /// Ignoring it would resolve a yearly `INSTALLS`/`DETAILED` request to the
+  /// monthly-only version.
+  ///
+  /// Returns `null` when Apple publishes no such report.
   static SalesReportCombination? find(
     SalesReportType type,
-    SalesReportSubType subType,
-  ) {
+    SalesReportSubType subType, {
+    SalesFrequency? frequency,
+  }) {
     for (final combination in all) {
-      if (combination.type == type && combination.subType == subType) {
+      if (combination.type != type || combination.subType != subType) continue;
+      if (frequency == null || combination.frequencies.contains(frequency)) {
         return combination;
       }
     }
     return null;
   }
 
+  /// Every frequency Apple offers for [type] and [subType], across all rows.
+  static Set<SalesFrequency> frequenciesFor(
+    SalesReportType type,
+    SalesReportSubType subType,
+  ) => {
+    for (final combination in all)
+      if (combination.type == type && combination.subType == subType)
+        ...combination.frequencies,
+  };
+
   /// Every sub-type valid for [type].
   static List<SalesReportSubType> subTypesFor(SalesReportType type) => [
-    for (final combination in all)
-      if (combination.type == type) combination.subType,
+    ...{
+      for (final combination in all)
+        if (combination.type == type) combination.subType,
+    },
   ];
 
   @override

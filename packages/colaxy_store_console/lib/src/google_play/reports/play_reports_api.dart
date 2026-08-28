@@ -107,13 +107,26 @@ class PlayReportsApi {
   ///
   /// Sequential on purpose: a long-lived app has years of files, and firing
   /// them all at once is the quickest way to be throttled.
+  ///
+  /// Throws [ArgumentError] under the same rules as [fetch]: a report that is
+  /// published per breakdown needs one naming which. Without that this would
+  /// stream every breakdown of every month interleaved — tables with
+  /// different columns, in one stream, which is nearly impossible to notice
+  /// and impossible to use.
   Stream<ReportTable> fetchAll(
     PlayReportType type, {
     String? dimension,
   }) async* {
+    // Validate up front, with the same message fetch would give, rather than
+    // after the listing request has already been spent.
+    type.objectName(
+      packageName: packageName,
+      month: DateTime.utc(2000),
+      dimension: dimension,
+    );
+
     final suffix = dimension == null ? '.csv' : '_$dimension.csv';
-    final names = await list(type);
-    for (final name in names) {
+    for (final name in await list(type)) {
       if (!name.endsWith(suffix)) continue;
       yield await fetchObject(name);
     }

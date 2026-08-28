@@ -305,6 +305,34 @@ void main() {
       expect(recorder.requests, hasLength(3));
     });
 
+    test('refuses to mix breakdowns when none is named', () async {
+      // Without this, one stream would carry country, device and language
+      // tables interleaved — different columns, nearly impossible to notice.
+      final recorder = _Recorder();
+
+      await expectLater(
+        _api(recorder).fetchAll(PlayReportType.installs).toList(),
+        throwsArgumentError,
+      );
+      expect(recorder.requests, isEmpty, reason: 'not even the listing');
+    });
+
+    test('needs no breakdown for a report that has none', () async {
+      final recorder = _Recorder()
+        ..enqueueJson({
+          'items': [
+            {'name': 'reviews/reviews_com.example.app_202608.csv'},
+          ],
+        })
+        ..enqueueCsv('Review Text\nGood\n');
+
+      final tables = await _api(
+        recorder,
+      ).fetchAll(PlayReportType.reviews).toList();
+
+      expect(tables, hasLength(1));
+    });
+
     test('stops downloading when the caller stops consuming', () async {
       final recorder = _Recorder()
         ..enqueueJson({

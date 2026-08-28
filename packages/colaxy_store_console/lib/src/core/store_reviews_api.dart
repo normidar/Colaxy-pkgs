@@ -48,9 +48,10 @@ abstract interface class StoreReviewsApi {
   /// Replying again to a review that already has a reply replaces it on both
   /// stores; neither keeps a history.
   ///
-  /// Throws [ArgumentError] if [body] is empty or exceeds the store's limit
-  /// (350 characters on Google Play, 5,970 on the App Store), so an
-  /// over-long reply fails locally instead of burning quota.
+  /// Throws [ArgumentError] if [body] is empty, or — on Google Play, whose
+  /// 350-character limit Google documents — if it is too long, so an
+  /// over-long reply fails locally instead of burning one of the 2,000 daily
+  /// writes. Apple publishes no limit, so none is enforced there.
   Future<ReviewReply> reply(String reviewId, String body);
 
   /// Releases the underlying HTTP client.

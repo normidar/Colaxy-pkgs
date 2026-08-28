@@ -27,6 +27,8 @@ import 'package:meta/meta.dart';
 /// ### Optional
 /// - **[baseUri]**: API root (default:
 ///   `https://playdeveloperreporting.googleapis.com/`).
+/// - **[ownsClient]**: Whether [close] closes `authenticatedClient`
+///   (default: `true`; pass `false` when several APIs share one).
 /// - **[retryPolicy]**: When to retry (default: `RetryPolicy()`).
 /// - **[onLog]**: Receives one line per retry and wait (default: `null`).
 ///
@@ -44,6 +46,7 @@ class PlayReportingClient {
   PlayReportingClient({
     required http.Client authenticatedClient,
     Uri? baseUri,
+    this.ownsClient = true,
     this.retryPolicy = const RetryPolicy(),
     this.onLog,
     @visibleForTesting Future<void> Function(Duration)? sleep,
@@ -66,6 +69,19 @@ class PlayReportingClient {
 
   /// API root every path is resolved against.
   final Uri baseUri;
+
+  /// Whether [close] should close the client this object was given.
+  ///
+  /// `true` suits the common case of one API over one authenticated client.
+  /// Pass `false` when several APIs share one — a single
+  /// `authenticate(scopes: [reportingScope, storageReadScope])` call covers
+  /// both Play statistics APIs, and letting the first `close()` shut it would
+  /// break the second.
+  ///
+  /// `AppStoreConnectClient` decides this for itself, because it creates the
+  /// client when it is not given one. Nothing here can: an authenticated
+  /// client always comes from the caller.
+  final bool ownsClient;
 
   /// When to retry a throttled or transiently failing request.
   final RetryPolicy retryPolicy;
@@ -105,8 +121,10 @@ class PlayReportingClient {
     return _decode(response);
   }
 
-  /// Closes the authenticated client.
-  void close() => _http.close();
+  /// Closes the authenticated client, if this object owns it.
+  void close() {
+    if (ownsClient) _http.close();
+  }
 
   Uri _uri(String path, Map<String, Object?> query) {
     final trimmed = path.startsWith('/') ? path.substring(1) : path;

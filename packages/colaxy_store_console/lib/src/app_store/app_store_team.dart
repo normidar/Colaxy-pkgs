@@ -51,7 +51,7 @@ class AppStoreTeam {
     Uri? baseUri,
     RetryPolicy retryPolicy = const RetryPolicy(),
     StoreConsoleLog? onLog,
-  }) => AppStoreTeam.client(
+  }) => AppStoreTeam.withClient(
     client: AppStoreConnectClient(
       apiKey: apiKey,
       httpClient: httpClient,
@@ -66,7 +66,7 @@ class AppStoreTeam {
   ///
   /// Use this to share one transport — and so one cached token — with an
   /// `AppStoreConnectConsole` for the same account.
-  AppStoreTeam.client({
+  AppStoreTeam.withClient({
     required AppStoreConnectClient client,
     required this.vendorNumber,
   }) : _client = client,

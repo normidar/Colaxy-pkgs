@@ -195,6 +195,52 @@ void main() {
       expect(SalesReportQuery.sales, returnsNormally);
     });
 
+    test('resolves the version Apple lists for that exact frequency', () {
+      // INSTALLS/DETAILED appears on two rows of Apple's table with
+      // different versions. Merging them would default a yearly request to
+      // 1_2, which only monthly accepts — a 400 for a report that exists.
+      expect(
+        SalesReportQuery(
+          type: SalesReportType.installs,
+          subType: SalesReportSubType.detailed,
+          frequency: SalesFrequency.monthly,
+          date: DateTime.utc(2026, 8, 20),
+        ).resolvedVersion,
+        '1_2',
+      );
+      expect(
+        SalesReportQuery(
+          type: SalesReportType.installs,
+          subType: SalesReportSubType.detailed,
+          frequency: SalesFrequency.yearly,
+          date: DateTime.utc(2026, 8, 20),
+        ).resolvedVersion,
+        '1_1',
+      );
+    });
+
+    test('lists every frequency of a report that spans several rows', () {
+      expect(
+        SalesReportCombination.frequenciesFor(
+          SalesReportType.installs,
+          SalesReportSubType.detailed,
+        ),
+        {SalesFrequency.monthly, SalesFrequency.yearly},
+      );
+      expect(
+        () => SalesReportQuery(
+          type: SalesReportType.installs,
+          subType: SalesReportSubType.detailed,
+          frequency: SalesFrequency.daily,
+        ),
+        throwsA(
+          isA<ArgumentError>()
+              .having((e) => e.message, 'lists monthly', contains('MONTHLY'))
+              .having((e) => e.message, 'lists yearly', contains('YEARLY')),
+        ),
+      );
+    });
+
     test('accepts every combination in Apple table', () {
       // Guards the transcription: a typo here would reject a report that
       // actually exists.
@@ -210,6 +256,21 @@ void main() {
                   : DateTime.utc(2026, 8, 20),
             ),
             returnsNormally,
+            reason: '$combination at ${frequency.wireName}',
+          );
+          // And resolves to a version that row actually lists.
+          expect(
+            combination.versions,
+            contains(
+              SalesReportQuery(
+                type: combination.type,
+                subType: combination.subType,
+                frequency: frequency,
+                date: frequency == SalesFrequency.weekly
+                    ? DateTime.utc(2026, 8, 23)
+                    : DateTime.utc(2026, 8, 20),
+              ).resolvedVersion,
+            ),
             reason: '$combination at ${frequency.wireName}',
           );
         }

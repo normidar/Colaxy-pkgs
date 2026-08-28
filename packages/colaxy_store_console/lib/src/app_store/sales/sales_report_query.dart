@@ -60,8 +60,10 @@ class SalesReportQuery {
       throw ArgumentError.value(
         date,
         'date',
-        'A weekly report must be requested by the Sunday that closes the '
-            'week. Use SalesFrequency.endOfWeek(date) to convert.',
+        'A weekly report is addressed by the Sunday that closes the week. '
+            'Apple is reported to snap some other days to a week boundary '
+            'rather than reject them, which would hand you a different week '
+            'than you asked for. Use SalesFrequency.endOfWeek(date).',
       );
     }
   }
@@ -158,8 +160,8 @@ class SalesReportQuery {
     SalesReportSubType subType,
     SalesFrequency frequency,
   ) {
-    final combination = SalesReportCombination.find(type, subType);
-    if (combination == null) {
+    final anyFrequency = SalesReportCombination.find(type, subType);
+    if (anyFrequency == null) {
       final valid = SalesReportCombination.subTypesFor(
         type,
       ).map((subType) => subType.wireName).join(', ');
@@ -171,13 +173,21 @@ class SalesReportQuery {
             '${valid.isEmpty ? 'none' : valid}.',
       );
     }
-    if (!combination.frequencies.contains(frequency)) {
+    final combination = SalesReportCombination.find(
+      type,
+      subType,
+      frequency: frequency,
+    );
+    if (combination == null) {
+      final valid = SalesReportCombination.frequenciesFor(
+        type,
+        subType,
+      ).map((frequency) => frequency.wireName).join(', ');
       throw ArgumentError.value(
         frequency,
         'frequency',
         'Apple does not offer ${type.wireName}/${subType.wireName} at '
-            '${frequency.wireName}. Valid frequencies: '
-            '${combination.frequencies.map((f) => f.wireName).join(', ')}.',
+            '${frequency.wireName}. Valid frequencies: $valid.',
       );
     }
     return combination;

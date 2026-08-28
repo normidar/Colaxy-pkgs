@@ -22,8 +22,11 @@ versions you can actually depend on.
   applies `ratings` and `hasReply` per page and ignores the rest.
 - Unified `StoreReview` and `ReviewReply`, with `raw` keeping the original
   store payload.
-- Reply length is validated locally — 350 characters on Google Play, 5,970 on
-  the App Store — so an over-long reply fails before it costs quota.
+- Google Play's documented 350-character reply limit is enforced locally, so
+  an over-long reply fails before it costs one of the 2,000 daily writes.
+  Apple publishes no limit for `responseBody`, so none is enforced there; the
+  community-measured figure is exposed as
+  `AppStoreReviewsApi.advisoryReplyLength` to warn with.
 - `AppStoreReviewsApi.deleteReply`, which Google Play has no equivalent for.
 
 ### App Store statistics
@@ -86,7 +89,10 @@ versions you can actually depend on.
   token minted for the wrong one fails in a way that looks like a bad key.
 - `AppStoreConnectClient`, `PlayReportingClient` and `PlayStorageClient`:
   plain authenticated clients you can point at any endpoint of their API,
-  with `JsonApiPage` unwrapping Apple's collection envelope.
+  with `JsonApiPage` unwrapping Apple's collection envelope. Each closes only
+  the transport it owns — the Play clients take `ownsClient`, so one
+  authenticated client can back several APIs without the first `close()`
+  shutting it for the rest.
 - `RetryPolicy`: exponential backoff with a `Retry-After` override for
   throttling and transient server errors. Google Play's quota failures arrive
   as `403 quotaExceeded` rather than `429`, so retryability follows the

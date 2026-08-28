@@ -34,8 +34,18 @@ class AppStoreReviewsApi implements StoreReviewsApi {
     required this.appId,
   }) : _client = client;
 
-  /// Longest response Apple accepts, in characters.
-  static const maxReplyLength = 5970;
+  /// The length App Store responses are widely observed to cap at.
+  ///
+  /// **Advisory, not enforced.** Apple publishes no limit for
+  /// `responseBody` — not in App Store Connect Help, not in the API
+  /// reference, not in its OpenAPI spec, where the field is an unconstrained
+  /// string. This figure is community-measured, and two different numbers
+  /// circulate. Blocking on an unverified limit would reject replies the
+  /// store would have accepted, so [reply] does not.
+  ///
+  /// Use it to warn in a UI, and let Apple's own rejection be the authority.
+  /// Google Play's 350 is enforced by contrast, because Google documents it.
+  static const advisoryReplyLength = 5970;
 
   /// Largest page Apple will return.
   static const maxPageSize = 200;
@@ -176,16 +186,12 @@ class AppStoreReviewsApi implements StoreReviewsApi {
     }
   }
 
+  /// Rejects a body Apple certainly will not take.
+  ///
+  /// Only emptiness is checked. Length is not: see [advisoryReplyLength].
   void _validateBody(String body) {
     if (body.trim().isEmpty) {
       throw ArgumentError.value(body, 'body', 'Reply body cannot be empty');
-    }
-    if (body.length > maxReplyLength) {
-      throw ArgumentError.value(
-        body.length,
-        'body.length',
-        'App Store replies are limited to $maxReplyLength characters',
-      );
     }
   }
 

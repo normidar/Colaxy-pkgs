@@ -44,9 +44,12 @@ enum SalesFrequency {
 
   /// The Sunday that closes the week containing [date].
   ///
-  /// Apple's weeks end on Sunday and a weekly report must be requested by
-  /// that closing date. Passing any other day is rejected, so this is the
-  /// conversion to run first:
+  /// Apple's weeks end on Sunday and a weekly report is addressed by that
+  /// closing date. Reports of what Apple does with any other day differ —
+  /// sometimes a rejection, sometimes a silent snap to a week boundary — and
+  /// the silent snap is the reason `SalesReportQuery` refuses the request
+  /// outright rather than letting you receive a week you did not ask for.
+  /// Run this first:
   ///
   /// ```dart
   /// final query = SalesReportQuery.sales(

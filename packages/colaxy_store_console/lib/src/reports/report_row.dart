@@ -13,8 +13,9 @@
 /// ## Parameters
 ///
 /// ### Required
-/// - **[columnIndex]**: Normalised column name to position, shared with the
+/// - **[columns]**: Header names as the store wrote them, shared with the
 ///   table this row came from.
+/// - **[columnIndex]**: Normalised column name to position, likewise shared.
 /// - **[cells]**: The row's raw cells.
 ///
 /// ## Example
@@ -26,7 +27,14 @@
 /// ```
 class ReportRow {
   /// Creates a row. Normally obtained from a `ReportTable`, not built by hand.
-  const ReportRow({required this.columnIndex, required this.cells});
+  const ReportRow({
+    required this.columns,
+    required this.columnIndex,
+    required this.cells,
+  });
+
+  /// Header names as the store wrote them.
+  final List<String> columns;
 
   /// Normalised column name to position.
   final Map<String, int> columnIndex;
@@ -128,12 +136,16 @@ class ReportRow {
 
   /// This row as a map from column name to raw cell.
   ///
+  /// Keys are the header names as the store wrote them, not the normalised
+  /// forms used for lookup — a map keyed on `daily device installs` would be
+  /// wrong to write back out, and surprising to read.
+  ///
   /// Columns the row has no cell for, and empty cells, are left out.
   Map<String, String> toMap() {
     final map = <String, String>{};
-    for (final entry in columnIndex.entries) {
-      final value = at(entry.value);
-      if (value != null) map[entry.key] = value;
+    for (var i = 0; i < columns.length; i++) {
+      final value = at(i);
+      if (value != null) map[columns[i]] = value;
     }
     return map;
   }

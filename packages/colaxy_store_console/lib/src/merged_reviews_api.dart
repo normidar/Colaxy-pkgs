@@ -48,10 +48,16 @@ class MergedReviewsApi implements StoreReviewsApi {
   /// each store in memory and would burn Google Play's 200-reads-per-hour
   /// quota even when the caller breaks out early. Sort the collected results
   /// by `StoreReview.timestamp` if you need a chronological view.
+  ///
+  /// `query.cursor` is dropped. Cursors are per-store — Apple's is a URL,
+  /// Google's an opaque token — so forwarding one to every delegate would
+  /// hand at least one store a cursor it cannot read. Each store starts from
+  /// its own first page and pages itself from there.
   @override
   Stream<StoreReview> list([ReviewQuery query = const ReviewQuery()]) async* {
+    final fromStart = query.cursor == null ? query : query.withCursor(null);
     for (final delegate in delegates) {
-      yield* delegate.list(query);
+      yield* delegate.list(fromStart);
     }
   }
 

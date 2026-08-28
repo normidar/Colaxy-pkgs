@@ -93,6 +93,20 @@ void main() {
 
       expect(table[0].toMap(), {'a': '1', 'c': '3'});
     });
+
+    test('toMap keys on the header the store wrote, not the lookup form', () {
+      // Lookups normalise case and spacing, but a map keyed on
+      // `daily device installs` would be wrong to write back out and
+      // surprising to read.
+      final table = ReportTable.fromTsv(
+        'Daily Device Installs\tCountry Code\n142\tJP\n',
+      );
+
+      expect(table[0].toMap(), {
+        'Daily Device Installs': '142',
+        'Country Code': 'JP',
+      });
+    });
   });
 
   group('conversions', () {

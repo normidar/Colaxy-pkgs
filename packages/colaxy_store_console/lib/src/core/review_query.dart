@@ -102,9 +102,6 @@ class ReviewQuery {
   /// original.
   final String? translationLanguage;
 
-  /// Whether any filter in this query has to be applied client-side on Play.
-  bool get needsClientSideFilter => ratings.isNotEmpty || hasReply != null;
-
   /// Whether a review with [rating] and [reviewHasReply] passes
   /// [ratings] and [hasReply].
   ///

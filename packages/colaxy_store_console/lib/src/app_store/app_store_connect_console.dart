@@ -51,7 +51,7 @@ class AppStoreConnectConsole {
     Uri? baseUri,
     RetryPolicy retryPolicy = const RetryPolicy(),
     StoreConsoleLog? onLog,
-  }) => AppStoreConnectConsole.client(
+  }) => AppStoreConnectConsole.withClient(
     client: AppStoreConnectClient(
       apiKey: apiKey,
       httpClient: httpClient,
@@ -66,7 +66,7 @@ class AppStoreConnectConsole {
   ///
   /// Use this to share one transport — and so one cached token — between
   /// several apps on the same team.
-  AppStoreConnectConsole.client({
+  AppStoreConnectConsole.withClient({
     required AppStoreConnectClient client,
     required this.appId,
   }) : _client = client,

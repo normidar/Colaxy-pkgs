@@ -235,7 +235,7 @@ void main() {
   group('AppStoreTeam', () {
     test('wires the vendor number through to the reports API', () async {
       final recorder = _Recorder()..enqueueReport(_report);
-      final team = AppStoreTeam.client(
+      final team = AppStoreTeam.withClient(
         client: AppStoreConnectClient(
           apiKey: testApiKey(),
           httpClient: recorder.client,

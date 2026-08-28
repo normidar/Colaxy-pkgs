@@ -39,8 +39,8 @@ iOS-only app.
   `StoreMetric` and `StoreConsoleException` are the same shape whichever
   store answered, and every result carries the `Store` it came from.
 - **Replies, including edits.** `reply()` creates or replaces a response.
-  Length limits are checked locally, so an over-long reply fails before it
-  costs quota.
+  Google's documented 350-character limit is enforced locally, so an
+  over-long reply fails before it costs one of the 2,000 daily writes.
 - **Paging handled.** `list()` is a lazy `Stream` that fetches the next page
   only as you consume it; `listPage()` hands you a cursor to persist.
 - **Reports decoded.** Apple's headerless gzip TSV and Google's UTF-16LE
@@ -170,16 +170,22 @@ gaps. `ReviewQuery` fields that a store cannot honour are marked below.
 | History reachable | **last 7 days only** | full |
 | Ratings without text | **not returned** | returned |
 | `ratings` filter | client-side, per page | server-side |
-| `hasReply` filter | client-side, per page | server-side¹ |
+| `hasReply` filter | client-side, per page | server-side² |
 | `sort` | **ignored** | server-side |
 | `territories` filter | **ignored** (never reported) | server-side |
 | `translationLanguage` | server-side | **ignored** |
-| Reply length | 350 characters | 5,970 characters |
+| Reply length | 350, enforced locally | undocumented, not enforced¹ |
 | Reply state | always published | may be `pendingPublish` |
 | Delete a reply | not supported | `deleteReply()` |
 | Quota | 200 reads/hour, 2,000 replies/day, per app | per key |
 
-¹ Apple's `exists[publishedResponse]` counts only *published* responses, so a
+¹ Apple publishes no limit for `responseBody` — not in its help, its API
+reference, or its OpenAPI spec, where the field is an unconstrained string.
+The widely-quoted 5,970 is community-measured, so this package exposes it as
+`AppStoreReviewsApi.advisoryReplyLength` to warn with, and does not block on
+it. Google's 350 *is* documented, so that one is enforced.
+
+² Apple's `exists[publishedResponse]` counts only *published* responses, so a
 reply still pending publication reads as "no reply".
 
 Two consequences worth designing around:
@@ -229,9 +235,10 @@ A few things the API does not make obvious:
   `table.columns.isEmpty` tells "no report" apart from "report with no rows".
 - **Date format follows the frequency.** Daily and weekly take `YYYY-MM-DD`,
   monthly `YYYY-MM`, yearly `YYYY`. `SalesReportQuery` handles it.
-- **Weekly reports must be requested by the Sunday that closes the week.**
-  Use `SalesFrequency.endOfWeek(date)`; passing any other day throws rather
-  than silently fetching a different week.
+- **Weekly reports are addressed by the Sunday that closes the week.** Use
+  `SalesFrequency.endOfWeek(date)`. Any other day throws — Apple is reported
+  to snap some of them to a week boundary instead of rejecting them, and
+  quietly receiving a different week is worse than an error.
 - **`version` is not validated.** Apple's published versions and the ones its
   API accepts have drifted apart, so an explicit `version:` is passed through
   untouched. Left unset, you get the newest Apple documents.
@@ -445,6 +452,42 @@ final console = await StoreConsole.connect(
 Nothing is logged unless you pass `onLog`. Pass `RetryPolicy.none()` to see
 failures immediately — worth doing inside a job that is itself retried.
 
+### Sharing a client
+
+Each client closes the transport it owns. `AppStoreConnectClient` works that
+out for itself: it closes a client it created and leaves one you passed in
+alone. The Play clients cannot — an authenticated client always comes from
+`PlayServiceAccount.authenticate` — so they take `ownsClient`, which defaults
+to `true`.
+
+One `authenticate` call can cover several APIs, and then the first `close()`
+would shut the client the others still need:
+
+```dart
+final client = await account.authenticate(
+  scopes: [
+    PlayServiceAccount.reportingScope,
+    PlayServiceAccount.storageReadScope,
+  ],
+);
+
+final vitals = PlayVitalsApi(
+  client: PlayReportingClient(authenticatedClient: client, ownsClient: false),
+  packageName: 'com.example.app',
+);
+final reports = PlayReportsApi(
+  client: PlayStorageClient(authenticatedClient: client, ownsClient: false),
+  bucket: bucket,
+  packageName: 'com.example.app',
+);
+
+// …then close the one you made.
+client.close();
+```
+
+On the App Store side, `reviews` and `analytics` share their console's
+transport, so close the console rather than either of them.
+
 ### Handling failures
 
 ```dart
@@ -459,8 +502,8 @@ try {
 }
 ```
 
-`reply()` throws `ArgumentError` for an empty or over-long body before any
-request goes out.
+`reply()` throws `ArgumentError` for an empty body, and for one over Google's
+documented 350 characters, before any request goes out.
 
 ### Reaching past this package
 

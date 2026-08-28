@@ -128,12 +128,12 @@ class ReportTable {
 
   /// The row at [index].
   ReportRow operator [](int index) =>
-      ReportRow(columnIndex: columnIndex, cells: rows[index]);
+      ReportRow(columns: columns, columnIndex: columnIndex, cells: rows[index]);
 
   /// Every data row, lazily.
   Iterable<ReportRow> get entries sync* {
     for (final cells in rows) {
-      yield ReportRow(columnIndex: columnIndex, cells: cells);
+      yield ReportRow(columns: columns, columnIndex: columnIndex, cells: cells);
     }
   }
 
