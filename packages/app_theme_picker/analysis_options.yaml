@@ -3,3 +3,11 @@ include: ../../analysis_options.yaml
 analyzer:
   errors:
     specify_nonobvious_property_types: ignore
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
