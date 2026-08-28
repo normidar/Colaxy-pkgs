@@ -93,7 +93,7 @@
 
 ---
 
-## Phase 2 — ASC 売上レポート (最初の実装対象)
+## Phase 2 — ASC 売上レポート (最初の実装対象) ✅
 
 4面で最も単純。同期 GET 1本で gzip TSV が返る。Phase 1 の基盤の検証を兼ねる。
 
@@ -106,16 +106,39 @@
 
 | # | 内容 |
 |---|------|
-| 2-1 | **`AppStoreTeam`** — vendorNumber を持つチーム単位の入れ物。アプリ単位の `AppStoreConnectConsole` とは別階層にする(前提4)。 |
-| 2-2 | **`SalesReportsApi`** — 上記パラメータを型で表現(`SalesFrequency` / `SalesReportType` / `SalesReportSubType` enum)。組み合わせ不正は Apple が 400 を返す前にローカルで弾く。 |
-| 2-3 | **売上行のマッピング。** ただし `SALES` と `SUBSCRIBER` では列が全く違うので、**型付きモデルは作らず** `ReportTable` を返す。列の意味は README の表で説明する。 |
-| 2-4 | **データが無い日は 404 が返る**ことの扱い。エラーではなく空として返す(Apple の仕様であって失敗ではない)。 |
+| ✅ 2-1 | **`AppStoreTeam`** — vendorNumber を持つチーム単位の入れ物。アプリ単位の `AppStoreConnectConsole` とは別階層にする(前提4)。 |
+| ✅ 2-2 | **`SalesReportsApi`** — 上記パラメータを型で表現(`SalesFrequency` / `SalesReportType` / `SalesReportSubType` enum)。組み合わせ不正は Apple が 400 を返す前にローカルで弾く。 |
+| ✅ 2-3 | **売上行のマッピング。** ただし `SALES` と `SUBSCRIBER` では列が全く違うので、**型付きモデルは作らず** `ReportTable` を返す。列の意味は README の表で説明する。 |
+| ✅ 2-4 | **データが無い日は 404 が返る**ことの扱い。エラーではなく空として返す(Apple の仕様であって失敗ではない)。 |
 
 **完了条件**: MockClient で gzip TSV を返し、`ReportTable` として読めるテスト。
 
+> ✅ **Phase 2 完了 (テスト 180 → 206)**。判明したこと・計画からの逸脱:
+> - **`version` はローカル検証しないことにした。** 計画では「組み合わせ不正はローカルで弾く」と
+>   書いたが、Apple の公開表と実 API の受理値が過去に食い違っている
+>   (`SALES`/`DAILY` に対しドキュメントは `1_0`、実際は `1_1` を要求されたアカウントの報告あり)。
+>   厳格に弾くと**実際には動く組み合わせを塞いでしまう**。
+>   type × subType × frequency のみ検証し、`version` は既定値を入れつつ明示指定は素通しする。
+> - **`frequency` の検証には明確な価値があった。** Apple は不正な frequency に対し
+>   `INVALID_COMBINATION` + 「Invalid combination of date type and date」を返す。
+>   日付は正しいのに日付のせいだと言われるので、デバッグが完全に迷子になる。
+> - **日付形式は frequency ごとに違う。** DAILY/WEEKLY は `YYYY-MM-DD`、
+>   MONTHLY は `YYYY-MM`、YEARLY は `YYYY`。`SalesFrequency.formatDate` に閉じ込めた。
+> - **WEEKLY は日曜日(週の最終日)必須。** 自動補正は「頼んだ期間と違うデータが黙って返る」ので
+>   採用せず、`ArgumentError` + `SalesFrequency.endOfWeek()` を案内する形にした。
+> - **404 = 売上ゼロの日。** 「There were no sales for the date specified」が返る。
+>   エラー扱いだと閑散日のたびにジョブが落ちる。空テーブルを返す。
+>   生成済みレポートは必ずヘッダ行を持つので、`columns.isEmpty` で
+>   「レポート無し」と「0行のレポート」を曖昧さなく区別できる。
+> - **売上レポートはアプリ単位で引けない。** vendorNumber (チーム単位) 必須で、
+>   1レポートにアカウント配下の全アプリが SKU 別に入る。API に絞り込みは無い。
+>   そのため `AppStoreTeam` という別階層を作った。
+> - **vendorNumber を返す API は存在しない。** App Store Connect の
+>   「お支払いとお取引レポート」画面にしか出ないので、利用者に設定してもらう。
+
 ---
 
-## Phase 3 — Play vitals (Reporting API)
+## Phase 3 — Play vitals (Reporting API) ✅
 
 手書きクライアント。同期クエリで JSON が返るので、非同期4段の Phase 5 より先にやる。
 
@@ -126,12 +149,35 @@
 
 | # | 内容 |
 |---|------|
-| 3-1 | **`PlayReportingClient`** — 認証済み HTTP + エラー変換。`AppStoreConnectClient` と対になる位置づけ。 |
-| 3-2 | **`PlayVitalsApi`** — メトリクスセットごとの `query`。時間粒度 (`DAILY`/`HOURLY`)、期間、ディメンション指定。 |
-| 3-3 | **レスポンス → `MetricPoint` 系列へのマッピング。** Google の `timelineSpec` / `rows` 形式は素直ではないので、マッパーを分離してテストする。 |
-| 3-4 | **`freshnessInfo` の扱い。** どこまでのデータが確定済みかを返す仕組みがあるので、無視せずモデルに載せる(未確定データを確定として扱うと日次集計が狂う)。 |
+| ✅ 3-1 | **`PlayReportingClient`** — 認証済み HTTP + エラー変換。`AppStoreConnectClient` と対になる位置づけ。 |
+| ✅ 3-2 | **`PlayVitalsApi`** — メトリクスセットごとの `query`。時間粒度 (`DAILY`/`HOURLY`)、期間、ディメンション指定。 |
+| ✅ 3-3 | **レスポンス → `MetricPoint` 系列へのマッピング。** Google の `timelineSpec` / `rows` 形式は素直ではないので、マッパーを分離してテストする。 |
+| ✅ 3-4 | **`freshnessInfo` の扱い。** どこまでのデータが確定済みかを返す仕組みがあるので、無視せずモデルに載せる(未確定データを確定として扱うと日次集計が狂う)。 |
 
 **完了条件**: 記録済み JSON からクラッシュ率の日次系列が組み立てられるテスト。
+
+> ✅ **Phase 3 完了 (テスト 206 → 240)**。discovery document から確定した事実:
+> - **DAILY バケットは `America/Los_Angeles` の暦日。** Google は「歴史的経緯」として
+>   これ以外のタイムゾーンを提供していない。つまり Play の「8/20」と App Store の「8/20」は
+>   **異なる24時間**を指し、どちらも UTC の1日ではない。
+>   `MetricPoint.date` は Google が報告した暦日をそのまま UTC ラベルで保持する方針にした
+>   (実 UTC に変換すると深夜からズレ、境界では日付自体が変わって Play Console と食い違う)。
+>   `AggregationPeriod.timeZoneId` で型として可視化。
+> - **`errorCountMetricSet` は `reportType` ディメンション必須。** 全メトリックセット中これだけ。
+>   欠落時の Google のエラーはどのディメンションか言わない。ローカルで弾く。
+> - **ローリング平均 (`…7dUserWeighted` / `…28dUserWeighted`) は HOURLY 非対応。**
+>   これもローカルで弾く。
+> - **メトリック名自体は検証しない。** Phase 2 の `version` と同じ理由
+>   (Google は予告なくメトリックを追加する)。ドキュメントとして
+>   `VitalsMetricSet.metrics` に列挙はする。
+> - **`google.type.Decimal` は必ず文字列 `{"value": "0.0231"}`。** 数値として読むと
+>   null になって点が黙って落ちる。
+> - **1行に複数メトリックが乗る。** `StoreMetric` は1メトリックの時系列なので、
+>   レスポンスを転置するマッパーが必要だった。
+> - **クォータ超過は `RESOURCE_EXHAUSTED`** で、429 でも 403 でも来る。
+>   Phase 0 と同じく変換後の例外型でリトライ可否を決める。
+> - **スコープ間違いは「鍵が不正」に見える。** Android Publisher スコープのトークンは
+>   ここでは拒否されるので、401/403 のメッセージで `reportingScope` を名指しする。
 
 ---
 

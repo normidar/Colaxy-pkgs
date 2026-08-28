@@ -27,6 +27,34 @@
   series shared by every statistics surface, with `total`, `average`,
   `latest`, `period`, `byDate` and `whereDimension`.
 
+- `AppStoreTeam` and `SalesReportsApi`: App Store Connect Sales and Trends
+  reports. These are team-scoped, keyed by vendor number rather than app ID,
+  and cover every app in the account at once — which is why they hang off a
+  new `AppStoreTeam` rather than `AppStoreConnectConsole`.
+- `SalesReportQuery`, `SalesReportType`, `SalesReportSubType`,
+  `SalesFrequency` and `SalesReportCombination`: Apple's allowed-values table
+  as types. An impossible report type/sub-type/frequency combination throws
+  locally, naming the parameter actually at fault — Apple's own error blames
+  the date. `version` is passed through unvalidated, since Apple's published
+  versions and the ones its API accepts have drifted apart.
+- `SalesFrequency.formatDate` and `.endOfWeek`: the per-frequency
+  `reportDate` formats, and the Sunday a weekly report must be requested by.
+- `AppStoreConnectClient.getBytes`, for endpoints that answer with something
+  other than JSON.
+
+- `PlayVitalsApi`, `PlayReportingClient`, `VitalsQuery`, `VitalsMetricSet`,
+  `AggregationPeriod`, `UserCohort` and `MetricFreshness`: Android vitals from
+  the Play Developer Reporting API. Hand-written, because that API is in
+  neither `googleapis` nor `googleapis_beta`.
+- Queries validate the two restrictions whose Google-side errors do not name
+  the cause: `errorCountMetricSet` requires the `reportType` dimension, and
+  rolling averages are not available hourly. Metric names are not validated,
+  for the same reason sales report versions are not.
+- `MetricFreshness.clamp`, for trimming a query to the buckets Google has
+  settled — recent vitals are still moving and storing them as final is how a
+  pipeline ends up disagreeing with Play Console.
+- `MetricUnit.bytes`, for the memory-usage metric sets.
+
 ### Changed
 - `PlayServiceAccount.authenticate` takes a `scopes` list, defaulting to the
   Android Publisher scope it previously hardcoded. `GooglePlayConsole.connect`

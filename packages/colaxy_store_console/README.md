@@ -268,8 +268,107 @@ derive from it. `googleapis`' `DetailedApiRequestError` never escapes.
 
 ## Statistics
 
-The clients are not written yet, but the pieces every store report is read
-through are:
+### App Store sales and subscriptions
+
+Sales and Trends reports are **team-scoped**, not app-scoped: one report
+covers every app under the account, keyed by SKU, and the API offers no way to
+ask for a single app. So they hang off `AppStoreTeam`, keyed by your **vendor
+number** (App Store Connect → Payments and Financial Reports — no API returns
+it, so it has to be configured).
+
+```dart
+final team = AppStoreTeam(apiKey: key, vendorNumber: '85000000');
+
+final table = await team.salesReports.fetch(
+  SalesReportQuery.sales(date: DateTime.utc(2026, 8, 20)),
+);
+for (final row in table.entries) {
+  print('${row['SKU']}: ${row.intAt('Units')} units');
+}
+
+team.close();
+```
+
+`SalesReportQuery` encodes Apple's allowed-values table, so an impossible
+combination fails locally naming the parameter actually at fault. That matters
+more than it sounds: Apple answers a bad *frequency* with `INVALID_COMBINATION`
+and the detail "Invalid combination of date type and date", sending you off to
+debug a date that was fine.
+
+A few things the API does not make obvious:
+
+- **A `404` means zero sales that period, not a failure.** `fetch` returns an
+  empty table. A generated report always has a header row, so
+  `table.columns.isEmpty` tells "no report" apart from "report with no rows".
+- **Date format follows the frequency.** Daily and weekly take `YYYY-MM-DD`,
+  monthly `YYYY-MM`, yearly `YYYY`. `SalesReportQuery` handles it.
+- **Weekly reports must be requested by the Sunday that closes the week.**
+  Use `SalesFrequency.endOfWeek(date)`; passing any other day throws rather
+  than silently fetching a different week.
+- **`version` is not validated.** Apple's published versions and the ones its
+  API accepts have drifted apart, so an explicit `version:` is passed through
+  untouched. Left unset, you get the newest Apple documents.
+- **Reports lag.** Daily the next day, weekly on Mondays, monthly five days
+  after month end, yearly six days after year end. Daily/weekly/monthly are
+  kept one year, yearly ten, and are not regenerated after that.
+
+### Google Play vitals
+
+Crash rate, ANR rate and the rest of Android vitals, through the Play
+Developer Reporting API. That API is in neither `googleapis` nor
+`googleapis_beta`, so this is a hand-written client — and it needs a
+**different scope** from reviews:
+
+```dart
+final client = PlayReportingClient(
+  authenticatedClient: await account.authenticate(
+    scopes: [PlayServiceAccount.reportingScope],
+  ),
+);
+final api = PlayVitalsApi(client: client, packageName: 'com.example.app');
+
+// Recent buckets are still moving, so stop where Google says data is settled.
+final freshness = await api.freshness(VitalsMetricSet.crashRate);
+final metrics = await api.query(
+  VitalsQuery(
+    metricSet: VitalsMetricSet.crashRate,
+    metrics: const ['userPerceivedCrashRate', 'distinctUsers'],
+    from: DateTime.utc(2026, 8, 2),
+    to: freshness.clamp(DateTime.now().toUtc(), AggregationPeriod.daily),
+  ),
+);
+
+print(metrics['userPerceivedCrashRate']?.average);
+api.close();
+```
+
+Things that bite:
+
+- **A daily bucket is an `America/Los_Angeles` day**, not a UTC one — Google
+  calls this a historical constraint and offers no alternative. So a Play
+  "day" and an App Store "day" cover different 24-hour windows. Dates come
+  back as the civil date Google reported, labelled UTC, so they match Play
+  Console rather than drifting off it.
+- **A token minted for the Android Publisher scope is rejected here**, and the
+  rejection looks like a bad key. The `401`/`403` message names the scope.
+- **`errorCountMetricSet` requires the `reportType` dimension** on every
+  query; `VitalsQuery` rejects it locally, since Google's error does not say
+  which dimension is missing.
+- **Rolling averages (`…7dUserWeighted`) are daily only.** Also rejected
+  locally.
+- **Metric names are not validated** — Google adds them without notice.
+  `VitalsMetricSet.metrics` lists the documented ones for reference.
+- **Installs, ratings and revenue are not here.** Google only publishes those
+  as CSVs in a Cloud Storage bucket.
+
+Google returns one row per bucket carrying every requested metric;
+`PlayVitalsApi.query` pivots that into one `StoreMetric` per metric name. A
+metric with no data is absent from the map rather than present and empty, so
+"no data" stays distinguishable from "zero".
+
+### Reading reports
+
+Every store report is read through these:
 
 | Type | What it is |
 | --- | --- |
@@ -297,17 +396,14 @@ the usual way this kind of code produces confident nonsense, so `total` and
 
 ## Not yet implemented
 
-The four statistics surfaces themselves. They share the transport, credential
+Two of the four statistics surfaces. They share the transport, credential
 and report layers above, but not much else — they differ in granularity,
 freshness and even in which account they authenticate as:
 
-- **Google Play vitals** — crash rate, ANR rate and friends, via the Play
-  Developer Reporting API. Note this API is *not* in `googleapis`, so it needs
-  a hand-written client like the App Store one.
 - **Google Play installs, ratings and revenue** — only available as CSV
   reports in the developer's Cloud Storage bucket, not as an API.
-- **App Store sales and subscriptions** — `GET /v1/salesReports`, gzipped TSV.
-- **App Store analytics** — the `analyticsReportRequests` family.
+- **App Store analytics** — the `analyticsReportRequests` family, an
+  asynchronous request/report/instance/segment chain.
 
 Note that neither store exposes a rating average through these review
 endpoints, and Google Play's reviews exclude ratings without text — so an

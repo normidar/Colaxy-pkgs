@@ -95,6 +95,26 @@ class AppStoreConnectClient {
     return _decode(response);
   }
 
+  /// GETs [path] with [query] and returns the raw response body.
+  ///
+  /// Reports are not JSON: Apple serves them as gzipped TSV, and gzip is not
+  /// text at all. [accept] sets the `Accept` header — pass
+  /// `application/a-gzip` for reports, which is the type Apple documents.
+  ///
+  /// Errors still arrive as JSON and are still mapped, so a failure throws the
+  /// same exceptions as everywhere else rather than returning bad bytes.
+  Future<List<int>> getBytes(
+    String path, {
+    Map<String, Object?> query = const {},
+    String? accept,
+  }) async {
+    final uri = baseUri.replace(path: path, queryParameters: _encode(query));
+    final response = await _send(
+      () => _http.get(uri, headers: _headers(accept: accept)),
+    );
+    return response.bodyBytes;
+  }
+
   /// GETs [path] with [query] as a JSON:API collection page.
   ///
   /// Prefer this over [getJson] for list endpoints: it pulls apart the
@@ -186,9 +206,13 @@ class AppStoreConnectClient {
     if (_ownsHttp) _http.close();
   }
 
-  Map<String, String> _headers({bool withContentType = false}) => {
+  Map<String, String> _headers({
+    bool withContentType = false,
+    String? accept,
+  }) => {
     'Authorization': 'Bearer ${_tokens.token()}',
     if (withContentType) 'Content-Type': 'application/json',
+    'Accept': ?accept,
   };
 
   /// Runs [request], re-signing once on `401` and backing off per

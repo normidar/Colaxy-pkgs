@@ -21,6 +21,9 @@ enum MetricUnit {
   /// A length of time, in milliseconds.
   duration,
 
+  /// A quantity of memory or storage, in bytes.
+  bytes,
+
   /// The store did not say, or this package does not model it yet.
   unknown,
 }
