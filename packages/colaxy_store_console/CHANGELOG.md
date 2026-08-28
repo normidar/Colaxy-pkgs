@@ -55,6 +55,18 @@
   pipeline ends up disagreeing with Play Console.
 - `MetricUnit.bytes`, for the memory-usage metric sets.
 
+- `PlayReportsApi`, `PlayStorageClient` and `PlayReportType`: Google Play's
+  monthly report CSVs from the developer's Cloud Storage bucket — installs,
+  ratings, crashes, store performance and review history. None of these have
+  an API; the CSVs are the only route, and the ratings report is the only
+  route to a real rating average.
+- The bucket ID accepts the whole `gs://…/stats/installs/` URI Play Console's
+  copy button produces, not just the bare name.
+- `PlayReportsApi.list` and `.fetchAll` discover which months exist by listing
+  the bucket, since Google says not to depend on its publishing schedule.
+- `GoogleApiError`, shared by the reporting and storage clients so the two
+  cannot drift on what a given status means.
+
 ### Changed
 - `PlayServiceAccount.authenticate` takes a `scopes` list, defaulting to the
   Android Publisher scope it previously hardcoded. `GooglePlayConsole.connect`

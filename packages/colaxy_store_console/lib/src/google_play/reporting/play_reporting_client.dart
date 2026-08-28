@@ -4,6 +4,7 @@ import 'package:colaxy_store_console/src/core/retry_policy.dart';
 import 'package:colaxy_store_console/src/core/store.dart';
 import 'package:colaxy_store_console/src/core/store_console_exception.dart';
 import 'package:colaxy_store_console/src/core/store_console_log.dart';
+import 'package:colaxy_store_console/src/google_play/google_api_error.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
@@ -52,6 +53,16 @@ class PlayReportingClient {
 
   /// API version prefix every path is built on.
   static const apiVersion = 'v1beta1';
+
+  /// Explains the usual causes of a `401`/`403` from this API.
+  ///
+  /// The scope is the one people miss: a token minted for the Android
+  /// Publisher scope is rejected here, and the rejection reads like a bad key.
+  static const authHint =
+      'Check that the service account is invited in Play Console with "View '
+      'app information", and that the token was minted with '
+      'PlayServiceAccount.reportingScope — the Android Publisher scope does '
+      'not cover this API.';
 
   /// API root every path is resolved against.
   final Uri baseUri;
@@ -112,7 +123,7 @@ class PlayReportingClient {
       final response = await request();
       if (response.statusCode < 400) return response;
 
-      final error = _errorFor(response);
+      final error = GoogleApiError.translate(response, authHint: authHint);
       // Google reports an exhausted quota as RESOURCE_EXHAUSTED, which can
       // arrive as 429 or as 403; the translated type is the reliable signal.
       final retryable =
@@ -145,54 +156,6 @@ class PlayReportingClient {
       );
     }
     return decoded;
-  }
-
-  /// Maps an error response onto the exception hierarchy.
-  ///
-  /// Google answers `{"error": {code, message, status, details}}`, but not
-  /// always — a load-balancer failure arrives as HTML. Parsing is best-effort
-  /// and a body that will not parse still yields a typed exception.
-  StoreConsoleException _errorFor(http.Response response) {
-    String? status;
-    var message = 'Request failed';
-
-    try {
-      final body = jsonDecode(response.body);
-      if (body is Map<String, dynamic>) {
-        final error = body['error'];
-        if (error is Map<String, dynamic>) {
-          message = error['message'] as String? ?? message;
-          status = error['status'] as String?;
-        }
-      }
-    } on FormatException {
-      // Leave the defaults; the status code still identifies the failure.
-    }
-
-    if (status == 'RESOURCE_EXHAUSTED' || response.statusCode == 429) {
-      return StoreRateLimitException(
-        message,
-        statusCode: response.statusCode,
-        store: Store.googlePlay,
-        code: status,
-      );
-    }
-    if (response.statusCode == 401 ||
-        (response.statusCode == 403 && status == 'PERMISSION_DENIED')) {
-      return StoreAuthException(
-        '$message. Check that the service account is invited in Play Console '
-        'with "View app information", and that the token was minted with '
-        'PlayServiceAccount.reportingScope — the Android Publisher scope does '
-        'not cover this API.',
-        store: Store.googlePlay,
-      );
-    }
-    return StoreApiException(
-      message,
-      statusCode: response.statusCode,
-      store: Store.googlePlay,
-      code: status,
-    );
   }
 
   static Map<String, String> _encode(Map<String, Object?> query) {

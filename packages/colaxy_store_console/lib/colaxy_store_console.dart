@@ -28,6 +28,7 @@ export 'package:colaxy_store_console/src/core/store_console_exception.dart';
 export 'package:colaxy_store_console/src/core/store_console_log.dart';
 export 'package:colaxy_store_console/src/core/store_review.dart';
 export 'package:colaxy_store_console/src/core/store_reviews_api.dart';
+export 'package:colaxy_store_console/src/google_play/google_api_error.dart';
 export 'package:colaxy_store_console/src/google_play/google_play_console.dart';
 export 'package:colaxy_store_console/src/google_play/play_review_mapper.dart';
 export 'package:colaxy_store_console/src/google_play/play_reviews_api.dart';
@@ -39,6 +40,9 @@ export 'package:colaxy_store_console/src/google_play/reporting/play_vitals_api.d
 export 'package:colaxy_store_console/src/google_play/reporting/play_vitals_mapper.dart';
 export 'package:colaxy_store_console/src/google_play/reporting/vitals_metric_set.dart';
 export 'package:colaxy_store_console/src/google_play/reporting/vitals_query.dart';
+export 'package:colaxy_store_console/src/google_play/reports/play_report_type.dart';
+export 'package:colaxy_store_console/src/google_play/reports/play_reports_api.dart';
+export 'package:colaxy_store_console/src/google_play/reports/play_storage_client.dart';
 export 'package:colaxy_store_console/src/merged_reviews_api.dart';
 export 'package:colaxy_store_console/src/reports/csv_decoder.dart';
 export 'package:colaxy_store_console/src/reports/metric_point.dart';

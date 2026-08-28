@@ -181,19 +181,40 @@
 
 ---
 
-## Phase 4 — Play のインストール/評価/売上 (GCS CSV)
+## Phase 4 — Play のインストール/評価/売上 (GCS CSV) ✅
 
 **API が存在しない**面。`gs://pubsite_prod_rev_<developer-id>/stats/...` の CSV を落とす。
 
 | # | 内容 |
 |---|------|
-| 4-1 | **バケット取得方法の確定。** Play Console の「レポートをダウンロード」画面にしか出ない ID なので、ユーザーに設定してもらう前提でよいか要判断。 |
-| 4-2 | **Cloud Storage からのダウンロード。** `googleapis` の `storage/v1` は利用可能(確認済み)。スコープは `devstorage.read_only`。 |
-| 4-3 | **UTF-16LE CSV のデコード (1-3)** と、installs / ratings / crashes / reviews の各レポート形式のマッピング。 |
-| 4-4 | **月次ファイルの列挙とマージ。** 1ファイル=1ヶ月なので、期間指定は複数ファイルにまたがる。 |
+| ✅ 4-1 | **バケット取得方法の確定。** Play Console の「レポートをダウンロード」画面にしか出ない ID なので、ユーザーに設定してもらう前提でよいか要判断。 |
+| ✅ 4-2 | **Cloud Storage からのダウンロード。** `googleapis` の `storage/v1` は利用可能(確認済み)。スコープは `devstorage.read_only`。 |
+| ✅ 4-3 | **UTF-16LE CSV のデコード (1-3)** と、installs / ratings / crashes / reviews の各レポート形式のマッピング。 |
+| ✅ 4-4 | **月次ファイルの列挙とマージ。** 1ファイル=1ヶ月なので、期間指定は複数ファイルにまたがる。 |
 
-> **リスク**: 4-1 が解決できないと使い勝手が悪い。Phase 3 完了後に、
-> 本当に需要があるか(vitals と ASC で足りないか)を再評価してから着手する。
+> ✅ **Phase 4 完了 (テスト 240 → 258)**。判明したこと・計画からの変更:
+> - **4-1 の結論: バケット ID は利用者に設定してもらう。** Play Console の
+>   「レポートのダウンロード」画面にしか出ず、どの API にも出てこない。ただし
+>   コピーボタンが渡すのは `gs://pubsite_prod_rev_…/stats/installs/` という
+>   **URI 全体**なので、そのまま貼っても動くよう `normaliseBucket` で
+>   scheme とパスを落とす(生で渡すと「無効なバケット名」で落ちる)。
+> - **4-2 は `googleapis` の storage を使わなかった。** `package:googleapis/storage/v1.dart` は
+>   **deprecated**(`google_cloud_storage` へ移行を推奨)。必要なのは list と download の
+>   GET 2本だけなので、Reporting と同様に Cloud Storage JSON API を直接叩く。
+>   deprecated API も新規依存も避けられる。
+> - **Google 系エラー変換を `GoogleApiError` に共通化した。** Reporting と Storage は
+>   同じ `{"error": {code, message, status}}` 形式。2箇所が別々に育つと
+>   「403 の意味」が食い違うので1箇所にまとめ、認証ヒントだけ差し替える。
+> - **オブジェクト名は丸ごと percent-encode が必要。** JSON API はオブジェクト名を
+>   1つのパスセグメントとして扱うので、`/` を生で残すと別の(存在しない)
+>   エンドポイントに解決される。
+> - **レポート種別ごとに breakdown が違う。** `crashes` に `carrier` は無く、
+>   `store_performance` には `overview` が無い。存在しない breakdown を頼むと
+>   404 が返り、「その月はデータ無し」と見分けがつかないのでローカルで弾く。
+> - **月の列挙は推測ではなく prefix list で行う。** Google 自身が
+>   「特定時刻に更新される前提で作るな」と言っているため。
+> - **`ratings` レポートが本当の平均評価の唯一の入手経路。** レビュー API は
+>   テキスト無し評価を返さないので平均が出せない。
 
 ---
 

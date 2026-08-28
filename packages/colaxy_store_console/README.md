@@ -366,6 +366,57 @@ Google returns one row per bucket carrying every requested metric;
 metric with no data is absent from the map rather than present and empty, so
 "no data" stays distinguishable from "zero".
 
+### Google Play installs, ratings and review history
+
+Google publishes these **only as CSVs** in the developer's Cloud Storage
+bucket — no API covers them. That makes this the only route to installs, to
+store performance, to review history beyond seven days, and to a real rating
+average (the reviews API omits ratings that carry no text, so an average
+computed from it is wrong).
+
+```dart
+final api = PlayReportsApi(
+  client: PlayStorageClient(
+    authenticatedClient: await account.authenticate(
+      scopes: [PlayServiceAccount.storageReadScope],
+    ),
+  ),
+  // Paste the whole URI from Play Console's "Copy Cloud Storage URI" button;
+  // the scheme and path are trimmed for you.
+  bucket: 'gs://pubsite_prod_rev_01234567890123456789/stats/installs/',
+  packageName: 'com.example.app',
+);
+
+final table = await api.fetch(
+  PlayReportType.installs,
+  month: DateTime.utc(2026, 8),
+  dimension: 'country',
+);
+```
+
+The bucket ID is per developer account, lives only on the **Play Console →
+Download reports** page, and appears in no API — so it has to be configured.
+The service account needs `storageReadScope` *and* an invitation in Play
+Console, the same two-step setup as reviews.
+
+Breakdowns differ per report — `crashes` has no `carrier`, `store_performance`
+has no `overview` — and asking for one that does not exist returns a `404`
+indistinguishable from a month with no data, so `PlayReportType` rejects those
+locally. A month Google has not published comes back as an empty table.
+
+Rather than guessing month names, list what exists:
+
+```dart
+for (final name in await api.list(PlayReportType.ratings)) print(name);
+
+await for (final table in api.fetchAll(
+  PlayReportType.ratings,
+  dimension: 'overview',
+)) {
+  // every published month, oldest first
+}
+```
+
 ### Reading reports
 
 Every store report is read through these:
@@ -396,18 +447,17 @@ the usual way this kind of code produces confident nonsense, so `total` and
 
 ## Not yet implemented
 
-Two of the four statistics surfaces. They share the transport, credential
-and report layers above, but not much else — they differ in granularity,
-freshness and even in which account they authenticate as:
+One statistics surface, which shares the transport, credential and report
+layers above:
 
-- **Google Play installs, ratings and revenue** — only available as CSV
-  reports in the developer's Cloud Storage bucket, not as an API.
 - **App Store analytics** — the `analyticsReportRequests` family, an
   asynchronous request/report/instance/segment chain.
 
-Note that neither store exposes a rating average through these review
+Note that neither store exposes a rating average through its *review*
 endpoints, and Google Play's reviews exclude ratings without text — so an
-average computed from `StoreReview.rating` will not match Play Console.
+average computed from `StoreReview.rating` will not match Play Console. Use
+`PlayReportType.ratings` for Android; the App Store publishes no rating
+report at all, so there the only source is the reviews themselves.
 
 ## License
 
