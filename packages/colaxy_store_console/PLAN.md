@@ -218,19 +218,36 @@
 
 ---
 
-## Phase 5 — ASC アナリティクスレポート
+## Phase 5 — ASC アナリティクスレポート ✅
 
 非同期4段 (`request` → `report` → `instance` → `segment`) で最も複雑。最後に回す。
 
 | # | 内容 |
 |---|------|
-| 5-1 | **`AnalyticsReportsApi`** — `POST /v1/analyticsReportRequests` (`ONGOING` / `ONE_TIME_SNAPSHOT`)、既存リクエストの列挙 (`filter[accessType]`)。 |
-| 5-2 | **ダウンロードチェーンの実装。** `/analyticsReports/{id}/instances` → `/analyticsReportInstances/{id}/segments` → segment の URL から gzip TSV。0-3 のページングを使う。 |
-| 5-3 | **待機とポーリング。** `ONGOING` の初回は 24〜48時間後。同期的に待つのは非現実なので、「リクエスト作成」と「取得」を別 API として分ける。 |
-| 5-4 | **`stoppedDueToInactivity` の扱い。** 使われないリクエストは Apple 側で削除され ID が無効になる。再作成が必要なことを型で表現する。 |
+| ✅ 5-1 | **`AnalyticsReportsApi`** — `POST /v1/analyticsReportRequests` (`ONGOING` / `ONE_TIME_SNAPSHOT`)、既存リクエストの列挙 (`filter[accessType]`)。 |
+| ✅ 5-2 | **ダウンロードチェーンの実装。** `/analyticsReports/{id}/instances` → `/analyticsReportInstances/{id}/segments` → segment の URL から gzip TSV。0-3 のページングを使う。 |
+| ✅ 5-3 | **待機とポーリング。** `ONGOING` の初回は 24〜48時間後。同期的に待つのは非現実なので、「リクエスト作成」と「取得」を別 API として分ける。 |
+| ✅ 5-4 | **`stoppedDueToInactivity` の扱い。** 使われないリクエストは Apple 側で削除され ID が無効になる。再作成が必要なことを型で表現する。 |
 
-> **リスク**: instance の保持期間が「限定的」としか公開されておらず、
-> 取り逃すと再リクエストが要る。この面は「定期実行して自前で貯める」前提の設計にする。
+> ✅ **Phase 5 完了 (テスト 258 → 278)**。設計と発見:
+> - **「リクエスト作成」と「取得」を別 API に分けた (5-3)。** `ONGOING` の初回データは
+>   24〜48時間後なので、作成と読み取りを同じジョブでやると必ず空になる。
+>   `createRequest` はセットアップ時に1回、以降は `requests`/`reports`/`instances` で回収。
+> - **`ensureRequest` は停止済みリクエストを飛ばして新規作成する (5-4)。**
+>   `stoppedDueToInactivity` が立つと以下の ID がすべて解決しなくなるため、
+>   「生きているものを再利用、全部死んでいたら作り直す」が正しい挙動。
+> - **セグメント URL は事前署名済みで、API とは別ホスト・別期限。** Bearer トークンは
+>   無関係なので、認証ヘッダを付けない専用の取得経路 (`getSignedBytes`) を用意した。
+>   期限切れは `StoreApiException` になるので、segments を取り直す。
+> - **1 instance は複数セグメントに分割され、各セグメントが独自のヘッダ行を持つ。**
+>   連結して初めて1つのレポートになる。`ReportTable.concat` を追加し、
+>   **列が食い違ったら例外**にした(黙って連結すると全値が1列ずれた
+>   「もっともらしい嘘」になるため)。
+> - **レポート名は識別子ではなく散文**で、Apple が改名した実績がある。
+>   `filter[name]` より `filter[category]` を推奨する旨をドキュメントに書いた。
+> - **未確認事項は推測で埋めなかった。** 同一 accessType のリクエストを2つ作った場合の
+>   Apple の挙動は非公開なので、`ensureRequest` は「生きているものがあれば再利用」に留め、
+>   その旨をドキュメントに明記している。
 
 ---
 

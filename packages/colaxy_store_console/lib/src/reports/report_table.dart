@@ -66,6 +66,37 @@ class ReportTable {
   factory ReportTable.fromCsvBytes(List<int> bytes) =>
       ReportTable.fromRows(CsvDecoder.decodeBytes(bytes));
 
+  /// Joins tables that share a header into one.
+  ///
+  /// Apple splits a large analytics report instance across several segments,
+  /// each an independent file carrying its own header row; only the
+  /// concatenation is the report.
+  ///
+  /// Empty tables are skipped, so a period with no data does not blank the
+  /// result. Throws [StateError] if two tables disagree on their columns:
+  /// appending rows under the wrong header would silently shift every value
+  /// one column over, which is worse than failing.
+  factory ReportTable.concat(Iterable<ReportTable> tables) {
+    ReportTable? first;
+    final rows = <List<String>>[];
+
+    for (final table in tables) {
+      if (table.columns.isEmpty) continue;
+      if (first == null) {
+        first = table;
+      } else if (!_sameColumns(first.columns, table.columns)) {
+        throw StateError(
+          'Cannot concatenate report tables with different columns: '
+          '${first.columns.join(', ')} vs ${table.columns.join(', ')}',
+        );
+      }
+      rows.addAll(table.rows);
+    }
+
+    if (first == null) return ReportTable.empty();
+    return ReportTable(columns: first.columns, rows: rows);
+  }
+
   /// Header names, in order.
   final List<String> columns;
 
@@ -115,6 +146,14 @@ class ReportTable {
 
   /// The position of [column], or `null` if there is no such column.
   int? indexOf(String column) => columnIndex[ReportRow.normalise(column)];
+
+  static bool _sameColumns(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (ReportRow.normalise(a[i]) != ReportRow.normalise(b[i])) return false;
+    }
+    return true;
+  }
 
   @override
   String toString() =>

@@ -67,6 +67,20 @@
 - `GoogleApiError`, shared by the reporting and storage clients so the two
   cannot drift on what a given status means.
 
+- `AnalyticsReportsApi` on `AppStoreConnectConsole.analytics`: App Store
+  Connect analytics, the request → report → instance → segment chain. Creating
+  a request and reading it are separate calls on purpose — the first data
+  lands 24–48 hours after registration, so a job that does both always reads
+  nothing.
+- `ensureRequest` reuses a live request and creates one only when every
+  existing request has been stopped for inactivity, which kills the IDs
+  beneath it.
+- `ReportTable.concat`, for joining the segments of one instance. Segments
+  each carry their own header row; mismatched columns throw rather than
+  silently shifting every value one column across.
+- `AppStoreConnectClient.getSignedBytes`, for the pre-signed segment URLs,
+  which live off the API host and carry their own credentials.
+
 ### Changed
 - `PlayServiceAccount.authenticate` takes a `scopes` list, defaulting to the
   Android Publisher scope it previously hardcoded. `GooglePlayConsole.connect`

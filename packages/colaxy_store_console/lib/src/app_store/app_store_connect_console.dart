@@ -1,3 +1,4 @@
+import 'package:colaxy_store_console/src/app_store/analytics/analytics_reports_api.dart';
 import 'package:colaxy_store_console/src/app_store/app_store_api_key.dart';
 import 'package:colaxy_store_console/src/app_store/app_store_connect_client.dart';
 import 'package:colaxy_store_console/src/app_store/app_store_reviews_api.dart';
@@ -69,13 +70,19 @@ class AppStoreConnectConsole {
     required AppStoreConnectClient client,
     required this.appId,
   }) : _client = client,
-       reviews = AppStoreReviewsApi(client: client, appId: appId);
+       reviews = AppStoreReviewsApi(client: client, appId: appId),
+       analytics = AnalyticsReportsApi(client: client, appId: appId);
 
   /// The app's App Store Connect resource ID.
   final String appId;
 
   /// Reviews for this app.
   final AppStoreReviewsApi reviews;
+
+  /// Analytics reports for this app.
+  ///
+  /// Asynchronous, unlike everything else here: see [AnalyticsReportsApi].
+  final AnalyticsReportsApi analytics;
 
   final AppStoreConnectClient _client;
 

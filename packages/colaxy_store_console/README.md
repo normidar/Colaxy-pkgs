@@ -417,6 +417,58 @@ await for (final table in api.fetchAll(
 }
 ```
 
+### App Store analytics
+
+Impressions, product page views, downloads by source, sessions, retention.
+This is the one asynchronous surface in the package. Nothing is queryable —
+you register a standing *request*, Apple generates *reports* under it, each
+report has dated *instances*, and each instance is split into *segments* that
+hold the gzipped TSV:
+
+```text
+request  →  report  →  instance  →  segment  →  gzip TSV
+```
+
+```dart
+// Once, at setup. The first data lands 24–48 hours later.
+await console.appStore!.analytics.createRequest(AnalyticsAccessType.ongoing);
+
+// Later, on a schedule.
+final api = console.appStore!.analytics;
+final request = await api.ensureRequest(AnalyticsAccessType.ongoing);
+
+for (final report in await api.reports(
+  request.id,
+  category: AnalyticsReportCategory.appStoreEngagement,
+)) {
+  for (final instance in await api.instances(
+    report.id,
+    granularity: AnalyticsGranularity.daily,
+  )) {
+    final table = await api.downloadInstance(instance.id);
+  }
+}
+```
+
+Design around these:
+
+- **Registering and reading are separate calls.** A job that creates a request
+  and reads it always reads nothing.
+- **Unused requests are stopped and their data deleted.** Apple flags this as
+  `stoppedDueToInactivity`, and every ID beneath a stopped request goes dead.
+  `ensureRequest` skips stopped requests and registers a fresh one.
+- **Instances expire.** Apple keeps them "for a limited period". Treat this as
+  a pipeline that runs regularly and stores its own copy.
+- **Segment URLs are pre-signed and expire.** List them immediately before
+  downloading; an expired one throws `StoreApiException`.
+- **Report names are prose, and Apple has renamed them.** Filter by
+  `category`, not `name`.
+
+`downloadInstance` joins an instance's segments for you. Each segment is an
+independent file with its own header row, so only the concatenation is the
+report — and `ReportTable.concat` throws if two segments disagree on columns
+rather than shifting every value one column across.
+
 ### Reading reports
 
 Every store report is read through these:
@@ -445,19 +497,22 @@ for (final row in table.entries) {
 the usual way this kind of code produces confident nonsense, so `total` and
 `average` are documented per unit rather than offered interchangeably.
 
-## Not yet implemented
+## Caveats worth repeating
 
-One statistics surface, which shares the transport, credential and report
-layers above:
-
-- **App Store analytics** — the `analyticsReportRequests` family, an
-  asynchronous request/report/instance/segment chain.
-
-Note that neither store exposes a rating average through its *review*
-endpoints, and Google Play's reviews exclude ratings without text — so an
-average computed from `StoreReview.rating` will not match Play Console. Use
-`PlayReportType.ratings` for Android; the App Store publishes no rating
-report at all, so there the only source is the reviews themselves.
+- **A rating average cannot come from the review endpoints.** Google Play's
+  reviews exclude ratings without text, so an average over
+  `StoreReview.rating` will not match Play Console. Use
+  `PlayReportType.ratings` on Android; the App Store publishes no rating
+  report at all, so there the reviews are the only source and the same
+  caveat does not apply.
+- **"The same day" is three different days.** An App Store sales day, a Play
+  vitals day (`America/Los_Angeles`) and a UTC day are different 24-hour
+  windows. Comparing the two stores' daily figures without saying so
+  overstates the precision.
+- **Neither store is queryable in real time.** Every statistics surface here
+  lags by a day or more, and two of them expire data you did not collect.
+  These are pipelines to run on a schedule and store from, not APIs to read
+  on demand.
 
 ## License
 

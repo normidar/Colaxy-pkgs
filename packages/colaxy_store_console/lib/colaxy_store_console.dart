@@ -5,6 +5,9 @@
 /// console needs.
 library;
 
+export 'package:colaxy_store_console/src/app_store/analytics/analytics_enums.dart';
+export 'package:colaxy_store_console/src/app_store/analytics/analytics_models.dart';
+export 'package:colaxy_store_console/src/app_store/analytics/analytics_reports_api.dart';
 export 'package:colaxy_store_console/src/app_store/app_store_api_key.dart';
 export 'package:colaxy_store_console/src/app_store/app_store_connect_client.dart';
 export 'package:colaxy_store_console/src/app_store/app_store_connect_console.dart';

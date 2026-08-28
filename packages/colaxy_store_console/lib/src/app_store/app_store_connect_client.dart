@@ -115,6 +115,17 @@ class AppStoreConnectClient {
     return response.bodyBytes;
   }
 
+  /// GETs an absolute [uri] outside the API, without the bearer token.
+  ///
+  /// Analytics report segments live behind pre-signed URLs on another host.
+  /// They carry their own credentials, so attaching Apple's bearer token
+  /// would be pointless, and they **expire** — a failure here usually means
+  /// the URL went stale and the segments need listing again.
+  Future<List<int>> getSignedBytes(Uri uri) async {
+    final response = await _send(() => _http.get(uri));
+    return response.bodyBytes;
+  }
+
   /// GETs [path] with [query] as a JSON:API collection page.
   ///
   /// Prefer this over [getJson] for list endpoints: it pulls apart the
