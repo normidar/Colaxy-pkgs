@@ -2,9 +2,13 @@ import 'dart:convert';
 
 import 'package:colaxy_store_console/src/app_store/app_store_api_key.dart';
 import 'package:colaxy_store_console/src/app_store/app_store_token_provider.dart';
+import 'package:colaxy_store_console/src/app_store/json_api_page.dart';
+import 'package:colaxy_store_console/src/core/retry_policy.dart';
 import 'package:colaxy_store_console/src/core/store.dart';
 import 'package:colaxy_store_console/src/core/store_console_exception.dart';
+import 'package:colaxy_store_console/src/core/store_console_log.dart';
 import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
 
 /// Low-level transport for the App Store Connect REST API.
 ///
@@ -25,6 +29,10 @@ import 'package:http/http.dart' as http;
 /// - **[baseUri]**: API root (default:
 ///   `https://api.appstoreconnect.apple.com/`). Point it at
 ///   `api.enterprise.developer.apple.com` for a custom app account.
+/// - **[retryPolicy]**: When to retry a throttled or transiently failing
+///   request (default: `RetryPolicy()`, three attempts).
+/// - **[onLog]**: Receives one line per retry and wait (default: `null`,
+///   logging nothing).
 ///
 /// ## Example
 ///
@@ -39,17 +47,31 @@ class AppStoreConnectClient {
     required AppStoreApiKey apiKey,
     http.Client? httpClient,
     Uri? baseUri,
+    this.retryPolicy = const RetryPolicy(),
+    this.onLog,
+    @visibleForTesting Future<void> Function(Duration)? sleep,
   }) : _tokens = AppStoreTokenProvider(apiKey),
        _http = httpClient ?? http.Client(),
        _ownsHttp = httpClient == null,
+       _sleep = sleep ?? _wait,
        baseUri = baseUri ?? Uri.https('api.appstoreconnect.apple.com');
 
   /// API root every relative path is resolved against.
   final Uri baseUri;
 
+  /// When to retry a throttled or transiently failing request.
+  final RetryPolicy retryPolicy;
+
+  /// Receives one line per retry and wait.
+  final StoreConsoleLog? onLog;
+
   final AppStoreTokenProvider _tokens;
   final http.Client _http;
   final bool _ownsHttp;
+  final Future<void> Function(Duration) _sleep;
+
+  static Future<void> _wait(Duration duration) =>
+      Future<void>.delayed(duration);
 
   /// GETs [path] with [query] and returns the decoded JSON body.
   ///
@@ -72,6 +94,49 @@ class AppStoreConnectClient {
     final response = await _send(() => _http.get(uri, headers: _headers()));
     return _decode(response);
   }
+
+  /// GETs [path] with [query] as a JSON:API collection page.
+  ///
+  /// Prefer this over [getJson] for list endpoints: it pulls apart the
+  /// envelope Apple wraps every collection in, so each API does not have to
+  /// re-implement `links.next` and `meta.paging.total`.
+  Future<JsonApiPage> getPage(
+    String path, {
+    Map<String, Object?> query = const {},
+  }) async => JsonApiPage(await getJson(path, query: query));
+
+  /// GETs the absolute [uri] of a page, typically a previous `links.next`.
+  Future<JsonApiPage> getPageAt(Uri uri) async =>
+      JsonApiPage(await getUri(uri));
+
+  /// Every page of [path], following `links.next` until it stops.
+  ///
+  /// Pages are fetched lazily, so a caller that stops consuming stops the
+  /// requests too.
+  Stream<JsonApiPage> pages(
+    String path, {
+    Map<String, Object?> query = const {},
+  }) async* {
+    var page = await getPage(path, query: query);
+    while (true) {
+      yield page;
+      final next = page.nextCursor;
+      if (next == null) return;
+      page = await getPageAt(Uri.parse(next));
+    }
+  }
+
+  /// Every resource across every page of [path].
+  ///
+  /// Use [pages] instead when you need each response's `included` array,
+  /// which this flattening drops.
+  Stream<Map<String, dynamic>> resources(
+    String path, {
+    Map<String, Object?> query = const {},
+  }) => pages(
+    path,
+    query: query,
+  ).asyncExpand((page) => Stream.fromIterable(page.data));
 
   /// POSTs [body] as JSON to [path] and returns the decoded JSON body.
   Future<Map<String, dynamic>> postJson(
@@ -126,21 +191,47 @@ class AppStoreConnectClient {
     if (withContentType) 'Content-Type': 'application/json',
   };
 
-  /// Runs [request], retrying once with a fresh token on `401`.
+  /// Runs [request], re-signing once on `401` and backing off per
+  /// [retryPolicy] on throttling and transient server errors.
   ///
-  /// A token can be accepted and then rejected within its own lifetime — the
-  /// key is revoked, or Apple's clocks drift. Re-signing once turns that from
-  /// a hard failure into a hiccup, and a second `401` still throws.
-  Future<http.Response> _send(
-    Future<http.Response> Function() request,
-  ) async {
-    var response = await request();
-    if (response.statusCode == 401) {
-      _tokens.invalidate();
-      response = await request();
+  /// The `401` path is separate from the retry policy on purpose. A token can
+  /// be accepted and then rejected within its own lifetime — the key is
+  /// revoked, or Apple's clocks drift — and the fix is a fresh signature, not
+  /// a wait. It is allowed exactly once, so a genuinely bad key still fails
+  /// fast instead of looping.
+  Future<http.Response> _send(Future<http.Response> Function() request) async {
+    var attempt = 0;
+    var reSigned = false;
+
+    while (true) {
+      attempt++;
+      final response = await request();
+      final status = response.statusCode;
+
+      if (status < 400) return response;
+
+      if (status == 401 && !reSigned) {
+        reSigned = true;
+        _tokens.invalidate();
+        onLog?.call('401 from App Store Connect; re-signing the token');
+        continue;
+      }
+
+      if (!retryPolicy.shouldRetry(attempt: attempt, statusCode: status)) {
+        throw _errorFor(response);
+      }
+
+      final wait = retryPolicy.backoffFor(
+        attempt,
+        retryAfter: _retryAfter(response),
+      );
+      onLog?.call(
+        '$status from App Store Connect; retrying in '
+        '${wait.inMilliseconds}ms (attempt $attempt of '
+        '${retryPolicy.maxAttempts})',
+      );
+      await _sleep(wait);
     }
-    if (response.statusCode >= 400) throw _errorFor(response);
-    return response;
   }
 
   Map<String, dynamic> _decode(http.Response response) {

@@ -89,6 +89,23 @@ class PlayServiceAccount {
   /// The decoded service-account key.
   final Map<String, dynamic> json;
 
+  /// Scope for the Google Play Developer API: reviews, releases, listings.
+  static const String androidPublisherScope =
+      AndroidPublisherApi.androidpublisherScope;
+
+  /// Scope for the Play Developer Reporting API: crash rate, ANR rate, and
+  /// the rest of Android vitals.
+  ///
+  /// This is a *different* scope from [androidPublisherScope], and a token
+  /// minted for one will be rejected by the other's endpoints.
+  static const reportingScope =
+      'https://www.googleapis.com/auth/playdeveloperreporting';
+
+  /// Scope for reading the developer account's Cloud Storage report bucket,
+  /// where Google puts the install, rating and revenue CSVs that have no API.
+  static const storageReadScope =
+      'https://www.googleapis.com/auth/devstorage.read_only';
+
   /// The service account's email, the one to invite in Play Console.
   String get clientEmail => json['client_email'] as String;
 
@@ -96,16 +113,45 @@ class PlayServiceAccount {
   ///
   /// The returned client refreshes its own access token, so it can be held
   /// for the lifetime of a long run. Close it when done.
-  Future<http.Client> authenticate({http.Client? baseClient}) async {
+  ///
+  /// ## Parameters
+  ///
+  /// ### Optional
+  /// - **`scopes`**: OAuth scopes to request (default:
+  ///   `[androidPublisherScope]`). Each Google Play API needs its own — pass
+  ///   several to get one client that covers them all, which saves a token
+  ///   exchange per API.
+  /// - **`baseClient`**: Transport the authenticated client wraps
+  ///   (default: `null`, letting `googleapis_auth` create one).
+  ///
+  /// ## Example
+  ///
+  /// ```dart
+  /// final client = await account.authenticate(
+  ///   scopes: [
+  ///     PlayServiceAccount.androidPublisherScope,
+  ///     PlayServiceAccount.reportingScope,
+  ///   ],
+  /// );
+  /// ```
+  Future<http.Client> authenticate({
+    List<String>? scopes,
+    http.Client? baseClient,
+  }) async {
+    final requested = scopes ?? <String>[androidPublisherScope];
+    if (requested.isEmpty) {
+      throw ArgumentError.value(scopes, 'scopes', 'Cannot be empty');
+    }
     try {
       return await auth.clientViaServiceAccount(
         auth.ServiceAccountCredentials.fromJson(json),
-        [AndroidPublisherApi.androidpublisherScope],
+        requested,
         baseClient: baseClient,
       );
     } on Exception catch (error) {
       throw StoreAuthException(
-        'Google rejected the service account "$clientEmail": $error',
+        'Google rejected the service account "$clientEmail" for scopes '
+        '${requested.join(', ')}: $error',
         store: Store.googlePlay,
       );
     }

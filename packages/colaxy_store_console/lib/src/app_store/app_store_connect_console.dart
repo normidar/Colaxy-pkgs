@@ -1,6 +1,8 @@
 import 'package:colaxy_store_console/src/app_store/app_store_api_key.dart';
 import 'package:colaxy_store_console/src/app_store/app_store_connect_client.dart';
 import 'package:colaxy_store_console/src/app_store/app_store_reviews_api.dart';
+import 'package:colaxy_store_console/src/core/retry_policy.dart';
+import 'package:colaxy_store_console/src/core/store_console_log.dart';
 import 'package:http/http.dart' as http;
 
 /// Entry point for one app on the App Store.
@@ -21,6 +23,9 @@ import 'package:http/http.dart' as http;
 ///   owns and closes).
 /// - **`baseUri`**: API root (default:
 ///   `https://api.appstoreconnect.apple.com/`).
+/// - **`retryPolicy`**: When to retry a throttled or transiently failing
+///   request (default: `RetryPolicy()`, three attempts).
+/// - **`onLog`**: Receives one line per retry and wait (default: `null`).
 ///
 /// ## Example
 ///
@@ -43,11 +48,15 @@ class AppStoreConnectConsole {
     required String appId,
     http.Client? httpClient,
     Uri? baseUri,
+    RetryPolicy retryPolicy = const RetryPolicy(),
+    StoreConsoleLog? onLog,
   }) => AppStoreConnectConsole.client(
     client: AppStoreConnectClient(
       apiKey: apiKey,
       httpClient: httpClient,
       baseUri: baseUri,
+      retryPolicy: retryPolicy,
+      onLog: onLog,
     ),
     appId: appId,
   );

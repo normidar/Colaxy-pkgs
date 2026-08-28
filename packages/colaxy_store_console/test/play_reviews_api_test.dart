@@ -26,9 +26,20 @@ class _Recorder {
   );
 }
 
-PlayReviewsApi _api(_Recorder recorder) => PlayReviewsApi(
+/// Builds an API over [recorder].
+///
+/// Retries are off by default so a test that scripts one response gets
+/// exactly one request; the retry tests opt back in with their own policy and
+/// a fake clock, so no test ever actually sleeps.
+PlayReviewsApi _api(
+  _Recorder recorder, {
+  RetryPolicy retryPolicy = const RetryPolicy.none(),
+  List<Duration>? waits,
+}) => PlayReviewsApi(
   api: play.AndroidPublisherApi(recorder.client),
   packageName: 'com.example.app',
+  retryPolicy: retryPolicy,
+  sleep: (duration) async => waits?.add(duration),
 );
 
 Map<String, dynamic> _review({
@@ -316,6 +327,93 @@ void main() {
         expect(await _api(recorder).get('gp:old'), isNull);
       },
     );
+
+    test(
+      'retries a 403 quota error, which is transient despite the 403',
+      () async {
+        final waits = <Duration>[];
+        final recorder = _Recorder()
+          ..enqueue({
+            'error': {
+              'code': 403,
+              'message': 'Quota exceeded',
+              'errors': [
+                {'reason': 'quotaExceeded', 'message': 'Quota exceeded'},
+              ],
+            },
+          }, status: 403)
+          ..enqueue(_page([_review(id: 'a', rating: 5)]));
+
+        final page = await _api(
+          recorder,
+          retryPolicy: const RetryPolicy(),
+          waits: waits,
+        ).listPage();
+
+        expect(recorder.requests, hasLength(2));
+        expect(page.reviews, hasLength(1));
+        expect(waits, [const Duration(seconds: 1)]);
+      },
+    );
+
+    test('does not retry a plain 403, which is a permission problem', () async {
+      final recorder = _Recorder()
+        ..enqueue({
+          'error': {
+            'code': 403,
+            'message': 'The caller does not have permission',
+          },
+        }, status: 403)
+        ..enqueue(_page([]));
+
+      await expectLater(
+        _api(recorder, retryPolicy: const RetryPolicy()).listPage(),
+        throwsA(isA<StoreApiException>()),
+      );
+      expect(recorder.requests, hasLength(1));
+    });
+
+    test('retries a 500 and succeeds', () async {
+      final waits = <Duration>[];
+      final recorder = _Recorder()
+        ..enqueue({
+          'error': {'code': 500, 'message': 'Backend error'},
+        }, status: 500)
+        ..enqueue(_page([_review(id: 'a', rating: 5)]));
+
+      final page = await _api(
+        recorder,
+        retryPolicy: const RetryPolicy(),
+        waits: waits,
+      ).listPage();
+
+      expect(recorder.requests, hasLength(2));
+      expect(page.reviews, hasLength(1));
+    });
+
+    test('gives up once maxAttempts is spent', () async {
+      final recorder = _Recorder()
+        ..enqueue({
+          'error': {'code': 503, 'message': 'Unavailable'},
+        }, status: 503)
+        ..enqueue({
+          'error': {'code': 503, 'message': 'Unavailable'},
+        }, status: 503)
+        ..enqueue({
+          'error': {'code': 503, 'message': 'Unavailable'},
+        }, status: 503)
+        ..enqueue(_page([]));
+
+      await expectLater(
+        _api(
+          recorder,
+          retryPolicy: const RetryPolicy(),
+          waits: <Duration>[],
+        ).listPage(),
+        throwsA(isA<StoreApiException>()),
+      );
+      expect(recorder.requests, hasLength(3));
+    });
 
     test('keeps other statuses as StoreApiException', () async {
       final recorder = _Recorder()

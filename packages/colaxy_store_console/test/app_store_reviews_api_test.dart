@@ -27,10 +27,21 @@ class _Recorder {
   );
 }
 
-AppStoreReviewsApi _api(_Recorder recorder) => AppStoreReviewsApi(
+/// Builds an API over [recorder].
+///
+/// Retries are off by default so a test that scripts one response gets
+/// exactly one request; the retry tests opt back in with their own policy and
+/// a fake clock, so no test ever actually sleeps.
+AppStoreReviewsApi _api(
+  _Recorder recorder, {
+  RetryPolicy retryPolicy = const RetryPolicy.none(),
+  List<Duration>? waits,
+}) => AppStoreReviewsApi(
   client: AppStoreConnectClient(
     apiKey: testApiKey(),
     httpClient: recorder.client,
+    retryPolicy: retryPolicy,
+    sleep: (duration) async => waits?.add(duration),
   ),
   appId: '6740000000',
 );
@@ -349,6 +360,111 @@ void main() {
         throwsA(isA<StoreAuthException>()),
       );
       expect(recorder.requests, hasLength(2));
+    });
+
+    test('retries a 429 and succeeds, waiting what Apple asked for', () async {
+      final waits = <Duration>[];
+      final recorder = _Recorder();
+      recorder.responses.add(
+        http.Response(
+          jsonEncode({
+            'errors': [
+              {'status': '429', 'code': 'RATE_LIMIT_EXCEEDED', 'title': 'Slow'},
+            ],
+          }),
+          429,
+          headers: const {'retry-after': '7'},
+        ),
+      );
+      recorder.enqueue(_reviewPage());
+
+      final page = await _api(
+        recorder,
+        retryPolicy: const RetryPolicy(),
+        waits: waits,
+      ).listPage();
+
+      expect(recorder.requests, hasLength(2));
+      expect(page.reviews, hasLength(1));
+      expect(waits, [const Duration(seconds: 7)]);
+    });
+
+    test('backs off exponentially across repeated 500s', () async {
+      final waits = <Duration>[];
+      final recorder = _Recorder()
+        ..enqueue({'errors': <dynamic>[]}, status: 500)
+        ..enqueue({'errors': <dynamic>[]}, status: 500)
+        ..enqueue(_reviewPage());
+
+      await _api(
+        recorder,
+        retryPolicy: const RetryPolicy(),
+        waits: waits,
+      ).listPage();
+
+      expect(recorder.requests, hasLength(3));
+      expect(waits, [const Duration(seconds: 1), const Duration(seconds: 2)]);
+    });
+
+    test('gives up once maxAttempts is spent', () async {
+      final waits = <Duration>[];
+      final recorder = _Recorder()
+        ..enqueue({'errors': <dynamic>[]}, status: 503)
+        ..enqueue({'errors': <dynamic>[]}, status: 503)
+        ..enqueue({'errors': <dynamic>[]}, status: 503)
+        ..enqueue(_reviewPage());
+
+      await expectLater(
+        _api(
+          recorder,
+          retryPolicy: const RetryPolicy(),
+          waits: waits,
+        ).listPage(),
+        throwsA(isA<StoreApiException>()),
+      );
+      expect(recorder.requests, hasLength(3));
+    });
+
+    test('does not retry a 403, which would fail the same way', () async {
+      final recorder = _Recorder()
+        ..enqueue({
+          'errors': [
+            {'status': '403', 'code': 'FORBIDDEN_ERROR', 'title': 'No'},
+          ],
+        }, status: 403)
+        ..enqueue(_reviewPage());
+
+      await expectLater(
+        _api(recorder, retryPolicy: const RetryPolicy()).listPage(),
+        throwsA(isA<StoreApiException>()),
+      );
+      expect(recorder.requests, hasLength(1));
+    });
+
+    test('reports retries and re-signs through onLog', () async {
+      final logs = <String>[];
+      final recorder = _Recorder()
+        ..enqueue({
+          'errors': [
+            {'status': '401', 'title': 'Expired'},
+          ],
+        }, status: 401)
+        ..enqueue({'errors': <dynamic>[]}, status: 500)
+        ..enqueue(_reviewPage());
+
+      await AppStoreReviewsApi(
+        client: AppStoreConnectClient(
+          apiKey: testApiKey(),
+          httpClient: recorder.client,
+          onLog: logs.add,
+          sleep: (_) async {},
+        ),
+        appId: '6740000000',
+      ).listPage();
+
+      expect(logs, hasLength(2));
+      expect(logs.first, contains('re-signing'));
+      expect(logs.last, contains('retrying in'));
     });
 
     test('still throws a typed error for a body that is not JSON', () async {

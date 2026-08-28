@@ -1,5 +1,7 @@
 import 'package:colaxy_store_console/src/app_store/app_store_api_key.dart';
 import 'package:colaxy_store_console/src/app_store/app_store_connect_console.dart';
+import 'package:colaxy_store_console/src/core/retry_policy.dart';
+import 'package:colaxy_store_console/src/core/store_console_log.dart';
 import 'package:colaxy_store_console/src/core/store_reviews_api.dart';
 import 'package:colaxy_store_console/src/google_play/google_play_console.dart';
 import 'package:colaxy_store_console/src/google_play/play_service_account.dart';
@@ -78,6 +80,9 @@ class StoreConsole {
   ///   resource ID (default: `null`).
   /// - **[httpClient]**: Transport both sides use (default: each store
   ///   creates and owns its own).
+  /// - **`retryPolicy`**: When to retry a throttled or transiently failing
+  ///   request (default: `RetryPolicy()`, three attempts).
+  /// - **`onLog`**: Receives one line per retry and wait (default: `null`).
   ///
   /// Throws [ArgumentError] if neither pair is complete — otherwise a typo in
   /// one argument would silently produce a console that reads nothing.
@@ -87,6 +92,8 @@ class StoreConsole {
     AppStoreApiKey? appStoreKey,
     String? appId,
     http.Client? httpClient,
+    RetryPolicy retryPolicy = const RetryPolicy(),
+    StoreConsoleLog? onLog,
   }) async {
     final wantsPlay = playAccount != null && packageName != null;
     final wantsAppStore = appStoreKey != null && appId != null;
@@ -103,6 +110,8 @@ class StoreConsole {
               account: playAccount,
               packageName: packageName,
               baseClient: httpClient,
+              retryPolicy: retryPolicy,
+              onLog: onLog,
             )
           : null,
       appStore: wantsAppStore
@@ -110,6 +119,8 @@ class StoreConsole {
               apiKey: appStoreKey,
               appId: appId,
               httpClient: httpClient,
+              retryPolicy: retryPolicy,
+              onLog: onLog,
             )
           : null,
     );

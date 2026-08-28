@@ -1,13 +1,16 @@
+import 'package:colaxy_store_console/src/core/retry_policy.dart';
 import 'package:colaxy_store_console/src/core/review_page.dart';
 import 'package:colaxy_store_console/src/core/review_query.dart';
 import 'package:colaxy_store_console/src/core/review_reply.dart';
 import 'package:colaxy_store_console/src/core/store.dart';
 import 'package:colaxy_store_console/src/core/store_console_exception.dart';
+import 'package:colaxy_store_console/src/core/store_console_log.dart';
 import 'package:colaxy_store_console/src/core/store_review.dart';
 import 'package:colaxy_store_console/src/core/store_reviews_api.dart';
 import 'package:colaxy_store_console/src/google_play/play_review_mapper.dart';
 import 'package:googleapis/androidpublisher/v3.dart' as play;
 import 'package:http/http.dart' as http;
+import 'package:meta/meta.dart';
 
 /// Reads and answers Google Play reviews for one app.
 ///
@@ -35,14 +38,22 @@ import 'package:http/http.dart' as http;
 /// ### Optional
 /// - **`httpClient`**: The client backing `api`, closed by [close] when
 ///   given (default: `null`, leaving lifetime to the caller).
+/// - **[retryPolicy]**: When to retry a throttled or transiently failing
+///   request (default: `RetryPolicy()`, three attempts).
+/// - **[onLog]**: Receives one line per retry and wait (default: `null`,
+///   logging nothing).
 class PlayReviewsApi implements StoreReviewsApi {
   /// Creates a reviews client for one Google Play app.
   PlayReviewsApi({
     required play.AndroidPublisherApi api,
     required this.packageName,
     http.Client? httpClient,
+    this.retryPolicy = const RetryPolicy(),
+    this.onLog,
+    @visibleForTesting Future<void> Function(Duration)? sleep,
   }) : _api = api,
-       _httpClient = httpClient;
+       _httpClient = httpClient,
+       _sleep = sleep ?? _wait;
 
   /// Longest reply Google Play accepts, in characters.
   static const maxReplyLength = 350;
@@ -53,8 +64,18 @@ class PlayReviewsApi implements StoreReviewsApi {
   /// The app's application ID.
   final String packageName;
 
+  /// When to retry a throttled or transiently failing request.
+  final RetryPolicy retryPolicy;
+
+  /// Receives one line per retry and wait.
+  final StoreConsoleLog? onLog;
+
   final play.AndroidPublisherApi _api;
   final http.Client? _httpClient;
+  final Future<void> Function(Duration) _sleep;
+
+  static Future<void> _wait(Duration duration) =>
+      Future<void>.delayed(duration);
 
   @override
   Store get store => Store.googlePlay;
@@ -155,16 +176,37 @@ class PlayReviewsApi implements StoreReviewsApi {
     }
   }
 
-  /// Runs [request], translating `googleapis` errors into this package's.
+  /// Runs [request], translating `googleapis` errors into this package's and
+  /// backing off per [retryPolicy].
   ///
   /// `DetailedApiRequestError` carries the status and message but is a
   /// `googleapis` type, so letting it escape would force callers to depend on
   /// `googleapis` just to catch a quota error.
   Future<T> _guard<T>(Future<T> Function() request) async {
-    try {
-      return await request();
-    } on play.DetailedApiRequestError catch (error) {
-      throw _translate(error);
+    var attempt = 0;
+    while (true) {
+      attempt++;
+      try {
+        return await request();
+      } on play.DetailedApiRequestError catch (error) {
+        final translated = _translate(error);
+        final status = error.status ?? 0;
+
+        // A quota failure that Play reports as 403 is retryable even though a
+        // plain 403 is not, so the decision follows the translated type
+        // rather than the raw status.
+        final retryable =
+            translated is StoreRateLimitException ||
+            retryPolicy.shouldRetry(attempt: attempt, statusCode: status);
+        if (!retryable || attempt >= retryPolicy.maxAttempts) throw translated;
+
+        final wait = retryPolicy.backoffFor(attempt);
+        onLog?.call(
+          '$status from Google Play; retrying in ${wait.inMilliseconds}ms '
+          '(attempt $attempt of ${retryPolicy.maxAttempts})',
+        );
+        await _sleep(wait);
+      }
     }
   }
 

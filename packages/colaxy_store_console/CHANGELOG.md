@@ -1,3 +1,37 @@
+## Unreleased
+
+### Added
+- `RetryPolicy`: exponential backoff with a `Retry-After` override for
+  throttling and transient server errors, on both stores' clients. Off with
+  `RetryPolicy.none()`. Google Play's quota failures arrive as `403
+  quotaExceeded` rather than `429`, so retryability there follows the
+  translated exception type, not the raw status.
+- `StoreConsoleLog`: an optional `onLog` on every client, reporting retries
+  and token re-signs. Nothing is logged unless a callback is supplied.
+- `JsonApiPage` and `AppStoreConnectClient.getPage` / `getPageAt` / `pages` /
+  `resources`: the App Store Connect collection envelope, pulled apart once
+  instead of in each API.
+- `PlayServiceAccount.reportingScope` and `.storageReadScope`, for the Play
+  Developer Reporting API and the Cloud Storage report bucket.
+- `ReportTable` and `ReportRow`: store reports as a header plus rows, read by
+  column name. Lookups ignore case and whitespace, cells stay as strings until
+  converted, and a conversion that cannot be made returns `null` rather than
+  failing the import. Dates come back as UTC midnight, parsed from Apple's
+  `MM/DD/YYYY` as well as `YYYY-MM-DD` and full ISO timestamps.
+- `TsvDecoder`: the gzipped TSV App Store Connect serves for sales and
+  analytics reports, decompressed by magic number since Apple sends no
+  `Content-Encoding`.
+- `CsvDecoder`: Google Play's Cloud Storage report CSVs, which are UTF-16LE
+  with a byte-order mark and genuinely quoted.
+- `StoreMetric`, `MetricPoint` and `MetricUnit`: a date/value/dimensions
+  series shared by every statistics surface, with `total`, `average`,
+  `latest`, `period`, `byDate` and `whereDimension`.
+
+### Changed
+- `PlayServiceAccount.authenticate` takes a `scopes` list, defaulting to the
+  Android Publisher scope it previously hardcoded. `GooglePlayConsole.connect`
+  passes one through. Not a breaking change — existing calls behave the same.
+
 ## 0.1.0
 
 First release. Reviews across both stores; statistics are not implemented yet.

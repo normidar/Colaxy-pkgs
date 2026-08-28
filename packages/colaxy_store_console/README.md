@@ -164,6 +164,24 @@ await console.appStore!.reviews.deleteReply(review.id);
 Replying again to a review that already has a reply replaces it on both
 stores; neither keeps a history.
 
+### Retries and logging
+
+Both clients back off and retry throttling (`429`, and Google Play's `403
+quotaExceeded`) and transient server errors, three attempts by default. A
+`Retry-After` header wins over the backoff curve, capped so a misreported
+value cannot stall a job.
+
+```dart
+final console = await StoreConsole.connect(
+  // …credentials…
+  retryPolicy: const RetryPolicy(maxAttempts: 5),
+  onLog: (message) => stderr.writeln('[store] $message'),
+);
+```
+
+Nothing is logged unless you pass `onLog`. Pass `RetryPolicy.none()` to see
+failures immediately — worth doing inside a job that is itself retried.
+
 ### Handling failures
 
 ```dart
@@ -235,10 +253,11 @@ Use `timestamp` (`createdAt ?? updatedAt`) when sorting across stores.
 
 | Type | What it is |
 | --- | --- |
-| `PlayServiceAccount` | `.fromFile`, `.fromJsonString`, or a decoded map. |
+| `PlayServiceAccount` | `.fromFile`, `.fromJsonString`, or a decoded map. `authenticate(scopes: …)` for APIs beyond reviews. |
 | `AppStoreApiKey` | `.fromP8File`, or key ID + issuer ID + PEM string. |
 | `AppStoreTokenProvider` | Signs and caches the ES256 bearer token. |
-| `AppStoreConnectClient` | Authenticated JSON client for any ASC endpoint. |
+| `AppStoreConnectClient` | Authenticated JSON client for any ASC endpoint, with `getPage` / `pages` for collections. |
+| `RetryPolicy` | Backoff and retry rules, shared by both stores. |
 
 ### Errors
 
@@ -247,14 +266,44 @@ Use `timestamp` (`createdAt ?? updatedAt`) when sorting across stores.
 `StoreRateLimitException` (with `retryAfter`) and `ReviewNotFoundException`
 derive from it. `googleapis`' `DetailedApiRequestError` never escapes.
 
+## Statistics
+
+The clients are not written yet, but the pieces every store report is read
+through are:
+
+| Type | What it is |
+| --- | --- |
+| `ReportTable` / `ReportRow` | A report as a header plus rows, read by column name. `.fromTsv`, `.fromGzippedTsv`, `.fromCsvBytes`. |
+| `TsvDecoder` | Apple's gzipped TSV, decompressed by magic number — Apple sends no `Content-Encoding`. |
+| `CsvDecoder` | Google's report CSVs: UTF-16LE with a BOM, and genuinely quoted. |
+| `StoreMetric` / `MetricPoint` | A date/value/dimensions series, with `total`, `average`, `byDate`, `whereDimension`. |
+
+Reports are handed over as tables rather than typed models on purpose:
+Apple's `SALES` and `SUBSCRIBER` reports share almost no columns, and both
+stores rename headers between report versions. Cells stay as strings until you
+convert them, so exact money is still reachable through `row['Developer
+Proceeds']` when `decimalAt` would round it.
+
+```dart
+final table = ReportTable.fromGzippedTsv(bytes);
+for (final row in table.entries) {
+  print('${row.dateAt('Begin Date')}: ${row.intAt('Units')}');
+}
+```
+
+`MetricUnit` records whether values may be summed. Summing a crash *rate* is
+the usual way this kind of code produces confident nonsense, so `total` and
+`average` are documented per unit rather than offered interchangeably.
+
 ## Not yet implemented
 
-Store **statistics** are the other half of the plan and are not here yet. The
-transport and credential layers are shared, so they land on top of what
-already exists:
+The four statistics surfaces themselves. They share the transport, credential
+and report layers above, but not much else — they differ in granularity,
+freshness and even in which account they authenticate as:
 
 - **Google Play vitals** — crash rate, ANR rate and friends, via the Play
-  Developer Reporting API (`googleapis`' `playdeveloperreporting`).
+  Developer Reporting API. Note this API is *not* in `googleapis`, so it needs
+  a hand-written client like the App Store one.
 - **Google Play installs, ratings and revenue** — only available as CSV
   reports in the developer's Cloud Storage bucket, not as an API.
 - **App Store sales and subscriptions** — `GET /v1/salesReports`, gzipped TSV.

@@ -1,3 +1,5 @@
+import 'package:colaxy_store_console/src/core/retry_policy.dart';
+import 'package:colaxy_store_console/src/core/store_console_log.dart';
 import 'package:colaxy_store_console/src/google_play/play_reviews_api.dart';
 import 'package:colaxy_store_console/src/google_play/play_service_account.dart';
 import 'package:googleapis/androidpublisher/v3.dart' as play;
@@ -47,20 +49,34 @@ class GooglePlayConsole {
   /// - **[packageName]**: The app's application ID.
   ///
   /// ### Optional
-  /// - **[baseClient]**: Transport the authenticated client wraps
+  /// - **`baseClient`**: Transport the authenticated client wraps
   ///   (default: `null`, letting `googleapis_auth` create one).
+  /// - **`scopes`**: OAuth scopes to request (default: just the Android
+  ///   Publisher scope). Add `PlayServiceAccount.reportingScope` to reuse the
+  ///   same authenticated client for Android vitals.
+  /// - **`retryPolicy`**: When to retry a throttled or transiently failing
+  ///   request (default: `RetryPolicy()`, three attempts).
+  /// - **`onLog`**: Receives one line per retry and wait (default: `null`).
   static Future<GooglePlayConsole> connect({
     required PlayServiceAccount account,
     required String packageName,
     http.Client? baseClient,
+    List<String>? scopes,
+    RetryPolicy retryPolicy = const RetryPolicy(),
+    StoreConsoleLog? onLog,
   }) async {
-    final client = await account.authenticate(baseClient: baseClient);
+    final client = await account.authenticate(
+      scopes: scopes,
+      baseClient: baseClient,
+    );
     return GooglePlayConsole(
       packageName: packageName,
       reviews: PlayReviewsApi(
         api: play.AndroidPublisherApi(client),
         packageName: packageName,
         httpClient: client,
+        retryPolicy: retryPolicy,
+        onLog: onLog,
       ),
     );
   }

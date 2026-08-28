@@ -66,30 +66,23 @@ class AppStoreReviewsApi implements StoreReviewsApi {
     // A cursor is Apple's own `links.next`, already carrying every filter, so
     // it is followed verbatim rather than rebuilt from `query`.
     final cursor = query.cursor;
-    final json = cursor != null
-        ? await _client.getUri(Uri.parse(cursor))
-        : await _client.getJson(
+    final page = cursor != null
+        ? await _client.getPageAt(Uri.parse(cursor))
+        : await _client.getPage(
             '/v1/apps/$appId/customerReviews',
             query: _queryParameters(query),
           );
 
-    final data = json['data'];
-    final responses = AppStoreReviewMapper.includedResponses(json['included']);
-    final reviews = <StoreReview>[];
-    if (data is List) {
-      for (final entry in data) {
-        if (entry is! Map<String, dynamic>) continue;
-        reviews.add(
-          AppStoreReviewMapper.review(entry, responsesById: responses),
-        );
-      }
-    }
+    final responses = AppStoreReviewMapper.includedResponses(page.included);
 
     return ReviewPage(
       store: Store.appStore,
-      reviews: reviews,
-      nextCursor: _nextLink(json),
-      total: _total(json),
+      reviews: [
+        for (final resource in page.data)
+          AppStoreReviewMapper.review(resource, responsesById: responses),
+      ],
+      nextCursor: page.nextCursor,
+      total: page.total,
     );
   }
 
@@ -212,20 +205,4 @@ class AppStoreReviewsApi implements StoreReviewsApi {
     ReviewSort.highestRating => '-rating',
     ReviewSort.lowestRating => 'rating',
   };
-
-  static String? _nextLink(Map<String, dynamic> json) {
-    final links = json['links'];
-    if (links is! Map<String, dynamic>) return null;
-    final next = links['next'];
-    return next is String && next.isNotEmpty ? next : null;
-  }
-
-  static int? _total(Map<String, dynamic> json) {
-    final meta = json['meta'];
-    if (meta is! Map<String, dynamic>) return null;
-    final paging = meta['paging'];
-    if (paging is! Map<String, dynamic>) return null;
-    final total = paging['total'];
-    return total is int ? total : null;
-  }
 }
