@@ -122,3 +122,14 @@ app.*.symbols
 .idea/
 .vscode/
 melos_*.iml
+
+# Store credentials. colaxy_store_console's README points people at
+# secrets/, and an App Store .p8 downloads exactly once — committing one
+# means revoking it and reissuing.
+secrets/
+*.p8
+.env
+.env.*
+!.env.example
+play-api*.json
+*-service-account*.json

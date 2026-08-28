@@ -77,9 +77,8 @@ dependencies:
   colaxy_store_console: ^0.1.0
 ```
 
-This is a pure Dart package — it runs in scripts, CI jobs and servers, not in
-a Flutter app (neither store's API is callable from a shipped client, and
-neither should be: the credentials are account-wide).
+A pure Dart package: it runs in scripts, CI jobs and servers. Deliberately
+not in a Flutter app — see [Where to keep them](#where-to-keep-them).
 
 ## Credentials
 
@@ -177,19 +176,8 @@ final team = AppStoreTeam(               // sales reports
 );
 ```
 
-In CI, pass the key as a string rather than a file:
-
-```dart
-AppStoreApiKey(
-  keyId: Platform.environment['ASC_KEY_ID']!,
-  issuerId: Platform.environment['ASC_ISSUER_ID']!,
-  privateKey: Platform.environment['ASC_P8']!,
-);
-```
-
-A PEM that picked up literal `\n` or CRLF line endings on the way through a
-secret store is repaired automatically, so `ASC_P8="$(cat AuthKey_….p8)"`
-works and so does a single-line secret.
+In CI, pass the key as a string instead — see [Where to keep
+them](#where-to-keep-them).
 
 ### Google Play
 
@@ -251,6 +239,69 @@ final client = await account.authenticate(
   ],
 );
 ```
+
+### Where to keep them
+
+These are account-wide credentials. An App Store `.p8` can post replies as
+you and read your revenue; a Play service-account key can do the same on that
+side. Neither belongs in a repository, and the `.p8` in particular downloads
+exactly once — committing one means revoking it and reissuing.
+
+**Locally**, keep them outside the repo, or in an ignored directory:
+
+```sh
+secrets/                 # add to .gitignore, along with *.p8 and .env
+├── AuthKey_ABCD123456.p8
+└── play-api.json
+```
+
+```dart
+AppStoreApiKey.fromP8File(… path: 'secrets/AuthKey_ABCD123456.p8');
+PlayServiceAccount.fromFile('secrets/play-api.json');
+```
+
+Check the ignore actually covers them before the first commit — `secrets/` is
+not ignored by default in most templates:
+
+```sh
+git check-ignore -v secrets/AuthKey_ABCD123456.p8   # must print a rule
+```
+
+**For local runs**, `dart run colaxy_store_console:verify --help` lists every
+variable and where each comes from. There is also an
+[`.env.example`][env-example] in the repository to copy:
+
+```sh
+cp .env.example .env      # .env is git-ignored
+set -a && . ./.env && set +a
+```
+
+[env-example]: https://github.com/normidar/colaxy-pkgs/blob/main/packages/colaxy_store_console/.env.example
+
+**In CI**, use the runner's secret store and pass the contents rather than a
+path. Both key types have string constructors for exactly this:
+
+```dart
+AppStoreApiKey(
+  keyId: Platform.environment['ASC_KEY_ID']!,
+  issuerId: Platform.environment['ASC_ISSUER_ID']!,
+  privateKey: Platform.environment['ASC_P8']!,
+);
+PlayServiceAccount.fromJsonString(Platform.environment['PLAY_KEY_JSON']!);
+```
+
+A multi-line PEM survives a round trip through most secret stores, but not
+all of them: some return it with literal `\n` sequences, others with CRLF
+line endings. Both are repaired on the way in, so
+`ASC_P8="$(cat AuthKey_….p8)"` and a flattened single-line secret both work.
+
+The app ID, vendor number and bucket ID are not secrets — they identify, they
+do not authorise. Committing those is fine.
+
+**Never ship any of this inside an app.** These credentials cover the whole
+account, not one user, and an app binary is readable. Neither store's API is
+callable from a shipped client anyway, which is why this package is pure Dart
+rather than a Flutter plugin.
 
 ### Checking it works
 
