@@ -1,0 +1,32 @@
+---
+dependencies:
+  dart_jsonwebtoken: ^3.4.1
+  googleapis: ^17.0.0
+  googleapis_auth: ^2.3.3
+  http: ^1.6.0
+  meta: ^1.19.0
+description: Unified Dart client for Google Play Console and App Store Connect —
+  read store reviews and statistics, and reply to reviews, through one API.
+dev_dependencies:
+  test: ^1.24.0
+  very_good_analysis: ^10.3.0
+environment:
+  sdk: ^3.8.0
+# test_api_key.dart holds a throwaway P-256 key generated for the test suite.
+# It exercises the real ES256 signing path, was never uploaded to App Store
+# Connect, and grants access to nothing — but pub's leak detector cannot know
+# that. https://dart.dev/go/false-secrets
+false_secrets:
+  - /test/test_api_key.dart
+repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_store_console
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
+name: colaxy_store_console
+homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_store_console
+topics:
+  - colaxy
+  - app-store-connect
+  - google-play
+  - reviews
+  - tool
+version: 0.1.0
+resolution: workspace
