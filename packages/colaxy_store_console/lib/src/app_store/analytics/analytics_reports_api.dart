@@ -30,6 +30,10 @@ import 'package:colaxy_store_console/src/reports/report_table.dart';
 ///   copy, not as an API you query on demand.
 /// - **Segment URLs are pre-signed and expire.** List them when you are ready
 ///   to download, not earlier.
+/// - **Registering a request needs an Admin key.** Downloading afterwards
+///   does not: once a report type has been requested for the app, a Sales or
+///   Finance key can collect it. So [createRequest] and the rest of this API
+///   may want different keys.
 ///
 /// ## Parameters
 ///

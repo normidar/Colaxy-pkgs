@@ -47,6 +47,10 @@ Environment variables, per surface. Supply what you have; the rest is skipped.
     ASC_KEY_ID, ASC_ISSUER_ID, ASC_P8
     ASC_VENDOR_NUMBER  from Payments and Financial Reports
 
+  Note the key must be a *team* key: an individual key cannot reach the sales
+  endpoints whatever its role. Reviews want Customer Support or Admin; sales
+  want Sales, Finance or Admin.
+
   Google Play reviews
     PLAY_KEY_JSON      contents of the service-account JSON
     PLAY_PACKAGE       application ID, e.g. com.example.app
@@ -62,6 +66,7 @@ Writes performed only with --allow-writes:
   - App Store analytics: registers an ONGOING report request if none exists.
     Apple has no way to preview this, and an unused request is stopped
     automatically, so it is the one write worth making. Nothing is deleted.
+    Registering needs an Admin key; collecting afterwards does not.
 
 Exit code is non-zero if any check failed. Skipped checks do not fail the run.
 ''';

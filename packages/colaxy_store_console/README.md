@@ -83,30 +83,101 @@ neither should be: the credentials are account-wide).
 
 ## Credentials
 
-### Google Play
+Each surface needs its own set, and they are independent — you can set up one
+store, or one API, and leave the rest. What each needs:
 
-1. In Google Cloud, enable the **Google Play Android Developer API**.
-2. Create a service account and download its JSON key.
-3. In **Play Console → Users and permissions**, invite the service account's
-   email and grant it *View app information* to read and *Reply to reviews*
-   to answer.
+| Surface | Needs |
+| --- | --- |
+| App Store reviews | Team API key (Customer Support) + **app ID** |
+| App Store analytics | Team API key (Admin to register) + **app ID** |
+| App Store sales | Team API key (Sales / Finance) + **vendor number** |
+| Play reviews | Service account + Play Console invitation |
+| Play vitals | The same, plus the reporting scope |
+| Play report CSVs | The same, plus the storage scope + **bucket ID** |
 
-Step 3 is the one that gets missed. Without it every call fails with `401`
-even though the key itself is valid — which is why this package's `401`
-message names it.
+Two things to note before you start:
+
+- **Two values cannot be fetched from any API.** The App Store **vendor
+  number** and the Play **bucket ID** appear only on a console screen, so
+  both have to be configured by hand.
+- **No single App Store role covers everything.** Reviews and sales are
+  separate concerns to Apple; covering both means an Admin key or two keys.
 
 ### App Store Connect
 
-In **App Store Connect → Users and Access → Integrations → App Store Connect
-API**, create a key with a role that can read reviews and post responses
-(**Customer Support** is the least-privilege role that covers replying;
-**App Manager** also works). Keep the `.p8` — it downloads exactly once.
+**1. Create a team API key.** In **Users and Access → Integrations → App
+Store Connect API**, use the **Team Keys** tab and click **+**.
 
-You need the **key ID**, the **issuer ID**, and the app's **resource ID** (the
-number in the App Store Connect URL, `…/apps/6740000000/…` — not the bundle
-ID).
+The tab matters: an *individual* key cannot reach the sales and finance
+report endpoints at all, whatever role its owner has. If sales reports return
+`403` on a key that reads reviews fine, this is usually why.
 
-In CI, pass the secrets as strings rather than files:
+Pick a role covering what you need:
+
+| Role | Reviews | Reply | Sales reports | Analytics |
+| --- | --- | --- | --- | --- |
+| Customer Support | ✅ | ✅ | — | — |
+| Sales | — | — | ✅ | download only |
+| Finance | — | — | ✅ | download only |
+| Admin | ✅ | ✅ | ✅ | ✅ |
+
+Two wrinkles in that table:
+
+- **Registering an analytics report request needs Admin.** Once a report type
+  has been requested for the app, a Sales or Finance key can download the
+  generated reports. So `analytics.createRequest` may need an Admin key even
+  though collecting afterwards does not — run
+  `verify --allow-writes` once with Admin, then collect with a narrower key.
+- **No single narrow role covers reviews *and* sales.** They are separate
+  concerns to Apple. Use two keys, or accept Admin.
+
+An API key's name and access level cannot be edited after creation; changing
+either means revoking it and making a new one.
+
+The **`.p8` file downloads exactly once**. Store it somewhere you can restore
+from; Apple will not give it to you again, and the only remedy is a new key.
+
+That page also shows the two IDs you need: the **key ID** (10 characters,
+next to the key) and the **issuer ID** (a UUID, above the key list — one per
+team, shared by every key).
+
+**2. Find the app ID.** Open the app in App Store Connect and read it out of
+the URL:
+
+```text
+https://appstoreconnect.apple.com/apps/6740000000/appstore
+                                        ^^^^^^^^^^
+```
+
+This is the app's *resource* ID. It is **not** the bundle ID
+(`com.example.app`) and not the App Store listing ID, both of which are
+rejected.
+
+**3. Find the vendor number** — sales reports only. **Payments and Financial
+Reports**, shown near the top of the page, usually eight digits. No API
+returns it.
+
+It identifies the *account*, not the app: one sales report covers every app
+you publish, keyed by SKU. There is no per-app filter, so filter by SKU after
+the fact.
+
+```dart
+final console = AppStoreConnectConsole(  // reviews, analytics
+  apiKey: AppStoreApiKey.fromP8File(
+    keyId: 'ABCD123456',
+    issuerId: '69a6de70-0000-0000-0000-1f2c3d4e5f60',
+    path: 'secrets/AuthKey_ABCD123456.p8',
+  ),
+  appId: '6740000000',
+);
+
+final team = AppStoreTeam(               // sales reports
+  apiKey: key,
+  vendorNumber: '85000000',
+);
+```
+
+In CI, pass the key as a string rather than a file:
 
 ```dart
 AppStoreApiKey(
@@ -117,7 +188,78 @@ AppStoreApiKey(
 ```
 
 A PEM that picked up literal `\n` or CRLF line endings on the way through a
-secret store is repaired automatically.
+secret store is repaired automatically, so `ASC_P8="$(cat AuthKey_….p8)"`
+works and so does a single-line secret.
+
+### Google Play
+
+**1. Enable the APIs.** In Google Cloud, for the project you will use:
+
+| API | Needed for |
+| --- | --- |
+| Google Play Android Developer API | Reviews |
+| Google Play Developer Reporting API | Vitals |
+| Cloud Storage API | Report CSVs |
+
+**2. Create a service account** and download its JSON key from its **Keys**
+tab. Take the *service account* key, not an OAuth client secret — this
+package rejects the latter by name, because downloading the wrong one is an
+easy slip.
+
+**3. Invite it in Play Console.** Under **Users and permissions**, invite the
+service account's email address (`…@….iam.gserviceaccount.com`) and grant it:
+
+| Permission | Needed for |
+| --- | --- |
+| View app information | Reading anything |
+| Reply to reviews | `reply()` |
+| View financial data | Report CSVs |
+
+**Step 3 is the one that gets missed.** Without it every call fails with
+`401` despite a perfectly valid key, which is why this package's `401`
+message names it.
+
+**4. Find the bucket ID** — report CSVs only. **Download reports**, then the
+**Copy Cloud Storage URI** button beside any section:
+
+```text
+gs://pubsite_prod_rev_01234567890123456789/stats/installs/
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+```
+
+Paste the whole thing — the scheme and path are trimmed for you. It is one
+bucket per developer account, and no API returns it.
+
+**5. Request the scopes you need.** They are different per API, and a token
+minted for one is rejected by the others in a way that looks like a bad key:
+
+```dart
+final account = PlayServiceAccount.fromFile('secrets/play-api.json');
+
+// Reviews. The default, so `scopes:` can be omitted.
+final console = await GooglePlayConsole.connect(
+  account: account,
+  packageName: 'com.example.app',
+);
+
+// Vitals and report CSVs. One client can cover both — then pass
+// `ownsClient: false` so the first close() does not shut it for the other.
+final client = await account.authenticate(
+  scopes: [
+    PlayServiceAccount.reportingScope,
+    PlayServiceAccount.storageReadScope,
+  ],
+);
+```
+
+### Checking it works
+
+Rather than debugging a `401` by hand, point the verifier at your account —
+it reports each surface separately and names the likely cause of a failure:
+
+```sh
+dart run colaxy_store_console:verify --help
+```
 
 ## Reviews
 

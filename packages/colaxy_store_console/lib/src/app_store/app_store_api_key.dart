@@ -6,12 +6,15 @@ import 'package:colaxy_store_console/src/core/store_console_exception.dart';
 /// An App Store Connect API key: the `.p8` private key and its two IDs.
 ///
 /// Create one in App Store Connect under **Users and Access → Integrations →
-/// App Store Connect API**. The `.p8` file downloads exactly once, so keep it
-/// somewhere you can restore from.
+/// App Store Connect API**, on the **Team Keys** tab. The `.p8` file
+/// downloads exactly once, so keep it somewhere you can restore from.
 ///
-/// The key needs a role that can read reviews and post responses. **App
-/// Manager** works; **Customer Support** is the least-privilege role that
-/// covers replying.
+/// The role decides what the key reaches, and no narrow role covers
+/// everything: **Customer Support** reads and answers reviews,
+/// **Sales**/**Finance** read sales reports, and only **Admin** does both.
+/// An *individual* key cannot reach the sales endpoints at all, whatever its
+/// owner's role — which is why the Team Keys tab matters. See the README for
+/// the full table.
 ///
 /// ## Parameters
 ///
