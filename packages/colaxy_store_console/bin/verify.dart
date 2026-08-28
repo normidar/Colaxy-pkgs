@@ -18,7 +18,24 @@ import 'dart:io';
 import 'package:colaxy_store_console/colaxy_store_console.dart';
 
 /// What a single check concluded.
-enum _Outcome { pass, fail, skip }
+enum _Outcome {
+  /// The API answered with data this package parsed.
+  pass,
+
+  /// The API answered, but with nothing to parse — no sales that day, no
+  /// report generated yet.
+  ///
+  /// Distinct from [pass] on purpose. The credentials and the request shape
+  /// are proven; the decoding is not. Reporting it as a pass would claim a
+  /// verification that did not happen.
+  empty,
+
+  /// The API rejected the request, or this package could not read the answer.
+  fail,
+
+  /// Not attempted, for want of credentials.
+  skip,
+}
 
 /// One check's result, with enough detail to act on a failure.
 class _Result {
@@ -40,7 +57,7 @@ Environment variables, per surface. Supply what you have; the rest is skipped.
   App Store reviews, analytics
     ASC_KEY_ID         10-character key ID
     ASC_ISSUER_ID      issuer UUID
-    ASC_P8             contents of the .p8 file (not the path)
+    ASC_P8             the .p8 contents, or a path to the file
     ASC_APP_ID         numeric app ID from the App Store Connect URL
 
   App Store sales reports
@@ -87,38 +104,56 @@ Future<void> main(List<String> args) async {
   stdout.writeln();
   for (final result in results) {
     final tag = switch (result.outcome) {
-      _Outcome.pass => 'PASS',
-      _Outcome.fail => 'FAIL',
-      _Outcome.skip => 'SKIP',
+      _Outcome.pass => 'PASS ',
+      _Outcome.empty => 'EMPTY',
+      _Outcome.fail => 'FAIL ',
+      _Outcome.skip => 'SKIP ',
     };
     stdout.writeln('$tag  ${result.name.padRight(34)} ${result.detail}');
   }
 
-  final failed = results.where((r) => r.outcome == _Outcome.fail).length;
-  final passed = results.where((r) => r.outcome == _Outcome.pass).length;
-  final skipped = results.where((r) => r.outcome == _Outcome.skip).length;
-  stdout.writeln('\n$passed passed, $failed failed, $skipped skipped.');
+  int count(_Outcome outcome) =>
+      results.where((r) => r.outcome == outcome).length;
+  final failed = count(_Outcome.fail);
+  final empty = count(_Outcome.empty);
+  final skipped = count(_Outcome.skip);
+  stdout.writeln(
+    '\n${count(_Outcome.pass)} passed, $empty empty, $failed failed, '
+    '$skipped skipped.',
+  );
 
-  if (skipped > 0 && failed == 0) {
+  if (empty > 0) {
     stdout.writeln(
-      'Skipped checks were not verified against the real API. Supply their '
-      'credentials before trusting those surfaces.',
+      'EMPTY means the store answered but had no data — the credentials and '
+      'the request are good, the decoding is still unproven.',
+    );
+  }
+  if (skipped > 0) {
+    stdout.writeln(
+      'SKIP means not checked at all. Supply those credentials before '
+      'trusting the surface.',
     );
   }
   if (failed > 0) exit(1);
 }
 
-/// Runs [check], turning any failure into a readable result.
+/// Runs one check, turning any failure into a readable result.
 ///
 /// A verification tool that dies on the first error tells you less than one
 /// that reports every surface, so nothing is allowed to escape.
+/// Prefix a check's message with this to report [_Outcome.empty].
+const _emptyMarker = 'EMPTY:';
+
 Future<_Result> _run(String name, Future<String> Function() check) async {
   // Progress goes to a terminal only. Piped or redirected, the carriage
   // returns would leave half-erased lines in the output.
   final live = stdout.hasTerminal;
   if (live) stdout.write('${'… $name'.padRight(60)}\r');
   try {
-    return _Result(name, _Outcome.pass, await check());
+    final detail = await check();
+    return detail.startsWith(_emptyMarker)
+        ? _Result(name, _Outcome.empty, detail.substring(_emptyMarker.length))
+        : _Result(name, _Outcome.pass, detail);
   } on StoreConsoleException catch (error) {
     // These already carry a message naming the likely setup mistake.
     return _Result(name, _Outcome.fail, error.toString());
@@ -129,18 +164,59 @@ Future<_Result> _run(String name, Future<String> Function() check) async {
   }
 }
 
+/// The value of `name` in `env`, or `null` when unset or blank.
+String? _value(Map<String, String> env, String name) {
+  final value = env[name]?.trim();
+  return value == null || value.isEmpty ? null : value;
+}
+
 _Result _skip(String name, String missing) =>
     _Result(name, _Outcome.skip, 'needs $missing');
+
+/// Builds a key from `ASC_P8` holding either the PEM or a path to it.
+///
+/// Both are natural things to put in an environment variable, and telling
+/// them apart is unambiguous: a PEM always carries its `-----BEGIN` header.
+/// Guessing here is safe, and saves a confusing failure — a path handed
+/// straight to [AppStoreApiKey] fails as "does not look like PEM", which does
+/// not suggest the fix.
+AppStoreApiKey _appStoreKey({
+  required String keyId,
+  required String issuerId,
+  required String p8,
+}) {
+  final value = p8.trim();
+  if (value.contains('-----BEGIN')) {
+    return AppStoreApiKey(keyId: keyId, issuerId: issuerId, privateKey: value);
+  }
+  if (File(value).existsSync()) {
+    return AppStoreApiKey.fromP8File(
+      keyId: keyId,
+      issuerId: issuerId,
+      path: value,
+    );
+  }
+  throw StoreAuthException(
+    'ASC_P8 is neither PEM nor a readable file: ${value.length} characters, '
+    'no "-----BEGIN" header, and no file at that path. Set it to the '
+    r'contents of the .p8 — ASC_P8="$(cat AuthKey_....p8)" — or to a path '
+    'that exists.',
+    store: Store.appStore,
+  );
+}
 
 Future<List<_Result>> _appStoreChecks(
   Map<String, String> env, {
   required bool allowWrites,
 }) async {
-  final keyId = env['ASC_KEY_ID'];
-  final issuerId = env['ASC_ISSUER_ID'];
-  final p8 = env['ASC_P8'];
-  final appId = env['ASC_APP_ID'];
-  final vendorNumber = env['ASC_VENDOR_NUMBER'];
+  // A blank value means "not configured". Sourcing a .env template sets every
+  // variable, so treating an empty one as present turns an untouched line
+  // into a spurious failure.
+  final keyId = _value(env, 'ASC_KEY_ID');
+  final issuerId = _value(env, 'ASC_ISSUER_ID');
+  final p8 = _value(env, 'ASC_P8');
+  final appId = _value(env, 'ASC_APP_ID');
+  final vendorNumber = _value(env, 'ASC_VENDOR_NUMBER');
 
   if (keyId == null || issuerId == null || p8 == null) {
     return [
@@ -156,7 +232,7 @@ Future<List<_Result>> _appStoreChecks(
 
   results.add(
     await _run('App Store credentials', () async {
-      key = AppStoreApiKey(keyId: keyId, issuerId: issuerId, privateKey: p8);
+      key = _appStoreKey(keyId: keyId, issuerId: issuerId, p8: p8);
       // Signing locally proves the .p8 parses; only a request proves Apple
       // accepts it, which the checks below do.
       final token = AppStoreTokenProvider(key).token();
@@ -193,8 +269,8 @@ Future<List<_Result>> _appStoreChecks(
         await _run('App Store analytics', () async {
           final requests = await console.analytics.requests();
           if (requests.isEmpty && !allowWrites) {
-            return 'no report request registered; rerun with --allow-writes '
-                'to create one';
+            return '${_emptyMarker}no report request registered; rerun with '
+                '--allow-writes to create one';
           }
           final request = allowWrites
               ? await console.analytics.ensureRequest(
@@ -204,13 +280,14 @@ Future<List<_Result>> _appStoreChecks(
 
           final reports = await console.analytics.reports(request.id);
           if (reports.isEmpty) {
-            return 'request ${request.id} exists, no reports yet — Apple '
-                'takes 24-48 hours';
+            return '${_emptyMarker}request ${request.id} exists, no reports '
+                'yet — Apple takes 24-48 hours';
           }
           // The chain past this point is what the mocked tests cannot prove.
           final instances = await console.analytics.instances(reports.first.id);
           if (instances.isEmpty) {
-            return '${reports.length} reports, none generated yet';
+            return '$_emptyMarker${reports.length} reports, none generated '
+                'yet';
           }
           final table = await console.analytics.downloadInstance(
             instances.first.id,
@@ -231,17 +308,44 @@ Future<List<_Result>> _appStoreChecks(
     try {
       results.add(
         await _run('App Store sales reports', () async {
-          // Yesterday: today's daily report does not exist yet.
+          // Widening until something has data, because decoding a real
+          // report is the point — a quiet day proves only that the request
+          // was accepted. Yesterday first: today's report does not exist yet.
           final now = DateTime.now().toUtc();
-          final day = DateTime.utc(now.year, now.month, now.day - 1);
-          final table = await team.salesReports.fetch(
-            SalesReportQuery.sales(date: day),
-          );
-          if (table.columns.isEmpty) {
-            return 'no sales on ${_day(day)} — a real answer, not a failure';
+          final periods = <String, SalesReportQuery>{
+            'yesterday': SalesReportQuery.sales(
+              date: DateTime.utc(now.year, now.month, now.day - 1),
+            ),
+            'last month': SalesReportQuery.sales(
+              frequency: SalesFrequency.monthly,
+              date: DateTime.utc(now.year, now.month - 1),
+            ),
+            'last year': SalesReportQuery.sales(
+              frequency: SalesFrequency.yearly,
+              date: DateTime.utc(now.year - 1),
+            ),
+          };
+
+          for (final period in periods.entries) {
+            final table = await team.salesReports.fetch(period.value);
+            if (table.columns.isEmpty) continue;
+
+            // Every column is optional across report versions, so report
+            // what actually parsed rather than asserting on any one.
+            final unreadableDates = table.entries
+                .where((row) => row.dateAt('Begin Date') == null)
+                .length;
+            final units = table.entries.fold<int>(
+              0,
+              (sum, row) => sum + (row.intAt('Units') ?? 0),
+            );
+            return '${table.length} rows, ${table.columns.length} columns for '
+                '${period.key}; $units units'
+                '${unreadableDates == 0 ? '' : ', $unreadableDates unparsed '
+                          'dates'}';
           }
-          return '${table.length} rows for ${_day(day)}; '
-              'columns: ${table.columns.take(4).join(', ')}…';
+          return '${_emptyMarker}requests accepted, but no sales in any of: '
+              '${periods.keys.join(', ')}';
         }),
       );
 
@@ -258,7 +362,8 @@ Future<List<_Result>> _appStoreChecks(
             ),
           );
           return table.columns.isEmpty
-              ? 'accepted the request; no data for last year'
+              ? '${_emptyMarker}accepted the request — the version/frequency '
+                    'pairing is right — but no data for last year'
               : '${table.length} rows, ${table.columns.length} columns';
         }),
       );
@@ -271,9 +376,9 @@ Future<List<_Result>> _appStoreChecks(
 }
 
 Future<List<_Result>> _playChecks(Map<String, String> env) async {
-  final keyJson = env['PLAY_KEY_JSON'];
-  final packageName = env['PLAY_PACKAGE'];
-  final bucket = env['PLAY_BUCKET'];
+  final keyJson = _value(env, 'PLAY_KEY_JSON');
+  final packageName = _value(env, 'PLAY_PACKAGE');
+  final bucket = _value(env, 'PLAY_BUCKET');
 
   if (keyJson == null || packageName == null) {
     return [
@@ -313,7 +418,8 @@ Future<List<_Result>> _playChecks(Map<String, String> env) async {
           const ReviewQuery(pageSize: 1),
         );
         return page.reviews.isEmpty
-            ? 'no reviews in the last seven days — the API reaches no further'
+            ? '${_emptyMarker}no reviews in the last seven days — the API '
+                  'reaches no further'
             : 'read ${page.reviews.length} review';
       } finally {
         console.close();
@@ -347,7 +453,8 @@ Future<List<_Result>> _playChecks(Map<String, String> env) async {
         );
         final crashRate = metrics['crashRate'];
         if (crashRate == null) {
-          return 'settled to ${_day(until)}; no crash data in the last week';
+          return '${_emptyMarker}settled to ${_day(until)}; no crash data in '
+              'the last week';
         }
         return 'settled to ${_day(until)}; ${crashRate.points.length} daily '
             'points, average ${crashRate.average?.toStringAsFixed(5)}';
@@ -376,7 +483,7 @@ Future<List<_Result>> _playChecks(Map<String, String> env) async {
           // the part reconstructed from documentation rather than an API.
           final names = await api.list(PlayReportType.installs);
           if (names.isEmpty) {
-            return 'bucket reachable, but nothing under '
+            return '${_emptyMarker}bucket reachable, but nothing under '
                 '"${PlayReportType.installs.objectPrefix(packageName)}" — '
                 'check PLAY_PACKAGE matches the app in this account';
           }
