@@ -613,6 +613,39 @@ Use `timestamp` (`createdAt ?? updatedAt`) when sorting across stores.
 `StoreRateLimitException` (with `retryAfter`) and `ReviewNotFoundException`
 derive from it. `googleapis`' `DetailedApiRequestError` never escapes.
 
+## Verifying against your own account
+
+This package's tests run against mocked HTTP. That proves the code does what
+it was written to do; it cannot prove the two vendors' APIs behave the way
+their documentation says — and parts of both are documented thinly or not at
+all. A review of this package found a transcription error in Apple's
+allowed-values table that no mocked test could have caught, because the tests
+were written from the same transcription.
+
+So before trusting a surface, point it at your account:
+
+```sh
+export ASC_KEY_ID=ABCD123456
+export ASC_ISSUER_ID=69a6de70-0000-0000-0000-1f2c3d4e5f60
+export ASC_P8="$(cat AuthKey_ABCD123456.p8)"
+export ASC_APP_ID=6740000000
+
+dart run colaxy_store_console:verify
+```
+
+```text
+PASS  App Store credentials    signed a token for key ABCD123456 (312 chars)
+PASS  App Store reviews        read 1 review of 412
+SKIP  App Store sales reports  needs ASC_VENDOR_NUMBER
+…
+```
+
+Every surface is independent, so supply the credentials you have and the rest
+are skipped — and skipped is reported, not passed. It is read-only unless you
+pass `--allow-writes`, which lets it register an analytics report request
+(the one thing Apple gives no way to preview). `--help` lists the variables
+per surface.
+
 ## Caveats worth repeating
 
 - **A rating average cannot come from the review endpoints.** Google Play's

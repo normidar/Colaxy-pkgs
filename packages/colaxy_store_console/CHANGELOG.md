@@ -80,6 +80,12 @@ versions you can actually depend on.
   series with `total`, `average`, `latest`, `period`, `byDate` and
   `whereDimension`. `MetricUnit` records whether summing is meaningful.
 
+### Verification
+- `dart run colaxy_store_console:verify` checks each surface against a real
+  account, reporting per-surface pass, fail or skip. Read-only unless
+  `--allow-writes`. The mocked test suite cannot prove that two thinly
+  documented vendor APIs behave as documented; this can.
+
 ### Credentials and transport
 - `AppStoreApiKey` and `AppStoreTokenProvider`: ES256 JWT signing from a
   `.p8` key, cached and re-signed near expiry, with escaped-`\n` and CRLF

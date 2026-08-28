@@ -8,6 +8,10 @@ dependencies:
 description: Unified Dart client for Google Play Console and App Store Connect.
   Read reviews and reply to them, and pull sales, analytics, vitals and
   install reports from both stores through one API.
+executables:
+  # Not a CLI for using the package — a check that its assumptions about two
+  # undocumented-in-places APIs actually hold against your account.
+  colaxy-store-verify: verify
 dev_dependencies:
   test: ^1.24.0
   very_good_analysis: ^10.3.0
