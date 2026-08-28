@@ -1,8 +1,13 @@
 # colaxy_store_console
 
-One Dart API over **Google Play Console** and **App Store Connect**: read your
-app's reviews from both stores and reply to them, without writing the JWT
-signing, the JSON:API paging, or the two different error shapes yourself.
+One Dart API over **Google Play Console** and **App Store Connect** — reviews
+and statistics from both stores, without writing the JWT signing, the
+JSON:API paging, the gzip and UTF-16 report decoding, or the two vendors'
+different error shapes yourself.
+
+Covered: reviews (read and reply), App Store sales and subscriptions, App
+Store analytics, Android vitals, and Google Play's installs, ratings and
+review history.
 
 ```dart
 final console = await StoreConsole.connect(
@@ -30,20 +35,40 @@ iOS-only app.
 
 ## Features
 
-- **Both stores, one model.** `StoreReview`, `ReviewReply` and
-  `StoreConsoleException` are the same shape whichever store answered, and
-  every result carries the `Store` it came from.
+- **Both stores, one model.** `StoreReview`, `ReviewReply`, `ReportTable`,
+  `StoreMetric` and `StoreConsoleException` are the same shape whichever
+  store answered, and every result carries the `Store` it came from.
 - **Replies, including edits.** `reply()` creates or replaces a response.
   Length limits are checked locally, so an over-long reply fails before it
   costs quota.
 - **Paging handled.** `list()` is a lazy `Stream` that fetches the next page
   only as you consume it; `listPage()` hands you a cursor to persist.
+- **Reports decoded.** Apple's headerless gzip TSV and Google's UTF-16LE
+  quoted CSV both come back as a `ReportTable` you read by column name.
+- **The stores' worst errors, pre-empted.** Impossible report combinations,
+  missing dimensions and out-of-range granularities are rejected locally,
+  naming the parameter actually at fault — which the stores' own messages
+  routinely do not.
 - **Errors you can act on.** `StoreAuthException`, `StoreRateLimitException`,
-  `ReviewNotFoundException` — with messages that name the actual setup
-  mistake rather than restating the HTTP status.
+  `ReviewNotFoundException`, with retry and backoff already applied.
 - **Escape hatches.** `StoreReview.raw` keeps the original payload, and
-  `AppStoreConnectClient` is a plain authenticated JSON client you can point
-  at any App Store Connect endpoint.
+  `AppStoreConnectClient`, `PlayReportingClient` and `PlayStorageClient` are
+  plain authenticated clients you can point at any endpoint of their API.
+
+## What is covered
+
+| | Google Play | App Store |
+| --- | --- | --- |
+| Reviews, replies | `reviews` | `reviews` |
+| Review history | `PlayReportType.reviews` (CSV) | `reviews` (full) |
+| Ratings | `PlayReportType.ratings` (CSV) | — no report exists |
+| Installs / downloads | `PlayReportType.installs` (CSV) | `SalesReportType.installs` |
+| Sales, subscriptions | — not exposed | `salesReports` |
+| Crashes, ANRs, memory | `PlayVitalsApi` | `analytics` (PERFORMANCE) |
+| Store listing traffic | `PlayReportType.storePerformance` (CSV) | `analytics` (APP_STORE_ENGAGEMENT) |
+
+"CSV" means Google publishes it only as a monthly file in a Cloud Storage
+bucket, with no API behind it.
 
 ## Install
 
@@ -94,38 +119,9 @@ AppStoreApiKey(
 A PEM that picked up literal `\n` or CRLF line endings on the way through a
 secret store is repaired automatically.
 
-## What each store actually supports
+## Reviews
 
-The two APIs are not equivalent, and this package does not paper over the
-gaps. `ReviewQuery` fields that a store cannot honour are marked below.
-
-| | Google Play | App Store |
-| --- | --- | --- |
-| History reachable | **last 7 days only** | full |
-| Ratings without text | **not returned** | returned |
-| `ratings` filter | client-side, per page | server-side |
-| `hasReply` filter | client-side, per page | server-side¹ |
-| `sort` | **ignored** | server-side |
-| `territories` filter | **ignored** (never reported) | server-side |
-| `translationLanguage` | server-side | **ignored** |
-| Reply length | 350 characters | 5,970 characters |
-| Reply state | always published | may be `pendingPublish` |
-| Delete a reply | not supported | `deleteReply()` |
-| Quota | 200 reads/hour, 2,000 replies/day, per app | per key |
-
-¹ Apple's `exists[publishedResponse]` counts only *published* responses, so a
-reply still pending publication reads as "no reply".
-
-Two consequences worth designing around:
-
-- **Google Play's seven-day window is not a bug you can work around.** If you
-  need review history, poll on a schedule and store the results yourself.
-- **Client-side filtering makes Play pages ragged.** A page can come back
-  holding fewer reviews than you asked for — or none — while more still
-  remain. Drive paging off `ReviewPage.isLast` or the returned cursor, never
-  off the page length.
-
-## Usage
+Read reviews from either store, or both at once, and answer them.
 
 ### Reading
 
@@ -164,107 +160,38 @@ await console.appStore!.reviews.deleteReply(review.id);
 Replying again to a review that already has a reply replaces it on both
 stores; neither keeps a history.
 
-### Retries and logging
+### Support, per store
 
-Both clients back off and retry throttling (`429`, and Google Play's `403
-quotaExceeded`) and transient server errors, three attempts by default. A
-`Retry-After` header wins over the backoff curve, capped so a misreported
-value cannot stall a job.
+The two APIs are not equivalent, and this package does not paper over the
+gaps. `ReviewQuery` fields that a store cannot honour are marked below.
 
-```dart
-final console = await StoreConsole.connect(
-  // …credentials…
-  retryPolicy: const RetryPolicy(maxAttempts: 5),
-  onLog: (message) => stderr.writeln('[store] $message'),
-);
-```
-
-Nothing is logged unless you pass `onLog`. Pass `RetryPolicy.none()` to see
-failures immediately — worth doing inside a job that is itself retried.
-
-### Handling failures
-
-```dart
-try {
-  await api.reply(id, body);
-} on StoreRateLimitException catch (e) {
-  await Future<void>.delayed(e.retryAfter ?? const Duration(minutes: 5));
-} on StoreAuthException catch (e) {
-  stderr.writeln(e.message);  // names the likely setup mistake
-} on StoreApiException catch (e) {
-  stderr.writeln('${e.statusCode} ${e.code}: ${e.detail}');
-}
-```
-
-`reply()` throws `ArgumentError` for an empty or over-long body before any
-request goes out.
-
-### Reaching past this package
-
-```dart
-// The original payload: a googleapis `Review`, or the decoded JSON:API map.
-final original = review.raw;
-
-// Any App Store Connect endpoint, authenticated and error-mapped.
-final apps = await console.appStore!.client.getJson('/v1/apps');
-```
-
-## API reference
-
-### Entry points
-
-| Type | What it is |
-| --- | --- |
-| `StoreConsole` | One app across both stores. `StoreConsole.connect(…)` builds it. |
-| `GooglePlayConsole` | One app on Google Play. `GooglePlayConsole.connect(…)`. |
-| `AppStoreConnectConsole` | One app on the App Store. Constructs synchronously. |
-
-All three expose `reviews` and a `close()` you must call, or the process will
-not exit.
-
-### Reviews
-
-| Type | What it is |
-| --- | --- |
-| `StoreReviewsApi` | `list`, `listPage`, `get`, `reply`, `close`. Implemented by both stores. |
-| `PlayReviewsApi` / `AppStoreReviewsApi` | The per-store implementations. |
-| `MergedReviewsApi` | Fans out across stores. `listPage` is unsupported there — cursors are per-store. |
-| `ReviewQuery` | `pageSize`, `cursor`, `sort`, `ratings`, `territories`, `hasReply`, `translationLanguage`. |
-| `ReviewPage` | `reviews`, `nextCursor`, `total`, `isLast`. |
-| `StoreReview` | See the table below. |
-| `ReviewReply` | `body`, `id`, `lastModified`, `state`. |
-
-`StoreReview` fields a store does not provide are `null` rather than faked:
-
-| Field | Google Play | App Store |
+| | Google Play | App Store |
 | --- | --- | --- |
-| `id`, `rating`, `authorName`, `reply` | ✅ | ✅ |
-| `body` | ✅ (always present) | may be `null` |
-| `title` | — | ✅ |
-| `createdAt` | — (Play reports only last-modified) | ✅ |
-| `updatedAt` | ✅ | — |
-| `territory` | — | ✅ (alpha-3) |
-| `languageCode`, `appVersion`, `device`, `osVersion` | ✅ | — |
-| `thumbsUp`, `thumbsDown` | ✅ | — |
+| History reachable | **last 7 days only** | full |
+| Ratings without text | **not returned** | returned |
+| `ratings` filter | client-side, per page | server-side |
+| `hasReply` filter | client-side, per page | server-side¹ |
+| `sort` | **ignored** | server-side |
+| `territories` filter | **ignored** (never reported) | server-side |
+| `translationLanguage` | server-side | **ignored** |
+| Reply length | 350 characters | 5,970 characters |
+| Reply state | always published | may be `pendingPublish` |
+| Delete a reply | not supported | `deleteReply()` |
+| Quota | 200 reads/hour, 2,000 replies/day, per app | per key |
 
-Use `timestamp` (`createdAt ?? updatedAt`) when sorting across stores.
+¹ Apple's `exists[publishedResponse]` counts only *published* responses, so a
+reply still pending publication reads as "no reply".
 
-### Credentials and transport
+Two consequences worth designing around:
 
-| Type | What it is |
-| --- | --- |
-| `PlayServiceAccount` | `.fromFile`, `.fromJsonString`, or a decoded map. `authenticate(scopes: …)` for APIs beyond reviews. |
-| `AppStoreApiKey` | `.fromP8File`, or key ID + issuer ID + PEM string. |
-| `AppStoreTokenProvider` | Signs and caches the ES256 bearer token. |
-| `AppStoreConnectClient` | Authenticated JSON client for any ASC endpoint, with `getPage` / `pages` for collections. |
-| `RetryPolicy` | Backoff and retry rules, shared by both stores. |
-
-### Errors
-
-`StoreConsoleException` is the base; `StoreAuthException`,
-`StoreApiException` (with `statusCode`, `code`, `detail`),
-`StoreRateLimitException` (with `retryAfter`) and `ReviewNotFoundException`
-derive from it. `googleapis`' `DetailedApiRequestError` never escapes.
+- **Google Play's seven-day window is not a bug you can work around.** For
+  history, either poll on a schedule and store the results yourself, or read
+  the monthly review CSVs via `PlayReportType.reviews` — those are not
+  limited to a week, but they cannot be replied to.
+- **Client-side filtering makes Play pages ragged.** A page can come back
+  holding fewer reviews than you asked for — or none — while more still
+  remain. Drive paging off `ReviewPage.isLast` or the returned cursor, never
+  off the page length.
 
 ## Statistics
 
@@ -496,6 +423,152 @@ for (final row in table.entries) {
 `MetricUnit` records whether values may be summed. Summing a crash *rate* is
 the usual way this kind of code produces confident nonsense, so `total` and
 `average` are documented per unit rather than offered interchangeably.
+
+## Operating notes
+
+### Retries and logging
+
+Every client backs off and retries throttling (`429`, and Google Play's `403
+quotaExceeded` / `RESOURCE_EXHAUSTED`) and transient server errors, three
+attempts by default. A
+`Retry-After` header wins over the backoff curve, capped so a misreported
+value cannot stall a job.
+
+```dart
+final console = await StoreConsole.connect(
+  // …credentials…
+  retryPolicy: const RetryPolicy(maxAttempts: 5),
+  onLog: (message) => stderr.writeln('[store] $message'),
+);
+```
+
+Nothing is logged unless you pass `onLog`. Pass `RetryPolicy.none()` to see
+failures immediately — worth doing inside a job that is itself retried.
+
+### Handling failures
+
+```dart
+try {
+  await api.reply(id, body);
+} on StoreRateLimitException catch (e) {
+  await Future<void>.delayed(e.retryAfter ?? const Duration(minutes: 5));
+} on StoreAuthException catch (e) {
+  stderr.writeln(e.message);  // names the likely setup mistake
+} on StoreApiException catch (e) {
+  stderr.writeln('${e.statusCode} ${e.code}: ${e.detail}');
+}
+```
+
+`reply()` throws `ArgumentError` for an empty or over-long body before any
+request goes out.
+
+### Reaching past this package
+
+Nothing here is a wall. Every model keeps the payload it came from, and every
+client is usable directly.
+
+```dart
+// The original payload: a googleapis `Review`, or the decoded JSON:API map.
+final original = review.raw;
+
+// Any App Store Connect endpoint, authenticated, retried and error-mapped.
+final apps = await console.appStore!.client.getJson('/v1/apps');
+
+// Any Play Developer Reporting endpoint.
+await reportingClient.postJson('apps/com.example.app/anrRateMetricSet:query', {…});
+
+// Any object in the Play report bucket, including report families this
+// package does not model — subscriptions and buyer acquisition have their
+// own file-name grammars.
+await playReports.fetchObject('financial-stats/subscriptions/…csv');
+```
+
+## Examples
+
+Runnable scripts in [`example/`](example), each driven by environment
+variables:
+
+| File | What it does |
+| --- | --- |
+| `colaxy_store_console_example.dart` | Answers unreplied 1- and 2-star reviews on both stores. |
+| `sales_report_example.dart` | Sums a week of App Store units and proceeds, per SKU. |
+| `play_vitals_example.dart` | Three weeks of Android crash rate, worst countries first. |
+| `play_reports_example.dart` | Play installs by country, plus the real rating average. |
+| `app_store_analytics_example.dart` | Registers an analytics request, then collects what exists. |
+
+## API reference
+
+### Entry points
+
+| Type | What it is |
+| --- | --- |
+| `StoreConsole` | One app across both stores. `StoreConsole.connect(…)` builds it. |
+| `GooglePlayConsole` | One app on Google Play: `reviews`. |
+| `AppStoreConnectConsole` | One app on the App Store: `reviews`, `analytics`. |
+| `AppStoreTeam` | One App Store *account*: `salesReports`, keyed by vendor number. |
+| `PlayVitalsApi` / `PlayReportsApi` | Android vitals and the Play report CSVs, built directly. |
+
+Everything here has a `close()` you must call, or the process will not exit.
+An `AppStoreTeam` and an `AppStoreConnectConsole` for the same account can
+share one `AppStoreConnectClient`, and then share its cached token too.
+
+### Reviews
+
+| Type | What it is |
+| --- | --- |
+| `StoreReviewsApi` | `list`, `listPage`, `get`, `reply`, `close`. Implemented by both stores. |
+| `PlayReviewsApi` / `AppStoreReviewsApi` | The per-store implementations. |
+| `MergedReviewsApi` | Fans out across stores. `listPage` is unsupported there — cursors are per-store. |
+| `ReviewQuery` | `pageSize`, `cursor`, `sort`, `ratings`, `territories`, `hasReply`, `translationLanguage`. |
+| `ReviewPage` | `reviews`, `nextCursor`, `total`, `isLast`. |
+| `StoreReview` | See the table below. |
+| `ReviewReply` | `body`, `id`, `lastModified`, `state`. |
+
+`StoreReview` fields a store does not provide are `null` rather than faked:
+
+| Field | Google Play | App Store |
+| --- | --- | --- |
+| `id`, `rating`, `authorName`, `reply` | ✅ | ✅ |
+| `body` | ✅ (always present) | may be `null` |
+| `title` | — | ✅ |
+| `createdAt` | — (Play reports only last-modified) | ✅ |
+| `updatedAt` | ✅ | — |
+| `territory` | — | ✅ (alpha-3) |
+| `languageCode`, `appVersion`, `device`, `osVersion` | ✅ | — |
+| `thumbsUp`, `thumbsDown` | ✅ | — |
+
+Use `timestamp` (`createdAt ?? updatedAt`) when sorting across stores.
+
+### Credentials and transport
+
+| Type | What it is |
+| --- | --- |
+| `PlayServiceAccount` | `.fromFile`, `.fromJsonString`, or a decoded map. `authenticate(scopes: …)` for APIs beyond reviews. |
+| `AppStoreApiKey` | `.fromP8File`, or key ID + issuer ID + PEM string. |
+| `AppStoreTokenProvider` | Signs and caches the ES256 bearer token. |
+| `AppStoreConnectClient` | Authenticated JSON client for any ASC endpoint, with `getPage` / `pages` for collections. |
+| `PlayReportingClient` / `PlayStorageClient` | The same, for Android vitals and the report bucket. |
+| `RetryPolicy` | Backoff and retry rules, shared by every client. |
+| `StoreConsoleLog` | The `onLog` callback signature. |
+
+### Statistics
+
+| Type | What it is |
+| --- | --- |
+| `SalesReportsApi`, `SalesReportQuery` | App Store sales, subscriptions and installs. |
+| `AnalyticsReportsApi` | App Store analytics: requests, reports, instances, segments. |
+| `PlayVitalsApi`, `VitalsQuery`, `VitalsMetricSet` | Android vitals. |
+| `PlayReportsApi`, `PlayReportType` | Google Play's monthly report CSVs. |
+| `ReportTable`, `ReportRow` | A report as a header plus rows, read by column name. |
+| `StoreMetric`, `MetricPoint`, `MetricUnit` | A date/value/dimensions series. |
+| `MetricFreshness` | How far forward a vitals metric set has settled. |
+
+### Errors
+
+`StoreConsoleException` is the base; `StoreAuthException`,
+`StoreApiException` (with `statusCode`, `code`, `detail`),
+`StoreRateLimitException` (with `retryAfter`) and `ReviewNotFoundException`
+derive from it. `googleapis`' `DetailedApiRequestError` never escapes.
 
 ## Caveats worth repeating
 
