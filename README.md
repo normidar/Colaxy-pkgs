@@ -1,5 +1,7 @@
 # Colaxy-pkgs
 
+Version: V1
+
 A monorepo of Flutter/Dart packages used to build Colaxy apps. See
 [example/README.md](example/README.md) for how to put them together in an app.
 
