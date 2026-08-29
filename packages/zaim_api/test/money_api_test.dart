@@ -106,6 +106,50 @@ void main() {
       expect(records.single.id, 381);
       expect(records.single.mode, MoneyMode.income);
     });
+
+    test(
+        'skips a record with an unrecognised mode instead of failing the '
+        'whole page', () async {
+      final body = jsonEncode({
+        'money': [
+          {
+            'id': 1,
+            'mode': 'payment',
+            'user_id': 1,
+            'date': '2011-11-07',
+            'category_id': 101,
+            'amount': 100,
+          },
+          {
+            // A mode this package does not know yet.
+            'id': 2,
+            'mode': 'refund',
+            'user_id': 1,
+            'date': '2011-11-07',
+            'category_id': 101,
+            'amount': 200,
+          },
+          {
+            'id': 3,
+            'mode': 'income',
+            'user_id': 1,
+            'date': '2011-11-07',
+            'category_id': 101,
+            'amount': 300,
+          },
+        ],
+        'requested': 1321782829,
+      });
+      final log = RequestLog();
+      final client = ZaimClient(
+        credentials: testCredentials,
+        httpClient: log.client([body]),
+      );
+
+      final records = await client.money.list();
+
+      expect(records.map((r) => r.id), [1, 3]);
+    });
   });
 
   group('listAll paging', () {

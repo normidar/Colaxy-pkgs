@@ -65,7 +65,7 @@ void checkFiveYearWindow(DateTime date, String name, {DateTime? now}) {
 void checkIncomeWindow(DateTime date, String name, {DateTime? now}) {
   final today = _startOfDay(now ?? DateTime.now());
   final day = _startOfDay(date);
-  final earliest = DateTime(today.year, today.month - 3, today.day);
+  final earliest = _threeMonthsBefore(today);
   if (day.isBefore(earliest)) {
     throw ArgumentError.value(
       date,
@@ -99,6 +99,26 @@ void checkTransferAccounts(int? fromAccountId, int? toAccountId) {
 DateTime _startOfDay(DateTime value) {
   final local = value.isUtc ? value.toLocal() : value;
   return DateTime(local.year, local.month, local.day);
+}
+
+/// The calendar date three months before [date], clamped to the last day of
+/// the target month rather than overflowing into the month after.
+///
+/// `DateTime(date.year, date.month - 3, date.day)` alone is not enough:
+/// when the target month is shorter than `date.day` (for example May 31 minus
+/// three months has no "February 31"), the `DateTime` constructor silently
+/// rolls the result forward into March, narrowing the window this is meant to
+/// check.
+DateTime _threeMonthsBefore(DateTime date) {
+  var year = date.year;
+  var month = date.month - 3;
+  if (month < 1) {
+    month += 12;
+    year -= 1;
+  }
+  final daysInMonth = DateTime(year, month + 1, 0).day;
+  final day = date.day > daysInMonth ? daysInMonth : date.day;
+  return DateTime(year, month, day);
 }
 
 String _ymd(DateTime value) => '${value.year.toString().padLeft(4, '0')}-'

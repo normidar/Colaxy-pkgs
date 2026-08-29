@@ -83,9 +83,7 @@ class MoneyApi {
         groupByReceiptId: groupByReceiptId,
       ),
     );
-    return asMapList(json, 'money')
-        .map(MoneyRecord.fromJson)
-        .toList(growable: false);
+    return _parseRecords(asMapList(json, 'money'));
   }
 
   /// Every record matching the filters, walking pages of 100 until Zaim
@@ -377,6 +375,25 @@ class MoneyApi {
       query: ZaimTransport.mappingParameter,
     );
     return MoneyWriteResult.fromJson(json);
+  }
+
+  /// Parses the `money` array, dropping records `MoneyRecord.fromJson`
+  /// cannot parse rather than letting one bad record fail the whole page.
+  ///
+  /// The only way `MoneyRecord.fromJson` throws is a `mode` value outside
+  /// `payment` / `income` / `transfer` — Zaim adding a mode this package does
+  /// not know yet. That should not cost the caller every other record in the
+  /// response.
+  static List<MoneyRecord> _parseRecords(List<Map<String, dynamic>> maps) {
+    final records = <MoneyRecord>[];
+    for (final map in maps) {
+      try {
+        records.add(MoneyRecord.fromJson(map));
+      } on FormatException {
+        // Skip: an unrecognised `mode` this package does not know yet.
+      }
+    }
+    return List.unmodifiable(records);
   }
 
   /// Builds the query for [list]: `mapping=1` is always included and both

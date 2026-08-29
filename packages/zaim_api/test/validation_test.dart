@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:test/test.dart';
+import 'package:zaim_api/src/validation.dart';
 import 'package:zaim_api/zaim_api.dart';
 
 import 'fixtures.dart';
@@ -236,6 +237,23 @@ void main() {
         date: DateTime(now.year, now.month - 1, now.day),
       );
       expect(log.requests, hasLength(1));
+    });
+
+    test(
+        'the three-month boundary lands on the last day of the target month '
+        'instead of overflowing into the next one', () {
+      // Three months before May 31 is "February 31", which does not exist.
+      // The boundary must clamp to February 28/29, not silently roll forward
+      // into March.
+      final now = DateTime(2026, 5, 31);
+      expect(
+        () => checkIncomeWindow(DateTime(2026, 2, 28), 'date', now: now),
+        returnsNormally,
+      );
+      expect(
+        () => checkIncomeWindow(DateTime(2026, 2, 27), 'date', now: now),
+        throwsA(isA<ArgumentError>().having((e) => e.name, 'name', 'date')),
+      );
     });
 
     test('does not apply the three-month window to income updates', () async {
