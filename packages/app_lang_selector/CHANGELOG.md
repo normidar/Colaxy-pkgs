@@ -1,3 +1,11 @@
+## 0.4.0
+
+### Added
+- Traditional Chinese (`zh-TW`) translations for the selector page, and
+  `zh-TW` in `bundledLocales`. `繁體中文` was already in `langsNameMap`, so the
+  entry rendered with its native name while the page chrome around it fell
+  back to `fallbackLocale`.
+
 ## 0.3.1
 
 ### Fixed

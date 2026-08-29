@@ -68,6 +68,7 @@ EasyLocalization languageWidgetWrapper(Widget widget) {
       Locale('ja', 'JP'),
       Locale('en', 'US'),
       Locale('zh', 'CN'),
+      Locale('zh', 'TW'),
     ],
     path: 'assets/localizations',
     fallbackLocale: const Locale('en', 'US'),

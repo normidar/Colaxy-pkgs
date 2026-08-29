@@ -14,20 +14,31 @@ import 'package:image/image.dart' hide Color, Image;
 import 'package:image/image.dart' as img show Image;
 
 /// Locale mapping for Android
+///
+/// Entries are keyed by `language-COUNTRY` where the region picks a different
+/// store listing — Chinese is published as separate Simplified and Traditional
+/// listings — and by bare language code otherwise, which is what a locale
+/// without a country falls back to.
 const _androidLocaleMap = {
   'en': 'en-US',
   'ja': 'ja-JP',
   'zh': 'zh-CN',
+  'zh-CN': 'zh-CN',
+  'zh-TW': 'zh-TW',
   'es': 'es-ES',
   'pt': 'pt-PT',
   'tr': 'tr-TR',
 };
 
 /// Locale mapping for iOS
+///
+/// Keyed the same way as [_androidLocaleMap]; see the note there.
 const _iOSLocaleMap = {
   'en': 'en-US',
   'ja': 'ja',
   'zh': 'zh-Hans',
+  'zh-CN': 'zh-Hans',
+  'zh-TW': 'zh-Hant',
   'es': 'es-ES',
   'pt': 'pt-PT',
   'tr': 'tr',
@@ -38,15 +49,21 @@ const _iOSLocaleMap = {
 /// These maps only cover a handful of languages. Reading them with `!` turned
 /// every unmapped locale into a bare null-check crash halfway through a capture
 /// run, so look them up through here instead.
+///
+/// The regioned key wins over the bare language one: keying on the language
+/// alone sent `zh-TW` screenshots to the Simplified Chinese listing.
 String _storeLocaleName(
   Map<String, String> map,
   Locale locale,
   String platform,
 ) {
-  final name = map[locale.languageCode];
+  final country = locale.countryCode;
+  final name =
+      (country == null ? null : map['${locale.languageCode}-$country']) ??
+      map[locale.languageCode];
   if (name == null) {
     throw ArgumentError.value(
-      locale.languageCode,
+      locale.toString(),
       'locale',
       'colaxy_screenshot has no $platform store locale mapped for this '
           'language. Supported: ${map.keys.join(', ')}.',
@@ -141,6 +158,14 @@ class ScreenshotService {
     debugPrint('Screenshots taken, exiting the app...');
     exit(0);
   }
+
+  /// The store directory names a capture of [locale] would be written into.
+  ///
+  /// Exposed for tests: the mapping is otherwise only observable by running a
+  /// full capture and reading the paths back off disk.
+  @visibleForTesting
+  ({String android, String ios}) storeLocaleNames(Locale locale) =>
+      (android: _androidLocaleName(locale), ios: _iosLocaleName(locale));
 
   /// Verifies every configured locale can be mapped to a store directory.
   ///

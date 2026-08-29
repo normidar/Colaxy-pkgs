@@ -36,6 +36,7 @@ class _Localized extends StatelessWidget {
         Locale('ja', 'JP'),
         Locale('en', 'US'),
         Locale('zh', 'CN'),
+        Locale('zh', 'TW'),
         Locale('tr', 'TR'),
         Locale('pt', 'PT'),
         Locale('es', 'ES'),

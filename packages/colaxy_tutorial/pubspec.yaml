@@ -1,6 +1,6 @@
 ---
 dependencies:
-  app_lang_selector: ^0.3.1
+  app_lang_selector: ^0.4.0
   easy_localization: ^3.0.7
   flutter:
     sdk: flutter
@@ -31,5 +31,5 @@ topics:
   - manual
   - guide
   - startup
-version: 0.3.1
+version: 0.3.2
 resolution: workspace

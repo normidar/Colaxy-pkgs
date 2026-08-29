@@ -1,3 +1,17 @@
+## 0.9.0
+
+### Fixed
+- Store locale directories are now resolved from the language *and* country
+  code, so `Locale('zh', 'TW')` gets its own listing (`zh-Hant` on the App
+  Store, `zh-TW` on Play). Both maps were keyed by language alone, which
+  silently wrote Traditional Chinese screenshots over the Simplified Chinese
+  ones. A locale without a country code still resolves by language, so
+  `Locale('zh')` continues to mean Simplified.
+
+### Added
+- `ScreenshotService.storeLocaleNames(Locale)` (`@visibleForTesting`), which
+  reports the App Store and Play directory names a locale maps to.
+
 ## 0.8.1
 
 ### Changed

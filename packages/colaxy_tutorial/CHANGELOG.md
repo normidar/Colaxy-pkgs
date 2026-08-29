@@ -1,3 +1,11 @@
+## 0.3.2
+
+### Changed
+- Widened the `app_lang_selector` dependency to `^0.4.0`, the release that adds
+  Traditional Chinese (`zh-TW`). This package already shipped `zh-TW.json`, so
+  the whole set of colaxy packages an app loads through `PkgsAssetLoader` now
+  covers the same locale.
+
 ## 0.3.1
 
 ### Fixed

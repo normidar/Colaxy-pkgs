@@ -32,6 +32,7 @@ final bundledLocales = <LangCode>{
   const LangCode(languageCode: 'tr', countryCode: 'TR'),
   const LangCode(languageCode: 'vi', countryCode: 'VN'),
   const LangCode(languageCode: 'zh', countryCode: 'CN'),
+  const LangCode(languageCode: 'zh', countryCode: 'TW'),
 };
 
 final _langsNameMap = <LangCode, String>{

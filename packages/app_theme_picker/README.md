@@ -14,7 +14,7 @@ A beautiful and customizable Flutter package for theme selection with support fo
 🎨 **Multiple Color Schemes**: Support for all FlexColorScheme color schemes  
 🌙 **Theme Mode Support**: Light, Dark, and System theme modes  
 💾 **Persistent Settings**: Theme preferences are saved automatically  
-🌍 **Internationalization**: Built-in localization support (English, Japanese, Korean, Chinese)  
+🌍 **Internationalization**: Built-in localization support (English, Japanese, Korean, Simplified and Traditional Chinese)  
 ⚡ **State Management**: Powered by Flutter Riverpod for reactive state management  
 🎯 **Customizable**: Configurable button sizes and available color schemes
 
@@ -219,7 +219,8 @@ The package supports multiple languages out of the box:
 - English (en-US)
 - Japanese (ja-JP)
 - Korean (ko)
-- Chinese (zh-CN)
+- Chinese, Simplified (zh-CN)
+- Chinese, Traditional (zh-TW)
 
 To enable localization in your app, set up `easy_localization`:
 
@@ -237,6 +238,7 @@ void main() async {
         Locale('ja', 'JP'),
         Locale('ko'),
         Locale('zh', 'CN'),
+        Locale('zh', 'TW'),
       ],
       path: 'assets/localizations',
       fallbackLocale: Locale('en', 'US'),

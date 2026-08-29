@@ -28,6 +28,12 @@ The package includes native names for 40+ languages including:
 - Русский, العربية, Tiếng Việt, हिंदी, Polski
 - And many more...
 
+The selector page itself ships translations (`bundledLocales`) for `ar-AE`,
+`de-DE`, `en-US`, `es-ES`, `fr-FR`, `it-IT`, `ja-JP`, `ko-KR`, `pt-PT`,
+`ru-RU`, `tr-TR`, `vi-VN`, `zh-CN` and `zh-TW`. Any other locale in your
+`supportedLocales` is still listed by its native name; only the page chrome
+falls back to `fallbackLocale`.
+
 ## Getting Started
 
 ### Installation
@@ -77,6 +83,7 @@ void main() async {
         Locale('en', 'US'),
         Locale('ja', 'JP'),
         Locale('zh', 'CN'),
+        Locale('zh', 'TW'),
         Locale('ko', 'KR'),
         Locale('es', 'ES'),
         Locale('fr', 'FR'),

@@ -1,3 +1,11 @@
+## 0.4.0
+
+### Added
+- Traditional Chinese (`zh-TW`) translations. Apps whose `supportedLocales`
+  include `Locale('zh', 'TW')` previously fell back to `fallbackLocale` for
+  this package's strings — or failed to load them at all, since
+  `PkgsAssetLoader` reads one file per locale per package.
+
 ## 0.3.1
 
 ### Changed

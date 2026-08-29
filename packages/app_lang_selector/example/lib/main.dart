@@ -13,6 +13,7 @@ void main() async {
         Locale('en', 'US'),
         Locale('ja', 'JP'),
         Locale('zh', 'CN'),
+        Locale('zh', 'TW'),
         Locale('ko', 'KR'),
         Locale('es', 'ES'),
         Locale('fr', 'FR'),

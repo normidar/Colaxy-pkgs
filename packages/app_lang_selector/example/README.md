@@ -10,7 +10,8 @@ This is a sample Flutter application demonstrating how to use the `app_lang_sele
 - Support for multiple languages including:
   - English
   - Japanese (日本語)
-  - Chinese (简体中文)
+  - Chinese, Simplified (简体中文)
+  - Chinese, Traditional (繁體中文)
   - Korean (한국어)
   - Spanish (Español)
   - French (Français)

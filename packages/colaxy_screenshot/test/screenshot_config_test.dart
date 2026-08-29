@@ -89,6 +89,30 @@ void main() {
       );
     });
 
+    test('Traditional Chinese gets its own store listing', () {
+      final service = ScreenshotService(
+        config: _config(),
+        appPath: '/tmp/does-not-matter',
+      );
+
+      final simplified = service.storeLocaleNames(const Locale('zh', 'CN'));
+      final traditional = service.storeLocaleNames(const Locale('zh', 'TW'));
+
+      expect(simplified.ios, 'zh-Hans');
+      expect(simplified.android, 'zh-CN');
+      expect(traditional.ios, 'zh-Hant');
+      expect(traditional.android, 'zh-TW');
+    });
+
+    test('an unregioned locale still resolves by language', () {
+      final service = ScreenshotService(
+        config: _config(),
+        appPath: '/tmp/does-not-matter',
+      );
+
+      expect(service.storeLocaleNames(const Locale('ja')).ios, 'ja');
+    });
+
     test('skips the iOS check when only Android is enabled', () {
       // `tr` is mapped for both, but a locale mapped for one platform only
       // should not be rejected because of the platform that is switched off.

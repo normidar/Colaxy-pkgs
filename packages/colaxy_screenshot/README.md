@@ -11,7 +11,7 @@ A powerful Flutter package for automated screenshot generation for App Store, Go
 ## Features
 
 ✨ **Multi-platform Support**: Generate screenshots for iOS, Android, and macOS  
-🌍 **Multi-language Support**: Support for Japanese, English, Chinese, and more  
+🌍 **Multi-language Support**: Support for Japanese, English, Simplified and Traditional Chinese, and more  
 📱 **Device Compatibility**: Phone, tablet, and macOS screenshot generation  
 🎨 **Marketing Layouts**: Beautiful backgrounds and titles for app store listings  
 🚀 **Fastlane Integration**: Direct integration with Fastlane for automated app store uploads  
@@ -174,14 +174,35 @@ your_app/
 │   │   │   ├── 1_ipadPro13_1.welcome.png
 │   │   │   └── 1_mac_1.welcome.png        # enableMacos: true のみ
 │   │   ├── ja/
-│   │   └── zh-Hans/
+│   │   ├── zh-Hans/
+│   │   └── zh-Hant/
 │   └── metadata/
 │       └── android/
 │           ├── featureGraphic.png
 │           ├── en-US/images/phoneScreenshots/
 │           ├── ja-JP/images/phoneScreenshots/
-│           └── zh-CN/images/phoneScreenshots/
+│           ├── zh-CN/images/phoneScreenshots/
+│           └── zh-TW/images/phoneScreenshots/
 ```
+
+## Supported Locales
+
+Each `supportedLocales` entry is mapped to the store's own directory name. A
+locale that is not in this table fails validation before any capture starts.
+
+| `Locale`             | App Store | Play Store |
+| -------------------- | --------- | ---------- |
+| `Locale('en', 'US')` | `en-US`   | `en-US`    |
+| `Locale('ja', 'JP')` | `ja`      | `ja-JP`    |
+| `Locale('zh', 'CN')` | `zh-Hans` | `zh-CN`    |
+| `Locale('zh', 'TW')` | `zh-Hant` | `zh-TW`    |
+| `Locale('es', 'ES')` | `es-ES`   | `es-ES`    |
+| `Locale('pt', 'PT')` | `pt-PT`   | `pt-PT`    |
+| `Locale('tr', 'TR')` | `tr`      | `tr-TR`    |
+
+The country code is what separates Simplified from Traditional Chinese, so pass
+`Locale('zh', 'TW')` rather than a bare `Locale('zh')` — the latter is treated
+as Simplified.
 
 ## Supported Devices
 

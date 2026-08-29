@@ -12,7 +12,7 @@ A Flutter package that provides a simple and elegant way to display app informat
 
 - 📱 **App Information Display**: Shows app name, version, build number, and the Flutter version the app was compiled with
 - 📄 **License Viewer**: Integrated license page access
-- 🌐 **Multi-language Support**: Supports 7 languages (English, Japanese, Spanish, Korean, Portuguese, Turkish, Chinese)
+- 🌐 **Multi-language Support**: Supports 8 locales (English, Japanese, Spanish, Korean, Portuguese, Turkish, Simplified and Traditional Chinese)
 - ⚡ **Riverpod Integration**: Built with Flutter Riverpod for efficient state management
 - 🎨 **Customizable UI**: Simple ListTile with alert dialog for detailed information
 - 📦 **Easy Integration**: Drop-in widget ready to use
@@ -25,7 +25,8 @@ A Flutter package that provides a simple and elegant way to display app informat
 - 🇰🇷 Korean (ko-KR)
 - 🇵🇹 Portuguese (pt-PT)
 - 🇹🇷 Turkish (tr-TR)
-- 🇨🇳 Chinese (zh-CN)
+- 🇨🇳 Chinese, Simplified (zh-CN)
+- 🇹🇼 Chinese, Traditional (zh-TW)
 
 ## Installation
 
@@ -90,6 +91,7 @@ void main() async {
         Locale('pt', 'PT'),
         Locale('tr', 'TR'),
         Locale('zh', 'CN'),
+        Locale('zh', 'TW'),
       ],
       path: 'assets/translations', // Path to your translation files
       fallbackLocale: Locale('en', 'US'),
