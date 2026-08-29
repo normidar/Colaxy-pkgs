@@ -69,8 +69,9 @@ Environment variables, per surface. Supply what you have; the rest is skipped.
   want Sales, Finance or Admin.
 
   Google Play reviews
-    PLAY_KEY_JSON      contents of the service-account JSON
+    PLAY_KEY_JSON      the service-account JSON, or a path to the file
     PLAY_PACKAGE       application ID, e.g. com.example.app
+                       Omit it and the run lists the apps you can pick from.
 
   Google Play vitals
     PLAY_KEY_JSON, PLAY_PACKAGE
@@ -180,6 +181,24 @@ _Result _skip(String name, String missing) =>
 /// Guessing here is safe, and saves a confusing failure — a path handed
 /// straight to [AppStoreApiKey] fails as "does not look like PEM", which does
 /// not suggest the fix.
+/// Builds an account from `PLAY_KEY_JSON` holding either the key or a path.
+///
+/// The same accommodation as [_appStoreKey], for the same reason: both are
+/// natural things to put in an environment variable, and a service-account
+/// key always starts with `{`, so telling them apart is unambiguous.
+PlayServiceAccount _playAccount(String keyJson) {
+  final value = keyJson.trim();
+  if (value.startsWith('{')) return PlayServiceAccount.fromJsonString(value);
+  if (File(value).existsSync()) return PlayServiceAccount.fromFile(value);
+  throw StoreAuthException(
+    'PLAY_KEY_JSON is neither JSON nor a readable file: ${value.length} '
+    'characters, no leading "{", and no file at that path. Set it to the '
+    r'contents — PLAY_KEY_JSON="$(cat play-api.json)" — or to a path that '
+    'exists.',
+    store: Store.googlePlay,
+  );
+}
+
 AppStoreApiKey _appStoreKey({
   required String keyId,
   required String issuerId,
@@ -380,9 +399,9 @@ Future<List<_Result>> _playChecks(Map<String, String> env) async {
   final packageName = _value(env, 'PLAY_PACKAGE');
   final bucket = _value(env, 'PLAY_BUCKET');
 
-  if (keyJson == null || packageName == null) {
+  if (keyJson == null) {
     return [
-      _skip('Google Play credentials', 'PLAY_KEY_JSON, PLAY_PACKAGE'),
+      _skip('Google Play credentials', 'PLAY_KEY_JSON'),
       _skip('Google Play reviews', 'PLAY_* credentials'),
       _skip('Google Play vitals', 'PLAY_* credentials'),
       _skip('Google Play report CSVs', 'PLAY_* credentials'),
@@ -394,7 +413,7 @@ Future<List<_Result>> _playChecks(Map<String, String> env) async {
 
   results.add(
     await _run('Google Play credentials', () async {
-      account = PlayServiceAccount.fromJsonString(keyJson);
+      account = _playAccount(keyJson);
       return 'service account ${account.clientEmail}';
     }),
   );
@@ -404,6 +423,41 @@ Future<List<_Result>> _playChecks(Map<String, String> env) async {
       _skip('Google Play reviews', 'a usable key'),
       _skip('Google Play vitals', 'a usable key'),
       _skip('Google Play report CSVs', 'a usable key'),
+    ];
+  }
+
+  if (packageName == null) {
+    // The Reporting API is the only endpoint on either store that answers
+    // "which apps do I have?", so a missing package name is worth turning
+    // into the list you would otherwise go hunting for.
+    final apps = await _run('Google Play apps', () async {
+      final client = PlayReportingClient(
+        authenticatedClient: await account.authenticate(
+          scopes: [PlayServiceAccount.reportingScope],
+        ),
+      );
+      try {
+        final json = await client.getJson('apps:search');
+        final found = json['apps'];
+        if (found is! List || found.isEmpty) {
+          return '${_emptyMarker}the account reaches no apps';
+        }
+        final names = [
+          for (final app in found)
+            if (app is Map && app['packageName'] is String)
+              app['packageName']! as String,
+        ]..sort();
+        return 'set PLAY_PACKAGE to one of: ${names.join(', ')}';
+      } finally {
+        client.close();
+      }
+    });
+    return [
+      ...results,
+      apps,
+      _skip('Google Play reviews', 'PLAY_PACKAGE'),
+      _skip('Google Play vitals', 'PLAY_PACKAGE'),
+      _skip('Google Play report CSVs', 'PLAY_PACKAGE'),
     ];
   }
 

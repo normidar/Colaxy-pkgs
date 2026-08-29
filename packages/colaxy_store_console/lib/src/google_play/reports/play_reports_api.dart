@@ -14,8 +14,8 @@ import 'package:colaxy_store_console/src/reports/report_table.dart';
 ///
 /// In **Play Console → Download reports**, each section has a *Copy Cloud
 /// Storage URI* button giving something like
-/// `gs://pubsite_prod_rev_01234567890123456789/stats/installs/`. The bucket is
-/// the `pubsite_prod_rev_…` part — paste the whole URI if you like, it is
+/// `gs://pubsite_prod_1234567898765432100/stats/installs/`. The bucket is
+/// the `pubsite_prod_…` part — paste the whole URI if you like, it is
 /// trimmed for you. It is per developer account, appears in no API, and so
 /// has to be configured.
 ///
@@ -27,7 +27,7 @@ import 'package:colaxy_store_console/src/reports/report_table.dart';
 ///
 /// ### Required
 /// - **`client`**: Transport to issue requests through.
-/// - **[bucket]**: The `pubsite_prod_rev_…` bucket ID or a copied `gs://` URI.
+/// - **[bucket]**: The `pubsite_prod_…` bucket ID or a copied `gs://` URI.
 /// - **[packageName]**: The app's application ID.
 ///
 /// ## Example
@@ -39,7 +39,7 @@ import 'package:colaxy_store_console/src/reports/report_table.dart';
 ///       scopes: [PlayServiceAccount.storageReadScope],
 ///     ),
 ///   ),
-///   bucket: 'pubsite_prod_rev_01234567890123456789',
+///   bucket: 'pubsite_prod_1234567898765432100',
 ///   packageName: 'com.example.app',
 /// );
 ///
@@ -69,7 +69,7 @@ class PlayReportsApi {
   /// Strips the `gs://` scheme and any path from a copied Cloud Storage URI.
   ///
   /// Play Console's copy button hands over
-  /// `gs://pubsite_prod_rev_…/stats/installs/`, and passing that whole string
+  /// `gs://pubsite_prod_…/stats/installs/`, and passing that whole string
   /// as a bucket name fails with an error about an invalid bucket.
   static String normaliseBucket(String bucket) {
     var value = bucket.trim();

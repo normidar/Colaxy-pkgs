@@ -42,9 +42,18 @@ class PlayStorageClient {
        baseUri = baseUri ?? Uri.https('storage.googleapis.com');
 
   /// Explains the usual causes of a `401`/`403` from this bucket.
+  ///
+  /// Worth being specific, because the obvious fixes do not work. The bucket
+  /// belongs to Google, not to your Cloud project, so no amount of GCP IAM —
+  /// Storage Admin, project Owner — grants access to it. Only Play Console
+  /// does, and only at the account level.
   static const authHint =
-      'Check that the service account is invited in Play Console under Users '
-      'and permissions, and that the token was minted with '
+      'This bucket is Google-owned, so GCP IAM roles do not reach it. Grant '
+      'access in Play Console -> Users and permissions -> the service '
+      "account -> the *Account permissions* tab -> 'View app information and "
+      "download bulk reports'. Granting it on the Apps tab instead is the "
+      'usual cause of this error. Changes can take up to 24 hours to reach '
+      'the bucket. Also check the token carries '
       'PlayServiceAccount.storageReadScope.';
 
   /// API root every path is resolved against.
@@ -76,6 +85,10 @@ class PlayStorageClient {
       Future<void>.delayed(duration);
 
   /// Every object name in [bucket] under [prefix], following pagination.
+  ///
+  /// Listing is the only way in. Asking for the bucket's own metadata, or
+  /// listing the project's buckets, needs permissions Play never grants —
+  /// the bucket is not in your project — so neither is attempted.
   Future<List<String>> list(String bucket, {required String prefix}) async {
     final names = <String>[];
     String? pageToken;

@@ -208,17 +208,32 @@ service account's email address (`…@….iam.gserviceaccount.com`) and grant it
 message names it.
 
 **4. Find the bucket ID** — report CSVs only. **Download reports**, then the
-**Copy Cloud Storage URI** button beside any section:
+**Copy Cloud Storage URI** button beside any section, or the *Direct Report
+URIs* block at the foot of the page:
 
 ```text
-gs://pubsite_prod_rev_01234567890123456789/stats/installs/
-     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+gs://pubsite_prod_1234567898765432100/stats/installs/
+     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 ```
 
 Paste the whole thing — the scheme and path are trimmed for you. It is one
-bucket per developer account, and no API returns it.
+bucket per developer account, and no API returns it. Older accounts show
+`pubsite_prod_rev_…`; either is fine.
 
-**5. Request the scopes you need.** They are different per API, and a token
+**5. Grant bucket access at the account level.** This one deserves its own
+step, because the obvious fixes do not work. The bucket belongs to Google,
+not to your Cloud project, so **no GCP IAM role reaches it** — Storage Admin,
+project Owner, none of them. Only Play Console grants it:
+
+**Users and permissions → the service account → the *Account permissions*
+tab → View app information and download bulk reports**
+
+Granting that on the **Apps** tab instead is the most common cause of
+`storage.objects.list denied`, and it looks correct while failing. Changes
+can take **up to 24 hours** to reach the bucket, so a fresh grant that still
+403s may just need waiting out.
+
+**6. Request the scopes you need.** They are different per API, and a token
 minted for one is rejected by the others in a way that looks like a bad key:
 
 ```dart
@@ -510,7 +525,7 @@ final api = PlayReportsApi(
   ),
   // Paste the whole URI from Play Console's "Copy Cloud Storage URI" button;
   // the scheme and path are trimmed for you.
-  bucket: 'gs://pubsite_prod_rev_01234567890123456789/stats/installs/',
+  bucket: 'gs://pubsite_prod_1234567898765432100/stats/installs/',
   packageName: 'com.example.app',
 );
 
