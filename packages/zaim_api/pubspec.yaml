@@ -1,0 +1,27 @@
+dependencies:
+  http: ^1.6.0
+  meta: ^1.19.0
+  oauth1: ^2.1.0
+description: Dart client for the Zaim REST API v2.1.0. OAuth 1.0a authentication,
+  money record CRUD, categories, genres, accounts and the public master data
+  endpoints, with no code generation.
+dev_dependencies:
+  test: ^1.24.0
+  very_good_analysis: ^10.3.0
+environment:
+  # NOTE: the spec asked for `>=3.4.0`, but this package is a member of the
+  # repo's pub workspace and `resolution: workspace` needs language version
+  # 3.5 or newer. 3.5.0 is the lowest constraint that still satisfies it.
+  sdk: ">=3.5.0 <4.0.0"
+homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/zaim_api
+repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/zaim_api
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
+name: zaim_api
+topics:
+  - zaim
+  - oauth1
+  - household-accounting
+  - api-client
+  - finance
+version: 0.1.0
+resolution: workspace
