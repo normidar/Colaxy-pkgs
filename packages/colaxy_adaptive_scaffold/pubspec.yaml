@@ -4,8 +4,8 @@ dependencies:
     sdk: flutter
 description: A Flutter package for adaptive navigation.
 dev_dependencies:
-  auto_exporter: ^4.1.1
-  build_runner: ^2.0.0
+  auto_exporter: ^4.2.0
+  build_runner: ^2.16.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^10.3.0
