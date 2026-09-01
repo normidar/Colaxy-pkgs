@@ -1,19 +1,19 @@
 ---
 dependencies:
   device_frame_plus: ^1.0.0
-  device_info_plus: ^12.2.0
+  device_info_plus: ^13.2.0
   easy_localization: ^3.0.0
   flutter:
     sdk: flutter
-  flutter_riverpod: ^3.0.0
+  flutter_riverpod: ^3.4.2
   image: ^4.0.0
   path_provider: ^2.0.0
   screenshot: ^3.0.0
   window_manager: ^0.5.2
 description: Automated app store screenshot generation for iOS, Android, and macOS across multiple devices and languages, with Fastlane integration.
 dev_dependencies:
-  auto_exporter: ^4.1.1
-  build_runner: ^2.0.0
+  auto_exporter: ^4.2.0
+  build_runner: ^2.16.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^10.3.0

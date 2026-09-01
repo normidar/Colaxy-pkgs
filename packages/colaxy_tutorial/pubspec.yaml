@@ -4,14 +4,14 @@ dependencies:
   easy_localization: ^3.0.7
   flutter:
     sdk: flutter
-  flutter_riverpod: ^3.0.3
-  package_info_plus: ^9.0.0
+  flutter_riverpod: ^3.4.2
+  package_info_plus: ^10.2.1
   shared_preferences: ^2.2.3
   tutorial_coach_mark: ^1.2.12
 description: A tool for showing tutorials, developed on tutorial_coach_mark, more easier to use, more features.
 dev_dependencies:
-  auto_exporter: ^4.1.1
-  build_runner: ^2.4.11
+  auto_exporter: ^4.2.0
+  build_runner: ^2.16.0
   flutter_test:
     sdk: flutter
   very_good_analysis: ^10.3.0

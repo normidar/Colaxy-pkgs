@@ -7,7 +7,7 @@ environment:
   sdk: '>=3.11.0 <4.0.0' # pub workspace 機能を使うため 3.5.0 以上が必要
 
 dev_dependencies:
-  melos: 8.2.2
+  melos: 8.6.0
   # Needed so the root analysis_options.yaml can `include:` it.
   very_good_analysis: ^10.3.0
 
