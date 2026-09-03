@@ -163,6 +163,25 @@ store went through `fastlane supply`.
 - `appStoreVersionSubmissions` accepts `DELETE` only, so documentation telling
   you to POST there is describing something that no longer works that way.
 
+### The binary, on both stores
+- `BuildUploadsApi` delivers an `.ipa` or `.pkg` over the App Store Connect
+  API. **This is what removed the last reason to run Transporter or
+  `altool`** — until API 4.1 there was no way to send a binary over the API at
+  all, and this repository's plans were written around that limit.
+- Four steps, and the archive never touches the API: declare the upload,
+  reserve the file, send the bytes to Apple's asset host, commit, poll.
+- `assetType` and `uti` are enums in the specification, not free strings. The
+  archive goes in the `ASSET` slot; the other two slots hold the property
+  lists Transporter used to package alongside a binary, and **whether Apple
+  requires them for an API upload is unverified** — the archive is sent alone.
+- The version is **declared, not read**: `bundles.upload` takes the version
+  code out of the bundle, `buildUploads` takes `cfBundleVersion` on trust. The
+  CLI refuses to default it for that reason.
+- The commit takes a `Checksums` object naming an algorithm (`ChecksumAlgorithm`,
+  defaulting to SHA-256), where a screenshot takes a bare string.
+- A failed transfer deletes the upload. One left in `AWAITING_UPLOAD` is not a
+  build, just clutter nothing else clears.
+
 ### Not yet verified
 No call has been made against a real account on either store. The API surface
 comes from reading the `androidpublisher/v3` generated client and Apple's own

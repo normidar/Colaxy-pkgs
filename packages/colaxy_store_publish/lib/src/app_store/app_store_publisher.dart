@@ -10,6 +10,7 @@ import 'package:colaxy_store_publish/src/app_store/app_store_versions_api.dart';
 import 'package:colaxy_store_publish/src/app_store/asset_uploader.dart';
 import 'package:colaxy_store_publish/src/app_store/beta_groups_api.dart';
 import 'package:colaxy_store_publish/src/app_store/beta_testers_api.dart';
+import 'package:colaxy_store_publish/src/app_store/build_uploads_api.dart';
 import 'package:colaxy_store_publish/src/app_store/review_submissions_api.dart';
 import 'package:colaxy_store_publish/src/app_store/test_flight_api.dart';
 import 'package:http/http.dart' as http;
@@ -121,6 +122,14 @@ class AppStorePublisher {
   /// The app's builds. Read-only as far as creating them goes.
   AppStoreBuildsApi get builds =>
       AppStoreBuildsApi(client: _client, appId: appId);
+
+  /// Delivering a binary. The piece that replaced Transporter and `altool`.
+  BuildUploadsApi get buildUploads => BuildUploadsApi(
+    client: _client,
+    uploader: _uploader,
+    appId: appId,
+    onLog: onLog,
+  );
 
   /// The app's TestFlight groups.
   BetaGroupsApi get betaGroups =>

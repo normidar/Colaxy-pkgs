@@ -1,10 +1,12 @@
 # Fastlane を使わない Flutter リリースパイプライン
 
-**ステータス: 構想。Stage 1〜3 は実装済み (実アカウント未検証)。**
+**ステータス: Stage A / 1〜7 と Stage 8 のバイナリまで実装済み (実アカウント未検証)。
+残るのは署名 (壁 B) のみ。**
 このリポジトリが結果的に向かっている方向を明文化したもの。
-Play 側の実装内容と、実装して分かったことは [store_publish.md](store_publish.md) にある。
+Play 側は [store_publish.md](store_publish.md)、
+Apple 側は [app_store_connect_api.md](app_store_connect_api.md) にある。
 
-調査日: 2026-08-29。Stage 1〜3 実装日: 2026-09-03。
+調査日: 2026-08-29。実装日: 2026-09-03。
 
 ---
 
@@ -15,8 +17,9 @@ Play 側の実装内容と、実装して分かったことは [store_publish.md
 | ✅ **検証済み** | 全パッケージのソースを検索し、`Process.run` / `Process.start` の呼び出しが**1つも無い**ことを確認 |
 | ✅ **検証済み** | `colaxy_screenshot` が `RepaintBoundary` + `toImage` で描画していること |
 | ✅ **検証済み** | `androidpublisher/v3` の投入系 API ([store_publish.md](store_publish.md) 参照) |
-| ⚠️ **未検証** | **Apple 側は全般的に未確認。** コード署名、バイナリアップロード、ASC のメタデータ API |
-| ⚠️ **未検証** | fastlane の内部実装についての記述は当方の理解であり、ソースを読んで確認していない |
+| ✅ **検証済み** | **Apple 側も公式 OpenAPI 4.4.1 を読んだ** ([app_store_connect_api.md](app_store_connect_api.md))。当初「全般的に未確認」だった行はこれで置き換わった |
+| ⚠️ **未検証** | **両ストアとも実アカウントに1度も叩いていない。** ここが唯一かつ最大の残リスク |
+| ⚠️ **未検証** | コード署名まわり (壁 B) は未着手のまま |
 
 ---
 
@@ -27,15 +30,16 @@ Play 側の実装内容と、実装して分かったことは [store_publish.md
 
   アイコン生成   →   スクショ生成   →   メタデータ生成   →   投入   →   監視
   icons_launcher    screenshot         localization    store_publish  store_console
-       ✅                ✅                  ✅          ✅ Play のみ      ✅
-                                                        ❌ ASC 未着手
+       ✅                ✅                  ✅          ✅ Play        ✅
+                                                        ✅ ASC
                     └──────────────────────────────────────────┘
                                        ↑
-                              Ruby / fastlane / Gemfile なし
+                     Ruby / fastlane / Gemfile / Transporter なし
 ```
 
-**Android はこの流れが全部 Dart で閉じた** (Stage 3 完了)。
-iOS 側は投入が空いたままで、そこは Stage 5 以降。
+**両ストアともこの流れが Dart で閉じた。**
+残るのは iOS の**コード署名とビルド** (壁 B) だけで、
+そこは `security` / `xcodebuild` を薄く呼ぶ層になる。
 
 ---
 
@@ -47,8 +51,8 @@ iOS 側は投入が空いたままで、そこは Stage 5 以降。
 | `colaxy_screenshot` | スクショ生成 | **なし** (`RepaintBoundary` + `toImage`) |
 | `colaxy_localization` | メタデータ生成 | **なし** |
 | `colaxy_store_console` | ストアから読む | **なし** (HTTP のみ) |
-| `colaxy_store_publish` | **Play へ投入** | **なし** (HTTP のみ) |
-| **ASC への投入** | — | **fastlane (Ruby)** のまま |
+| `colaxy_store_publish` | **両ストアへ投入** | **なし** (HTTP のみ) |
+| **iOS の署名とビルド** | — | **`security` / `xcodebuild`** (壁 B、未着手) |
 
 ### `colaxy_screenshot` の方式が効いている
 
@@ -104,9 +108,10 @@ Play は multipart / resumable で API が直接ファイルを受け、
 Apple は必ず予約して別エンドポイントへ送る (ASC API のリクエストボディは
 966パス全部が JSON。実測)。
 
-### 壁 B: コード署名
+### 壁 B: コード署名 ← **唯一残った壁**
 
-証明書とプロビジョニングプロファイルは ASC API で取得できるはず (⚠️ 要確認) だが、
+証明書とプロビジョニングプロファイルは **ASC API で取得できる** (実測。
+`certificates` / `profiles` / `devices`。D-1 解決) が、
 
 - キーチェーンへの導入 → `security` コマンド
 - `xcodebuild` への引き渡し → `xcodebuild`
@@ -364,7 +369,7 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 
 ---
 
-### Stage 8 — 署名とバイナリ
+### Stage 8 — 署名とバイナリ ⚠️ **バイナリは実装済み。署名は未着手**
 
 **壁 B のみ。壁 A は消えた** ([app_store_connect_api.md](app_store_connect_api.md) 0節)。
 `Process.run` が入るのは**署名とビルドだけ**で、アップロードは HTTP で足りる。
@@ -374,14 +379,16 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 | 8-1 | ASC API から証明書 / プロビジョニングプロファイルを取得。**D-1 の答えは「取れる」** — `certificates` (`POST,GET,PATCH,DELETE`) / `profiles` (`POST,GET,DELETE`、**PATCH 無し**) / `devices` (`POST,GET,PATCH`、**DELETE 無し**、無効化は PATCH) |
 | 8-2 | `security` コマンドでキーチェーンに導入する薄いラッパ ← **ここは残る (壁 B)** |
 | 8-3 | `xcodebuild` / `flutter build ipa` の呼び出し。**ラッパを厚くしない** (3節: CLI のラッパを書いても何も得しない) ← **ここも残る (壁 B)** |
-| 8-4 | ~~Transporter / altool / notarytool~~ → **`buildUploads` で API から上げる。** 予約 → `uploadOperations` で分割転送 → `PATCH {uploaded, sourceFileChecksums}` → `state` が `COMPLETE` になるまでポーリング。**D-3 (altool の認証) は問い自体が消えた** |
+| 8-4 | ~~Transporter / altool / notarytool~~ → **`buildUploads` で API から上げる** | ✅ **実装済み。** `BuildUploadsApi`。**D-3 (altool の認証) は問い自体が消えた** |
 | 8-5 | **`match` 相当は作らない。** 個人開発では不要。必要になった時点で別途設計する (7節) |
-| 8-6 | `BuildUpload` は `assetFile` / `assetDescriptionFile` / `assetSpiFile` の3つのリレーションを持つ。**`.ipa` を1つ投げれば済むのかは未検証** (U-A3) |
+| 8-6 | 3つのリレーションに何を入れるか | ✅ **仕様で解決。** `assetType` / `uti` は enum だった。本体は `ASSET` + `com.apple.ipa`。**残りの2つ (plist) が必須かだけ未検証** |
+| **8-7** | **バージョンは宣言する、読まれない。** `cfBundleVersion` を Apple は鵜呑みにする。Play が bundle から version code を読むのと逆で、間違えてもファイル側では捕まらない | ✅ CLI は既定値を持たせず必ず指定させる |
 
 **完了条件**: **Fastfile / Gemfile / Ruby なしで iOS のリリースが1回通る。**
+→ **バイナリ転送までは揃った。残るのは署名 (8-1〜8-3) のみ。**
 
-**消えるもの**: **fastlane そのもの。**
-Apple 純正ツールへの依存も**署名とビルドだけに縮んだ** — 転送は Dart で完結する。
+**消えるもの**: **fastlane そのもの。加えて Transporter と altool も。**
+Apple 純正ツールへの依存は**署名とビルドだけに縮んだ** — 転送は Dart で完結する。
 
 ---
 
@@ -405,7 +412,7 @@ Apple 純正ツールへの依存も**署名とビルドだけに縮んだ** —
 | Stage 4 | (中間形式の型検証) | — | ✅ **完了。** ネットワーク不要なので実アカウント検証を待たない |
 | Stage 5〜6 | `deliver` のメタデータと画像 | まだ | ✅ 実装済み・未検証 |
 | Stage 7 | `pilot` | まだ | ✅ 実装済み・未検証 |
-| **Stage 8** | **fastlane 全体** | **完全に不要** | 未着手 (`buildUploads` で壁 A は消滅済み) |
+| **Stage 8** | **fastlane 全体 + Transporter / altool** | **完全に不要** | ⚠️ バイナリは実装済み・未検証。**署名 (壁 B) のみ未着手** |
 
 > **「実装済み・未検証」を「完了」と書かないこと。** `colaxy_store_console` では
 > モックで通ったあと実データで5件の誤りが出た。今回も同じ段階にいる。
@@ -478,8 +485,8 @@ Apple 純正ツールへの依存も**署名とビルドだけに縮んだ** —
 画像種別が33値で変換表が要ること
 ([app_store_connect_api.md](app_store_connect_api.md))。
 
-残るのは **Stage 8 (署名とバイナリ)** と、**両ストアの実アカウント検証**だけ。
-`supply` / `deliver` / `pilot` は置き換わっている。
+残るのは **署名 (壁 B)** と、**両ストアの実アカウント検証**だけ。
+`supply` / `deliver` / `pilot` に加え、**Transporter と altool も置き換わっている**。
 
 目標は fastlane の全廃ではなく **Fastfile を書かなくて済む状態**だったが、
 **全廃の方が当初の想定より近い**。

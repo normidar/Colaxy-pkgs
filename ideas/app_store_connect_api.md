@@ -1,6 +1,6 @@
 # App Store Connect API: 投入系の実測
 
-**ステータス: 調査完了 (Stage A)。Stage 5〜7 は実装済み・実アカウント未検証。**
+**ステータス: 調査完了 (Stage A)。Stage 5〜8 (バイナリ) は実装済み・実アカウント未検証。**
 
 調査日: 2026-09-03。[dart_native_pipeline.md](dart_native_pipeline.md) の Stage A
 「Apple 側の空白を埋める」の結果。それまで Apple に関する記述は
@@ -86,8 +86,24 @@ GET    /v1/apps/{id}/buildUploads
 
 `BuildUpload` のリレーション: `build`, `assetFile`, `assetDescriptionFile`,
 `assetSpiFile`, `buildUploadFiles`
-→ **ファイルは1つではない。** `assetFile` のほかに description と spi があり、
-`.ipa` を1つ投げれば済む形ではない可能性が高い。**ここは実データ検証が要る (U-A3)。**
+
+> **U-A3 は仕様だけで解けた (2026-09-03 追記)。**
+> 初回の抽出で `uti` と `assetType` を「素の文字列」と書いたのは**誤り**で、
+> スキーマの `type` だけ見て `enum` を見落としていた。実際は両方 enum:
+>
+> ```
+> assetType: ASSET | ASSET_DESCRIPTION | ASSET_SPI   ← 3つのリレーションに対応
+> uti:       com.apple.ipa | com.apple.pkg | com.apple.binary-property-list
+>            | com.apple.xml-property-list | com.pkware.zip-archive
+> ```
+>
+> つまり3つのファイルは**役割が型で決まっている**。本体は `ASSET` +
+> `com.apple.ipa` (macOS なら `com.apple.pkg`)。残り2つは plist で、
+> Transporter が同梱していたメタデータに相当する。
+> **API 経由で必須かどうかだけが未検証**で、実装は本体1つだけ送っている。
+>
+> `uti` が enum である以上、**列挙に無い種類は原理的に上げられない** —
+> `.aab` を投げる余地は無い。
 
 `Checksums` は `{file: {hash, algorithm}, composite: {hash, algorithm}}` で、
 `ChecksumAlgorithm` は `MD5` と `SHA_256`。
@@ -367,7 +383,7 @@ API では `APP_IPAD_PRO_3GEN_129` として返る、という報告がある。
 |---|---|---|
 | U-A1 | **実アカウントで1度も叩いていない。** この文書は仕様の読解 | Play 側と同じ段階。前例では実データで5件の誤りが出た |
 | U-A2 | `appInfos` が状態ごとに複数ある件 (二次)。間違った方に書くと無反応か | 「成功として報告されるが何も起きない」形。最も高くつく |
-| U-A3 | `BuildUpload` の `assetFile` / `assetDescriptionFile` / `assetSpiFile` の3つに何を入れるのか | `.ipa` を1つ投げれば済むのか、xcodebuild が出す他のファイルが要るのか |
+| U-A3 | ~~3つのファイル関係に何を入れるのか~~ | ✅ **仕様で解決。** `assetType` / `uti` が enum だった (0節)。**残るのは「description と spi が必須か」だけ** — 実装は本体1つだけ送る |
 | U-A4 | `AppStoreVersionState` (20値) と `AppVersionState` (15値) の使い分け | 状態で分岐する実装の前提 |
 | U-A5 | `uploadOperations` の並列度とリトライ。Apple がレート制限をかけるという報告 (二次) | 分割アップロードの設計に直結 |
 | U-A6 | `colaxy_screenshot` のファイル名 → `ScreenshotDisplayType` の対応表 | `iphone65` / `ipadPro13` / `mac` の3つだけなので小さいが、実物で確認が要る |
@@ -381,7 +397,7 @@ API では `APP_IPAD_PRO_3GEN_129` として返る、という報告がある。
 
 ## 10. 次の一歩
 
-Stage 5〜7 は実装済み。`colaxy_store_console` の `AppStoreConnectClient` を
+Stage 5〜7 と Stage 8 のバイナリ投入は実装済み。`colaxy_store_console` の `AppStoreConnectClient` を
 そのまま土台にしたので、認証・リトライ・ページングの作業はゼロだった
 (5節の「再利用できる既存資産」が Apple 側でもそのまま効いた)。
 
@@ -398,7 +414,9 @@ Stage 5〜7 は実装済み。`colaxy_store_console` の `AppStoreConnectClient`
 4. **TestFlight を内部グループで1回通す。**
    `--testflight=<内部グループ名>`。**外部グループで先に試さないこと** —
    ベータ審査が走るので取り消しが効かない。U-A9 がここで片付く
-5. `buildUploads` を実装する (Stage 8)。U-A3 / U-A7 — **残る唯一の未実装**
+5. ~~`buildUploads` を実装する~~ ✅ **完了。** U-A3 は仕様で解決した (0節)。
+   **残るのは署名 (壁 B) だけ** — `security` / `xcodebuild` を呼ぶ層で、
+   ここは Dart 化ではなく薄いラッパになる
 6. ~~TestFlight と提出 (Stage 7)~~ ✅ **実装完了。** 分かったことは
    [dart_native_pipeline.md](dart_native_pipeline.md) 7-A / 7-B
 

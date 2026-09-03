@@ -27,6 +27,9 @@ rather than aborting the run.
 Modes
   --doctor        Check the credentials and report what is writable, then
                   stop. Reads only; nothing is created or changed.
+  --upload=FILE   Deliver an .ipa or .pkg, then stop. Needs --version and
+                  --short-version: App Store Connect takes both on trust
+                  rather than reading them out of the archive.
   --testflight=GROUPS
                   Give the latest build to these TestFlight groups (comma
                   separated), then stop. Writes tester notes from
@@ -60,6 +63,9 @@ Options
                   external groups without the build.
   --build=NUMBER  With --testflight, pick a build number instead of the
                   most recently uploaded one.
+  --version=N     With --upload, the CFBundleVersion to declare.
+  --short-version=X.Y.Z
+                  With --upload, the CFBundleShortVersionString to declare.
 
 Environment
   ASC_KEY_ID      10-character key ID.
@@ -89,6 +95,9 @@ Future<void> main(List<String> args) async {
         !arg.startsWith('--platform=') &&
         !arg.startsWith('--testflight=') &&
         !arg.startsWith('--build=') &&
+        !arg.startsWith('--upload=') &&
+        !arg.startsWith('--version=') &&
+        !arg.startsWith('--short-version=') &&
         !const {
           '--doctor',
           '--no-app-info',
@@ -144,6 +153,18 @@ Future<void> main(List<String> args) async {
       return;
     }
 
+    final archive = _option(args, '--upload=');
+    if (archive != null) {
+      await _upload(
+        publisher,
+        path: archive,
+        version: _option(args, '--version='),
+        shortVersion: _option(args, '--short-version='),
+        platform: _option(args, '--platform=') ?? 'IOS',
+      );
+      return;
+    }
+
     final groups = _option(args, '--testflight=');
     if (groups != null) {
       await _testFlight(
@@ -189,6 +210,46 @@ Future<void> main(List<String> args) async {
     exitCode = 1;
   } finally {
     publisher.close();
+  }
+}
+
+/// Delivers a binary to App Store Connect.
+///
+/// The versions are required because Apple takes them on trust — nothing
+/// reads them out of the archive, so leaving them off would mean guessing.
+Future<void> _upload(
+  AppStorePublisher publisher, {
+  required String path,
+  required String? version,
+  required String? shortVersion,
+  required String platform,
+}) async {
+  if (version == null || shortVersion == null) {
+    stderr.writeln(
+      '--upload needs --version and --short-version. App Store Connect takes '
+      'both on trust rather than reading them out of the archive, so there '
+      'is nothing sensible to default them to.',
+    );
+    exitCode = 64;
+    return;
+  }
+
+  final upload = await publisher.buildUploads.upload(
+    file: File(path),
+    cfBundleVersion: version,
+    cfBundleShortVersionString: shortVersion,
+    platform: platform,
+  );
+  stdout.writeln(upload);
+  for (final warning in upload.warnings) {
+    stderr.writeln('warning: $warning');
+  }
+  if (!upload.isComplete) {
+    stderr.writeln(
+      'The upload did not reach COMPLETE. It may still be processing; check '
+      'again before distributing.',
+    );
+    exitCode = 1;
   }
 }
 

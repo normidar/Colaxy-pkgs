@@ -1,11 +1,11 @@
 # colaxy_store_publish
 
-Publish listings, screenshots and app bundles to Google Play and the App Store
-from pure Dart.
+Publish listings, screenshots and app binaries to Google Play and the App
+Store from pure Dart.
 
 Reads the `fastlane` directory layout — the one `colaxy_localization` and
-`colaxy_screenshot` already write — so it drops in where `fastlane supply` and
-`deliver` were, without a Ruby toolchain.
+`colaxy_screenshot` already write — so it drops in where `supply`, `deliver`
+and `pilot` were, without a Ruby toolchain and without Transporter.
 
 ```dart
 final publisher = await PlayPublisher.authenticate(
@@ -43,7 +43,7 @@ central design decision here.
 | Screenshots | one `upload` call | **reserve → chunk → checksum → commit** |
 | Device slots | 9, identical to the directory names on disk | **33**, matching nothing on disk |
 | File transfer | the API receives the bytes | **every request body is JSON**; bytes go elsewhere |
-| Binary | `bundles.upload` | `buildUploads` *(not implemented here yet)* |
+| Binary | `bundles.upload` — the API receives the file | `buildUploads` — reserve, then send elsewhere |
 
 Wrapping both in one type would claim things that are true of only one. The
 most damaging would be rollback: an interrupted Play publish leaves *nothing*
@@ -64,14 +64,18 @@ class between them.
 
 `fastlane supply` — all of it. Metadata, images, app bundles and tracks.
 
-`deliver` — the metadata and screenshot halves. Apple's binary upload
-(`buildUploads`, added in App Store Connect API 4.1) is not implemented yet.
+`deliver` — metadata, screenshots, and the binary upload.
 
 `pilot` — TestFlight group assignment, tester notes, tester invitations and
 beta review submission.
 
+**Transporter and `altool`** — no longer needed. Until App Store Connect API
+4.1 there was no way to deliver a binary over the API, so a Dart pipeline had
+to shell out to one of Apple's tools. `buildUploads` removed that.
+
 `gym` stays out of scope: wrapping `xcodebuild` in Dart calls the same binary
-and improves nothing.
+and improves nothing. Code signing likewise — `security` and `xcodebuild` are
+macOS commands and a thin wrapper adds nothing.
 
 ## Install
 
@@ -410,6 +414,42 @@ internal would skip the review and strand the build with nothing saying why.
 > from the same `release_notes.txt` but are two separate writes to two
 > resources with different lifetimes.
 
+### Delivering the binary
+
+```bash
+dart run colaxy_store_publish:publish-ios \
+  --upload=build/ios/ipa/App.ipa --version=412 --short-version=1.4.0
+```
+
+Four steps, and the archive never touches the API:
+
+```text
+POST  /v1/buildUploads          declare version and platform
+POST  /v1/buildUploadFiles      reserve; get upload operations
+PUT   (Apple's asset host)      the bytes, chunked, no bearer token
+PATCH /v1/buildUploadFiles/{id} commit with uploaded + checksums
+GET   /v1/buildUploads/{id}     poll until COMPLETE or FAILED
+```
+
+Two differences from Google Play worth holding on to:
+
+- **The version is declared, not read.** `bundles.upload` reads the version
+  code out of the bundle; `buildUploads` takes `cfBundleVersion` on trust.
+  Asserting it wrongly is not caught by the archive, which is why the CLI
+  refuses to default it.
+- **The commit takes a `Checksums` object naming an algorithm** (`MD5` or
+  `SHA_256`, defaulting to SHA-256 here), where a screenshot takes a bare
+  `sourceFileChecksum` string. They are not interchangeable.
+
+`assetType` and `uti` are enums in the specification, not free strings. The
+archive goes in the `ASSET` slot as `com.apple.ipa` or `com.apple.pkg`; the
+other two slots (`ASSET_DESCRIPTION`, `ASSET_SPI`) hold the property lists
+Transporter used to package alongside a binary. **Whether Apple requires them
+for an API upload is not verified** — this package sends the archive alone.
+
+A failed transfer deletes the upload. One left in `AWAITING_UPLOAD` is not a
+build, just clutter nothing else clears.
+
 ### Submitting for review is never automatic
 
 `appStoreVersionSubmissions` accepts `DELETE` only, so anything telling you to
@@ -481,6 +521,7 @@ locales that would have worked.
 | `AppInfoLocalizationsApi` | `list`, `get`, `update` |
 | `AppScreenshotsApi` | `sets`, `ensureSet`, `list`, `upload`, `delete`, `deleteAll`, `awaitProcessing` |
 | `AssetUploader` | Chunked transfer to Apple's asset host, plus the MD5 |
+| `BuildUploadsApi` | `list`, `get`, `upload`, `delete` — the binary |
 | `AppStoreBuildsApi` | `list`, `latest`, `betaDetail`, `setExportCompliance`, `setTesterNote`, `submitForBetaReview` |
 | `BetaGroupsApi` | `list`, `byName`, `create`, `addBuild`, `testers`, `addTesters` |
 | `BetaTestersApi` | `list`, `invite`, `remove` |
@@ -496,12 +537,12 @@ locales that would have worked.
 `--feature-graphic`, `--error-if-in-review`, `--skip-check`, `--allow-empty`.
 Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`.
 
-`dart run colaxy_store_publish:publish-ios` — `--doctor`,
-`--testflight=A,B`, `--root=DIR`, `--locales=a,b`, `--no-app-info`,
+`dart run colaxy_store_publish:publish-ios` — `--doctor`, `--upload=FILE`
+(`--version`, `--short-version`), `--testflight=A,B` (`--build`,
+`--no-beta-review`), `--root=DIR`, `--locales=a,b`, `--no-app-info`,
 `--no-version-text`, `--no-screenshots`, `--replace-screenshots`, `--no-wait`,
-`--platform=IOS`, `--no-beta-review`, `--build=NUMBER`. Credentials come from
-`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_P8` and `ASC_APP_ID`. **No flag submits
-for review.**
+`--platform=IOS`. Credentials come from `ASC_KEY_ID`, `ASC_ISSUER_ID`,
+`ASC_P8` and `ASC_APP_ID`. **No flag submits for review.**
 
 Both exit `0` on success, `1` when the store rejected something or a check
 found errors, `64` for bad arguments or missing credentials. See `--help`.
@@ -519,6 +560,9 @@ found errors, `64` for bad arguments or missing credentials. See `--help`.
 | `AppStoreVersionState` | 20 values; only `PREPARE_FOR_SUBMISSION` is writable |
 | `AppVersionState` | 15 values — a **different** enum on the same resource |
 | `InternalBetaState` / `ExternalBetaState` | Also different: only the external one has the beta review cycle |
+| `BuildUploadState` | `AWAITING_UPLOAD`, `PROCESSING`, `FAILED`, `COMPLETE` |
+| `BuildUploadAssetType` / `BuildUploadUti` | The two enums a reservation needs |
+| `ChecksumAlgorithm` | `MD5` or `SHA_256`, for build upload commits |
 | `BetaTesterState` / `BetaInviteType` | Where a tester is, and how they got there |
 
 ### Failures

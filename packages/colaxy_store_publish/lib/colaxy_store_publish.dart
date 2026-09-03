@@ -1,9 +1,9 @@
-/// Publish Android listings, screenshots and app bundles to Google Play from
-/// pure Dart.
+/// Publish listings, screenshots and app binaries to Google Play and the App
+/// Store from pure Dart.
 ///
-/// Reads the `fastlane supply` directory layout, which `colaxy_localization`
-/// and `colaxy_screenshot` already write, so this drops in where
-/// `fastlane supply` was without a Ruby toolchain.
+/// Reads the `fastlane` directory layout, which `colaxy_localization` and
+/// `colaxy_screenshot` already write, so this drops in where `supply`,
+/// `deliver` and `pilot` were without a Ruby toolchain.
 ///
 /// Covers both stores, with **separate shapes for each** — there is no
 /// unified publishing interface here, and that is deliberate. Google Play
@@ -36,6 +36,10 @@ export 'package:colaxy_store_publish/src/app_store/beta_groups_api.dart';
 export 'package:colaxy_store_publish/src/app_store/beta_tester.dart';
 export 'package:colaxy_store_publish/src/app_store/beta_testers_api.dart';
 export 'package:colaxy_store_publish/src/app_store/build_beta_detail.dart';
+export 'package:colaxy_store_publish/src/app_store/build_upload.dart';
+export 'package:colaxy_store_publish/src/app_store/build_upload_file.dart';
+export 'package:colaxy_store_publish/src/app_store/build_uploads_api.dart';
+export 'package:colaxy_store_publish/src/app_store/checksum_algorithm.dart';
 export 'package:colaxy_store_publish/src/app_store/review_submission.dart';
 export 'package:colaxy_store_publish/src/app_store/review_submissions_api.dart';
 export 'package:colaxy_store_publish/src/app_store/screenshot_display_type.dart';
