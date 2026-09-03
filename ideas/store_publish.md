@@ -319,10 +319,8 @@ Play 側の実装は済んだので、順序が変わった。
    `dart run colaxy_store_publish:publish --dry-run` で
    `insert` → `listings.update` → `validate` → `delete` を先に通し、その後 commit まで。
    **U-7 / U-9 / U-10 もここで一緒に潰れる。**
-2. **`colaxy_localization` の説明文が上限を超えうる欠陥を直す**
-   ([dart_native_pipeline.md](dart_native_pipeline.md) 4-A)。
-   4000文字を検査した**後で**「最低対応バージョン」の行を追記しているため、
-   上限ぎりぎりの説明文がディスク上で超える。Stage 4 の検証層を作って初めて見つかった。
+2. ~~`colaxy_localization` の説明文が上限を超えうる欠陥を直す~~
+   ✅ **完了 (v0.2.1)。** [dart_native_pipeline.md](dart_native_pipeline.md) 4-A
 3. `colaxy_screenshot` の `featureGraphic.png` の場所を規約に合わせる (0-3)。
    これは `colaxy_store_publish` ではなく `colaxy_screenshot` の修正。
 4. `colaxy_localization` が `changelogs/<versionCode>.txt` を書けるようにするか判断 (0-2)。

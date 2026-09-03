@@ -1,3 +1,14 @@
+## 0.2.1
+
+### Fixed
+- The description length limit is now checked against the file that gets
+  written, not against `store_description`. `_getDescription` validated 4000
+  characters and `_fitDescriptionToFastlane` *then* appended the
+  `[Minimum supported app version: X]` footer, so a description sitting just
+  under the limit produced a file over it — and the first sign of that was the
+  store rejecting the upload. The failure now names the footer's cost and the
+  length the description has to fit in.
+
 ## 0.2.0
 
 ### Breaking

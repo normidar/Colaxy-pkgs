@@ -31,6 +31,12 @@ class LocaleUnit {
 
   static const _blockedKeywords = ['google', 'apple', 'android', 'ios'];
 
+  /// Longest description either store accepts, in user-perceived characters.
+  ///
+  /// The limit applies to the generated file, not to `store_description`:
+  /// see [_requireDescriptionFits].
+  static const maxDescriptionLength = 4000;
+
   // Store limits count user-perceived characters. `String.length` counts UTF-16
   // code units, so an emoji or a combining sequence inflated the count and a
   // valid string was rejected (or an over-long one slipped through).
@@ -152,12 +158,45 @@ class LocaleUnit {
       iosDescription = '$iosDescription\n\n[:mav: $minimumVersion]';
     }
 
+    // The stores count what is in the file, not what was in the JSON.
+    // Checking `store_description` alone let a description sitting just under
+    // the limit through, and the footer appended below then pushed the file
+    // over it — with the store rejecting the upload as the first sign.
+    _requireDescriptionFits(androidDescription, description, 'Google Play');
+    _requireDescriptionFits(iosDescription, description, 'the App Store');
+
     fastlaneAndroidDescriptionFile
       ..createSync(recursive: true)
       ..writeAsStringSync(androidDescription);
     fastlaneIosDescriptionFile
       ..createSync(recursive: true)
       ..writeAsStringSync(iosDescription);
+  }
+
+  /// Rejects a description file that would exceed the store's limit.
+  ///
+  /// [written] is what would go in the file, [source] the `store_description`
+  /// it came from. Naming the footer's cost is the point: the author can only
+  /// act on "keep it under N", and N is not [maxDescriptionLength] once a
+  /// minimum version is set.
+  void _requireDescriptionFits(String written, String source, String store) {
+    final length = written.characters.length;
+    if (length <= maxDescriptionLength) return;
+
+    final sourceLength = source.characters.length;
+    final footer = length - sourceLength;
+    final buffer = StringBuffer(
+      '$locale store_description is too long for $store: the file would be '
+      '$length characters and the limit is $maxDescriptionLength.',
+    );
+    if (footer > 0) {
+      buffer.write(
+        ' The description itself is $sourceLength; the minimum-version '
+        'footer adds $footer. Keep the description under '
+        '${maxDescriptionLength - footer}.',
+      );
+    }
+    throw StateError(buffer.toString());
   }
 
   void _fitIosPrivacyUrlToFastlane() {
@@ -238,15 +277,12 @@ class LocaleUnit {
     return appStoreName;
   }
 
-  /// アプリの説明を取得します、これは4000文字以内である必要があります。
-  /// iOS、Androidの両方で使用されます。
-  String _getDescription() {
-    final description = _require('store_description');
-    if (description.characters.length > 4000) {
-      throw StateError('$locale description is too long');
-    }
-    return description;
-  }
+  /// アプリの説明を取得します。iOS、Androidの両方で使用されます。
+  ///
+  /// 長さの検査はここではなく [_requireDescriptionFits] で行います。
+  /// ストアが数えるのは JSON の値ではなく書き出したファイルの中身で、
+  /// 追記される行の分だけ両者はずれるためです。
+  String _getDescription() => _require('store_description');
 
   String _getIosPrivacyUrl() {
     final privacyUrl = _require('store_ios_privacy_url');

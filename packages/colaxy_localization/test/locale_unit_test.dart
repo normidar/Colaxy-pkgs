@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:characters/characters.dart';
 import 'package:colaxy_localization/colaxy_localization.dart';
 import 'package:test/test.dart';
 
@@ -26,6 +27,16 @@ void _writeLocale(String locale, Map<String, String> data) {
   File('${_root.path}/assets/localizations/$locale.json')
     ..createSync(recursive: true)
     ..writeAsStringSync(json.encode(data));
+}
+
+/// Writes a `pubspec.yaml` carrying `minimum_version`.
+///
+/// Its presence is what makes the generator append the footer to every
+/// description, so it is the switch these tests turn on.
+void _writeMinimumVersion(String version) {
+  File('${_root.path}/pubspec.yaml')
+    ..createSync(recursive: true)
+    ..writeAsStringSync('name: demo\nminimum_version: $version\n');
 }
 
 void main() {
@@ -111,6 +122,102 @@ void main() {
       final unit = LocaleUnit(locale: 'en-US', rootPath: _root.path);
 
       expect(unit.fitAllToFastlane, throwsA(isA<StateError>()));
+    });
+
+    test('rejects a description over 4000 characters', () {
+      _writeLocale(
+        'en-US',
+        _validJson(overrides: {'store_description': 'x' * 4001}),
+      );
+      final unit = LocaleUnit(locale: 'en-US', rootPath: _root.path);
+
+      expect(
+        unit.fitAllToFastlane,
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('store_description is too long'),
+          ),
+        ),
+      );
+    });
+
+    test('counts the minimum-version footer against the limit', () {
+      // The limit applies to the generated file. Checking store_description
+      // alone let a description right at 4000 through, and the footer then
+      // pushed the file over — with the store rejecting the upload as the
+      // first sign of it.
+      _writeMinimumVersion('1.2.0');
+      _writeLocale(
+        'en-US',
+        _validJson(overrides: {'store_description': 'x' * 4000}),
+      );
+      final unit = LocaleUnit(locale: 'en-US', rootPath: _root.path);
+
+      expect(
+        unit.fitAllToFastlane,
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(
+              contains('4040 characters'),
+              contains('footer adds 40'),
+              contains('under 3960'),
+            ),
+          ),
+        ),
+      );
+    });
+
+    test('leaves room for the footer rather than banning it', () {
+      // 4000 - 40 is still publishable; the check must not reject it.
+      _writeMinimumVersion('1.2.0');
+      _writeLocale(
+        'en-US',
+        _validJson(overrides: {'store_description': 'x' * 3960}),
+      );
+      final unit = LocaleUnit(locale: 'en-US', rootPath: _root.path);
+
+      // Later stages need an Android project on disk and fail for their own
+      // reasons, so this asserts only that the description was not the
+      // complaint.
+      String? message;
+      try {
+        unit.fitAllToFastlane();
+        // The package signals invalid input with StateError.
+        // ignore: avoid_catching_errors
+      } on StateError catch (e) {
+        message = e.message;
+      }
+      expect(message ?? '', isNot(contains('store_description')));
+      expect(
+        File(
+          '${_root.path}/fastlane/metadata/android/en-US/'
+          'full_description.txt',
+        ).readAsStringSync().characters.length,
+        4000,
+      );
+    });
+
+    test('says nothing about a footer when no minimum version is set', () {
+      _writeLocale(
+        'en-US',
+        _validJson(overrides: {'store_description': 'x' * 4001}),
+      );
+      final unit = LocaleUnit(locale: 'en-US', rootPath: _root.path);
+
+      expect(
+        unit.fitAllToFastlane,
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            isNot(contains('footer')),
+          ),
+        ),
+      );
     });
   });
 
