@@ -343,11 +343,14 @@ Play 側の実装は済んだので、順序が変わった。
 5. ~~認証・権限の検査を足す~~ ✅ **完了。** `--doctor` / `PlayDoctor` (Stage 9-1)
 6. ~~ASC 側の調査 (U-1〜U-3)~~ ✅ **完了。**
    [app_store_connect_api.md](app_store_connect_api.md) に実測の表がある
-7. **ASC 側をどこまで揃えるか決める。** 調査の結果、
-   **バイナリまで含めた全対応が可能**になった (壁 A の消滅)。
-   ただし投入の形が Play と重ならないので、**別パッケージにする**のが妥当。
-   最初の一歩は `colaxy_store_console` の既存の ASC 認証で
-   `appInfos` / `appStoreVersions` を実際に読むこと (U-A2 / U-A4)。
+7. ~~ASC 側をどこまで揃えるか決める~~ ✅ **決めて実装した (Stage 5〜6)。**
+   **別パッケージにはせず、同じ `colaxy_store_publish` の
+   `src/app_store/` に入れた** — 理由は
+   [app_store_connect_api.md](app_store_connect_api.md) 8節。
+   6節で「パッケージは分ける」と書いた根拠 (読み取りと書き込みの分離) は
+   Play 投入と Apple 投入の間には当てはまらない。
+   共通の型は作らず二本立てにしてある。
+8. **Stage 7 (TestFlight / 提出) と Stage 8 (署名とバイナリ)** が残っている。
 
 ---
 

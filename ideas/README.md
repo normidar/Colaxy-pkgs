@@ -10,9 +10,9 @@
 
 | 文書 | 内容 | ステータス |
 |---|---|---|
-| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想。Stage A / 1〜4 は完了 |
+| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想。Stage A / 1〜6 は完了 |
 | [store_publish.md](store_publish.md) | ストアへの投入層 (Play 側) | **実装済み・実アカウント未検証** |
-| [app_store_connect_api.md](app_store_connect_api.md) | **ASC API の投入系の実測。** 公式 OpenAPI 4.4.1 を読んだ結果 | **調査完了・実装未着手** |
+| [app_store_connect_api.md](app_store_connect_api.md) | **ASC API の投入系の実測。** 公式 OpenAPI 4.4.1 を読んだ結果と、Stage 5〜6 の設計 | **実装済み・実アカウント未検証** |
 | [firebase_reporting.md](firebase_reporting.md) | Firebase のレポート/管理情報を読むパッケージ | **保留 (作らない)** |
 | [repo_structure.md](repo_structure.md) | パッケージのディレクトリグループ化 | 未着手・低リスク・見送り中 |
 
@@ -38,7 +38,11 @@
   Play 側と信頼度が揃った。**最大の発見は「壁 A の消滅」** —
   Apple もバイナリを API で上げられるようになっていた (`buildUploads`、WWDC25)。
   この ideas フォルダが前提にしていた記述が1つ古くなっていた
-- **残る未知は実データだけ。** 両ストアとも仕様は読んだが、
+- **Stage 5〜6 (ASC のメタデータとスクショ) も実装済み。**
+  `colaxy_store_publish` の `src/app_store/` に入れた。**共通の型は作っていない** —
+  Play はトランザクションを持ち Apple は持たないので、包むと嘘になる
+- **残るのは Stage 7 (TestFlight / 提出) と Stage 8 (署名とバイナリ)**
+- **そして実データ。** 両ストアとも仕様は読んだが、
   **どちらも実アカウントに1度も叩いていない**
 
 ## 書き方の約束

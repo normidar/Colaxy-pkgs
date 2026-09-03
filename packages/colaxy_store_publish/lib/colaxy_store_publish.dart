@@ -5,13 +5,35 @@
 /// and `colaxy_screenshot` already write, so this drops in where
 /// `fastlane supply` was without a Ruby toolchain.
 ///
-/// Google Play only. App Store Connect has no equivalent for the binary half
-/// of this, and the metadata half differs enough that pretending to one
-/// interface would misdescribe both — see the README.
+/// Covers both stores, with **separate shapes for each** — there is no
+/// unified publishing interface here, and that is deliberate. Google Play
+/// publishes through a transaction that can be validated and rolled back;
+/// App Store Connect writes immediately and cannot. Code written against a
+/// shared type would be wrong about the thing that matters most.
+///
+/// See the README for the per-store support matrix.
 library;
 
+export 'package:colaxy_store_publish/src/app_store/app_info.dart';
+export 'package:colaxy_store_publish/src/app_store/app_info_localization.dart';
+export 'package:colaxy_store_publish/src/app_store/app_info_localizations_api.dart';
+export 'package:colaxy_store_publish/src/app_store/app_infos_api.dart';
+export 'package:colaxy_store_publish/src/app_store/app_screenshot.dart';
+export 'package:colaxy_store_publish/src/app_store/app_screenshot_set.dart';
+export 'package:colaxy_store_publish/src/app_store/app_screenshots_api.dart';
+export 'package:colaxy_store_publish/src/app_store/app_store_publisher.dart';
+export 'package:colaxy_store_publish/src/app_store/app_store_version.dart';
+export 'package:colaxy_store_publish/src/app_store/app_store_version_localization.dart';
+export 'package:colaxy_store_publish/src/app_store/app_store_version_localizations_api.dart';
+export 'package:colaxy_store_publish/src/app_store/app_store_version_state.dart';
+export 'package:colaxy_store_publish/src/app_store/app_store_versions_api.dart';
+export 'package:colaxy_store_publish/src/app_store/asset_uploader.dart';
+export 'package:colaxy_store_publish/src/app_store/screenshot_display_type.dart';
+export 'package:colaxy_store_publish/src/app_store/upload_operation.dart';
 export 'package:colaxy_store_publish/src/core/store_publish_exception.dart';
 export 'package:colaxy_store_publish/src/fastlane/fastlane_image_set.dart';
+export 'package:colaxy_store_publish/src/fastlane/fastlane_ios_listing.dart';
+export 'package:colaxy_store_publish/src/fastlane/fastlane_ios_metadata.dart';
 export 'package:colaxy_store_publish/src/fastlane/fastlane_listing.dart';
 export 'package:colaxy_store_publish/src/fastlane/fastlane_metadata.dart';
 export 'package:colaxy_store_publish/src/fastlane/metadata_check.dart';
@@ -33,6 +55,9 @@ export 'package:colaxy_store_publish/src/google_play/play_release_status.dart';
 export 'package:colaxy_store_publish/src/google_play/play_track.dart';
 export 'package:colaxy_store_publish/src/google_play/play_track_release.dart';
 export 'package:colaxy_store_publish/src/google_play/play_tracks_api.dart';
+export 'package:colaxy_store_publish/src/publish/app_store_metadata_publisher.dart';
+export 'package:colaxy_store_publish/src/publish/app_store_publish_options.dart';
+export 'package:colaxy_store_publish/src/publish/app_store_publish_report.dart';
 export 'package:colaxy_store_publish/src/publish/doctor_check.dart';
 export 'package:colaxy_store_publish/src/publish/play_doctor.dart';
 export 'package:colaxy_store_publish/src/publish/play_metadata_publisher.dart';

@@ -17,6 +17,12 @@ Publishes Google Play listings and images from a fastlane metadata tree.
 
 Usage: dart run colaxy_store_publish:publish [options]
 
+For the App Store, use `dart run colaxy_store_publish:publish-ios`. The two
+are separate commands because the stores are separate shapes: Google Play
+publishes through a transaction that can be validated and discarded, and the
+App Store writes immediately. A single command would have to pretend the
+difference away.
+
 Modes
   --check         Check the local tree and stop. Makes no network calls, needs
                   no credentials. Safe in a pre-commit hook.

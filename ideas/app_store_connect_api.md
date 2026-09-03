@@ -1,6 +1,6 @@
 # App Store Connect API: 投入系の実測
 
-**ステータス: 調査完了 (Stage A)。実装は未着手。**
+**ステータス: 調査完了 (Stage A)。Stage 5〜6 は実装済み・実アカウント未検証。**
 
 調査日: 2026-09-03。[dart_native_pipeline.md](dart_native_pipeline.md) の Stage A
 「Apple 側の空白を埋める」の結果。それまで Apple に関する記述は
@@ -331,14 +331,33 @@ API では `APP_IPAD_PRO_3GEN_129` として返る、という報告がある。
 
 ## 8. これで確定した判断
 
-- **[store_publish.md](store_publish.md) 6節「パッケージは分ける」は正しかった。**
-  ASC 側は `colaxy_store_publish` に足すのではなく、別パッケージにすべき。
-  共有するのは `colaxy_store_console` の認証・リトライ層で、投入の形は共有しない
-- **`commit` を隠さない判断も正しかった。** Apple に `commit` は無いので、
+- **`commit` を隠さない判断は正しかった。** Apple に `commit` は無いので、
   共通インターフェースで包めば必ず嘘になる
 - **バイナリの線引きは引き直せる。** 「Play のみ」ではなくなった
 - **変換表を発明しない方針は Apple 側では成立しない。** `ScreenshotDisplayType`
   への変換は書くしかない。Play 側で不要だったのは幸運であって設計ではなかった
+
+### ~~ASC は別パッケージにすべき~~ → **撤回。同じパッケージに入れた**
+
+この節は当初「ASC 側は `colaxy_store_publish` に足すのではなく別パッケージに
+すべき」と書いていた。**理由付けが間違っていた。**
+
+挙げた理由は「投入の形は共有しない」だったが、それが要求するのは
+**名前空間の分離であってパッケージの分離ではない**。
+そして `colaxy_store_console` が**まさにそれを1パッケージでやっている** —
+`src/app_store/` と `src/google_play/` に分け、
+「4つの API 面を単一インターフェースに統一しない」と明記したうえで同居させている。
+
+`colaxy_store_publish` を `colaxy_store_console` から分けた理由は
+**読み取りと書き込みの分離** ([store_publish.md](store_publish.md) 6節) であって、
+これは Play 投入と Apple 投入の間には**当てはまらない**。両方とも書き込みで、
+リスクの性質が同じ。
+
+→ `lib/src/app_store/` として同じパッケージに入れた。
+共通の型は作らず、`PlayPublisher` / `AppStorePublisher`、
+`PlayMetadataPublisher` / `AppStoreMetadataPublisher`、
+`colaxy-store-publish` / `colaxy-store-publish-ios` と**二本立てにしてある**。
+基底クラスは無い。
 
 ---
 
@@ -359,13 +378,26 @@ API では `APP_IPAD_PRO_3GEN_129` として返る、という報告がある。
 
 ## 10. 次の一歩
 
-1. **`colaxy_store_console` の `AppStoreConnectClient` で `GET /v1/apps` を叩き、
-   `appInfos` と `appStoreVersions` を実際に見る。** 認証層は既にあるので作業ゼロ。
-   U-A2 / U-A4 がここで片付く
-2. `appStoreVersionLocalizations` を1ロケール PATCH する (Stage 5)
-3. `appScreenshots` の予約 → 分割 → 確定を1枚通す (Stage 6)。U-A5 / U-A6
-4. `buildUploads` を試す (Stage 8 の一部が前倒しできる)。U-A3 / U-A7
-5. **そのうえでパッケージを切る。** 形が確定するまで名前も範囲も決めない
+Stage 5〜6 は実装済み。`colaxy_store_console` の `AppStoreConnectClient` を
+そのまま土台にしたので、認証・リトライ・ページングの作業はゼロだった
+(5節の「再利用できる既存資産」が Apple 側でもそのまま効いた)。
+
+1. **実アカウントで `--doctor` を通す (U-A1)。**
+   ```bash
+   export ASC_KEY_ID=… ASC_ISSUER_ID=… ASC_APP_ID=… ASC_P8="$(cat AuthKey.p8)"
+   dart run colaxy_store_publish:publish-ios --doctor
+   ```
+   読み取りのみ。**U-A2 (複数 `appInfo`) と U-A4 (2つの state enum) が
+   ここで片付く** — どの record がどの状態で返るかが見えるので
+2. 1ロケールだけ `--locales=ja --no-screenshots` で書く (Stage 5)
+3. スクショを1枚通す (Stage 6)。**U-A5 (分割の並列度) / U-A6 (`ipadPro13` の
+   対応先)** がここで片付く。特に U-A6 は二次情報のままなので要確認
+4. `buildUploads` を実装する (Stage 8 の前倒し)。U-A3 / U-A7
+5. TestFlight と提出 (Stage 7)。`reviewSubmissions` 側を使うこと
+
+> **Apple 側には dry-run が無い**ので、Play のような「安全な予行演習」ができない。
+> `--doctor` は読み取り専用にとどめ、書き込みの検証は
+> **1ロケール・スクショ無しから広げる**しかない。
 
 ---
 

@@ -1,0 +1,267 @@
+// Publishes a fastlane metadata tree to the App Store.
+//
+//   dart run colaxy_store_publish:publish-ios --doctor
+//   dart run colaxy_store_publish:publish-ios
+//
+// See --help for the environment variables it needs.
+
+import 'dart:io';
+
+import 'package:colaxy_store_console/colaxy_store_console.dart';
+import 'package:colaxy_store_publish/colaxy_store_publish.dart';
+
+const _usage = '''
+Publishes App Store listings and screenshots from a fastlane metadata tree.
+
+Usage: dart run colaxy_store_publish:publish-ios [options]
+
+There is no --dry-run here, and that is not an oversight. Google Play offers
+edits.validate; App Store Connect has no equivalent, and a locally-invented
+imitation would check different things than the store does. Narrow what a run
+touches with --no-app-info, --no-version-text and --no-screenshots instead.
+
+Every write lands immediately. A run that fails halfway leaves the store
+half-updated, so failures are collected per locale and reported at the end
+rather than aborting the run.
+
+Modes
+  --doctor        Check the credentials and report what is writable, then
+                  stop. Reads only; nothing is created or changed.
+  (none)          Write the metadata. This publishes.
+
+Options
+  --root=DIR      The project directory holding fastlane/ (default: .).
+  --locales=a,b   Publish only these locales (default: every one found).
+  --no-app-info   Skip the app-wide half: name, subtitle, privacy policy URL.
+  --no-version-text
+                  Skip the version half: description, keywords, release notes.
+  --no-screenshots
+                  Skip screenshots.
+  --replace-screenshots
+                  Empty each screenshot set before uploading into it.
+                  DESTRUCTIVE, and one request per existing screenshot —
+                  Apple has no bulk delete.
+  --no-wait       Do not wait for Apple to finish processing each screenshot.
+                  Processing is asynchronous and can reject an asset that
+                  uploaded cleanly, so waiting is on by default.
+  --platform=IOS  Narrow the version lookup (IOS, MAC_OS, TV_OS, VISION_OS).
+
+Environment
+  ASC_KEY_ID      10-character key ID.
+  ASC_ISSUER_ID   Issuer UUID.
+  ASC_P8          The .p8 contents, or a path to the file.
+  ASC_APP_ID      Numeric app ID from the App Store Connect URL.
+
+The key must be a *team* key. An individual key is rejected by several
+endpoints — colaxy_store_console found the same on the sales reports.
+
+Exit codes
+  0  done
+  1  the store rejected something, or a locale failed
+  64 wrong arguments or missing credentials
+''';
+
+Future<void> main(List<String> args) async {
+  if (args.contains('--help') || args.contains('-h')) {
+    stdout.write(_usage);
+    return;
+  }
+
+  final unknown = args.where(
+    (arg) =>
+        !arg.startsWith('--root=') &&
+        !arg.startsWith('--locales=') &&
+        !arg.startsWith('--platform=') &&
+        !const {
+          '--doctor',
+          '--no-app-info',
+          '--no-version-text',
+          '--no-screenshots',
+          '--replace-screenshots',
+          '--no-wait',
+        }.contains(arg),
+  );
+  if (unknown.isNotEmpty) {
+    stderr
+      ..writeln('Unknown argument: ${unknown.first}')
+      ..writeln('Run with --help.');
+    exitCode = 64;
+    return;
+  }
+
+  final keyId = _env('ASC_KEY_ID');
+  final issuerId = _env('ASC_ISSUER_ID');
+  final p8 = _env('ASC_P8');
+  final appId = _env('ASC_APP_ID');
+  if (keyId == null || issuerId == null || p8 == null || appId == null) {
+    stderr
+      ..writeln(
+        'ASC_KEY_ID, ASC_ISSUER_ID, ASC_P8 and ASC_APP_ID are all required.',
+      )
+      ..writeln('Run with --help.');
+    exitCode = 64;
+    return;
+  }
+
+  final AppStorePublisher publisher;
+  try {
+    publisher = AppStorePublisher.authenticate(
+      apiKey: _apiKey(keyId: keyId, issuerId: issuerId, p8: p8),
+      appId: appId,
+      onLog: (message) => stderr.writeln('[asc] $message'),
+    );
+  } on StoreConsoleException catch (error) {
+    stderr.writeln(error);
+    exitCode = 1;
+    return;
+  }
+
+  final metadata = FastlaneIosMetadata.forProject(
+    _option(args, '--root=') ?? '.',
+  );
+
+  try {
+    if (args.contains('--doctor')) {
+      await _doctor(publisher, metadata);
+      return;
+    }
+
+    final report = await AppStoreMetadataPublisher(
+      publisher: publisher,
+      metadata: metadata,
+      options: AppStorePublishOptions(
+        locales: _locales(_option(args, '--locales=')),
+        publishAppInfo: !args.contains('--no-app-info'),
+        publishVersionText: !args.contains('--no-version-text'),
+        publishScreenshots: !args.contains('--no-screenshots'),
+        replaceScreenshots: args.contains('--replace-screenshots'),
+        awaitProcessing: !args.contains('--no-wait'),
+        platform: _option(args, '--platform='),
+      ),
+      onLog: stdout.writeln,
+    ).publish();
+
+    stdout.writeln(report);
+    for (final path in report.unmappedScreenshots) {
+      stderr.writeln(
+        'skipped: no App Store device slot for this capture name\n    $path',
+      );
+    }
+    for (final failure in report.failedLocales.entries) {
+      stderr.writeln('failed [${failure.key}]: ${failure.value}');
+    }
+    if (report.isEmpty) {
+      stdout.writeln('Nothing was written — check the metadata directory.');
+    }
+    if (report.hasFailures) exitCode = 1;
+  } on StoreConsoleException catch (error) {
+    stderr.writeln(error);
+    exitCode = 1;
+  } finally {
+    publisher.close();
+  }
+}
+
+/// Reports what the credentials reach, without writing anything.
+///
+/// Deliberately read-only, unlike the Google Play doctor: there is no edit to
+/// open and discard here, so proving write permission would mean making a
+/// change that cannot be taken back.
+Future<void> _doctor(
+  AppStorePublisher publisher,
+  FastlaneIosMetadata metadata,
+) async {
+  final version = await publisher.versions.editable();
+  stdout.writeln(
+    version == null
+        ? 'FAIL   editable version         none in PREPARE_FOR_SUBMISSION'
+        : 'PASS   editable version         ${version.id} '
+              '(${version.versionString ?? '?'})',
+  );
+
+  final appInfo = await publisher.appInfos.editable();
+  stdout.writeln(
+    appInfo == null
+        ? 'FAIL   editable app info        none; app-wide text is locked'
+        : 'PASS   editable app info        ${appInfo.id}',
+  );
+
+  if (version != null) {
+    final locales = await publisher.versionLocalizations(version).list();
+    stdout.writeln(
+      'PASS   store locales            '
+      '${locales.map((l) => l.locale).join(', ')}',
+    );
+  }
+
+  try {
+    final local = metadata.locales();
+    stdout.writeln('PASS   local locales            ${local.join(', ')}');
+    for (final locale in local) {
+      final unmapped = metadata.unmappedScreenshots(locale);
+      if (unmapped.isEmpty) continue;
+      stdout.writeln(
+        'WARN   unplaceable screenshots  $locale: ${unmapped.length} '
+        'file(s) with no device slot',
+      );
+    }
+  } on StoreConsoleException catch (error) {
+    stdout.writeln('FAIL   local locales            ${error.message}');
+  }
+
+  if (version == null || appInfo == null) exitCode = 1;
+}
+
+/// The value of `--name=value`, or `null` when the flag is absent.
+String? _option(List<String> args, String prefix) {
+  for (final arg in args) {
+    if (arg.startsWith(prefix)) return arg.substring(prefix.length);
+  }
+  return null;
+}
+
+/// The value of `name` in the environment, or `null` when unset or blank.
+String? _env(String name) {
+  final value = Platform.environment[name]?.trim();
+  return value == null || value.isEmpty ? null : value;
+}
+
+Set<String>? _locales(String? value) {
+  if (value == null) return null;
+  final names = value
+      .split(',')
+      .map((name) => name.trim())
+      .where((name) => name.isNotEmpty)
+      .toSet();
+  return names.isEmpty ? null : names;
+}
+
+/// Builds a key from `ASC_P8` holding either the PEM or a path to it.
+///
+/// The same accommodation `colaxy_store_console`'s verify tool makes: both
+/// are natural things to put in an environment variable, and a PEM always
+/// carries its `-----BEGIN` header, so telling them apart is unambiguous.
+AppStoreApiKey _apiKey({
+  required String keyId,
+  required String issuerId,
+  required String p8,
+}) {
+  final value = p8.trim();
+  if (value.contains('-----BEGIN')) {
+    return AppStoreApiKey(keyId: keyId, issuerId: issuerId, privateKey: value);
+  }
+  if (File(value).existsSync()) {
+    return AppStoreApiKey.fromP8File(
+      keyId: keyId,
+      issuerId: issuerId,
+      path: value,
+    );
+  }
+  throw StoreAuthException(
+    'ASC_P8 is neither PEM nor a readable file: ${value.length} characters, '
+    'no "-----BEGIN" header, and no file at that path. Set it to the '
+    r'contents of the .p8 — ASC_P8="$(cat AuthKey_....p8)" — or to a path '
+    'that exists.',
+    store: Store.appStore,
+  );
+}

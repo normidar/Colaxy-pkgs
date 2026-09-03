@@ -1,30 +1,41 @@
 dependencies:
   characters: ^1.4.0
   colaxy_store_console: ^0.1.0
+  crypto: ^3.0.0
   googleapis: ^17.0.0
   http: ^1.6.0
   meta: ^1.19.0
   path: ^1.9.0
 executables:
-  # Publishes a fastlane metadata tree, and checks one without a network.
+  # Publishes a fastlane metadata tree to Google Play, and checks one without
+  # a network.
   colaxy-store-publish: publish
-description: Publish Android listings, screenshots and app bundles to Google
-  Play from pure Dart. Reads the fastlane supply directory layout, so it drops
-  in where `fastlane supply` was, without a Ruby toolchain.
+  # The App Store equivalent. Separate because the two stores do not share a
+  # shape: Play stages into a transaction, Apple writes immediately.
+  colaxy-store-publish-ios: publish_ios
+description: Publish listings, screenshots and app bundles to Google Play and
+  the App Store from pure Dart. Reads the fastlane directory layout, so it
+  drops in where `supply` and `deliver` were, without a Ruby toolchain.
 dev_dependencies:
   test: ^1.24.0
   very_good_analysis: ^10.3.0
 environment:
   sdk: ^3.8.0
+# app_store_support.dart holds a throwaway P-256 key generated for the test
+# suite. It exercises the real ES256 signing path, was never uploaded to App
+# Store Connect, and grants access to nothing — but pub's leak detector cannot
+# know that. https://dart.dev/go/false-secrets
+false_secrets:
+  - /test/app_store_support.dart
 repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_store_publish
 issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
 name: colaxy_store_publish
 homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_store_publish
 topics:
   - google-play
+  - app-store-connect
   - fastlane
   - publishing
   - release
-  - android
 version: 0.1.0
 resolution: workspace

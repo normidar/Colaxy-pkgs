@@ -1,7 +1,7 @@
 ## 0.1.0
 
-First release. Google Play publishing: listings, images, app bundles and
-tracks, over the `fastlane supply` directory layout.
+First release. Publishing to Google Play and the App Store over the fastlane
+directory layout: listings, screenshots, app bundles and tracks.
 
 This closes the one step of the release pipeline in this repository that still
 needed Ruby. Icons, screenshots and metadata were already generated in Dart,
@@ -101,7 +101,41 @@ store went through `fastlane supply`.
 - `PlayEditConflictException` is never retried: replaying a commit against the
   same stale snapshot fails identically.
 
+### App Store
+- `AppStorePublisher` and `AppStoreMetadataPublisher`, deliberately **not**
+  sharing a type with the Google Play side. Play publishes through a
+  transaction that can be validated and rolled back; the App Store writes
+  immediately. A shared interface would claim rollback where there is none.
+- No `dryRun`. `edits.validate` has no App Store equivalent and imitating it
+  locally would check different things than the store does.
+- A failing locale does not abort the run — with no rollback, stopping early
+  leaves the store just as half-updated, minus the locales that would have
+  worked. Failures land in `AppStorePublishReport.failedLocales`.
+- Metadata splits across **two resources**: `name`, `subtitle` and
+  `privacyPolicyUrl` go to `appInfoLocalizations`; `description`, `keywords`,
+  `whatsNew`, `promotionalText`, `supportUrl` and `marketingUrl` go to
+  `appStoreVersionLocalizations`. The flat fastlane directory says nothing
+  about this; `FastlaneIosListing` is where it is enforced.
+- `AppInfosApi.editable` filters locally, because
+  `/v1/apps/{id}/appInfos` accepts **no filter parameters at all**. An app has
+  one record per state and writing through the wrong one is reported to
+  succeed while changing nothing visible, so the publisher stops rather than
+  taking the first record.
+- Screenshots are reserve → chunked transfer → MD5 commit → poll. The bytes go
+  to Apple's asset host without the API's bearer token, because every request
+  body in the specification is JSON. A failed upload deletes its reservation:
+  an uncommitted one blocks submission.
+- `ScreenshotDisplayType` carries all 33 slots and `byCaptureName` maps
+  `colaxy_screenshot`'s file names onto them. Unlike Android, where the
+  directory names *are* the API values, Apple needs a table — so captures it
+  cannot place are reported in `unmappedScreenshots` rather than dropped.
+- `colaxy-store-publish-ios` executable, with `--doctor` (read-only).
+
 ### Not yet verified
-No call has been made against a real Play Console account. The API surface
-comes from reading the `androidpublisher/v3` client; the tests run against a
-mock.
+No call has been made against a real account on either store. The API surface
+comes from reading the `androidpublisher/v3` generated client and Apple's own
+OpenAPI document (4.4.1); the tests run against a mock.
+
+Two App Store mappings are secondary sources rather than specification, and
+are marked as such in the code: `ipadPro13` → `APP_IPAD_PRO_3GEN_129`, and
+the claim that writing through a non-editable `appInfo` silently no-ops.

@@ -1,11 +1,11 @@
 # colaxy_store_publish
 
-Publish Android listings, screenshots and app bundles to Google Play from pure
-Dart.
+Publish listings, screenshots and app bundles to Google Play and the App Store
+from pure Dart.
 
-Reads the `fastlane supply` directory layout — the one `colaxy_localization`
-and `colaxy_screenshot` already write — so it drops in where `fastlane supply`
-was, without a Ruby toolchain.
+Reads the `fastlane` directory layout — the one `colaxy_localization` and
+`colaxy_screenshot` already write — so it drops in where `fastlane supply` and
+`deliver` were, without a Ruby toolchain.
 
 ```dart
 final publisher = await PlayPublisher.authenticate(
@@ -30,29 +30,45 @@ dart run colaxy_store_publish:publish --dry-run   # Google validates, nothing sh
 dart run colaxy_store_publish:publish             # publishes
 ```
 
-## Google Play only
+## Two stores, two shapes, no unified interface
 
-This package does not touch App Store Connect, and will not grow a unified
-interface over both.
+Both stores are covered. Neither is wrapped in a shared type, and that is the
+central design decision here.
 
 | | Google Play | App Store Connect |
 |---|---|---|
-| Metadata over an API | yes | yes, differently |
-| Screenshots over an API | yes, one call | reservation + chunked upload |
-| **Binary over an API** | **yes** (`bundles.upload`) | **no** — Transporter or `notarytool` |
-| **Transactional** | **yes** (`edits`, with commit and rollback) | **no** — changes apply as they are made |
+| **Transactional** | **yes** — `edits`, with commit and rollback | **no** — every write is live immediately |
+| **Dry run** | **yes** — `edits.validate` | **none exists** |
+| Metadata | one `Listing` per locale | **two resources**: app-wide and version-scoped |
+| Screenshots | one `upload` call | **reserve → chunk → checksum → commit** |
+| Device slots | 9, identical to the directory names on disk | **33**, matching nothing on disk |
+| File transfer | the API receives the bytes | **every request body is JSON**; bytes go elsewhere |
+| Binary | `bundles.upload` | `buildUploads` *(not implemented here yet)* |
 
-Wrapping both in one type would claim things that are only true of one of them.
-The most damaging would be rollback: an interrupted Play publish leaves
-*nothing* behind, and code written against a shared interface would assume the
-same of Apple, where it is false.
+Wrapping both in one type would claim things that are true of only one. The
+most damaging would be rollback: an interrupted Play publish leaves *nothing*
+behind, and code written against a shared interface would assume the same of
+Apple, where a half-finished run leaves a half-updated store.
+
+So there are two entry points, two publishers, two executables, and no base
+class between them.
+
+| | Google Play | App Store |
+|---|---|---|
+| Entry point | `PlayPublisher` | `AppStorePublisher` |
+| Orchestration | `PlayMetadataPublisher` | `AppStoreMetadataPublisher` |
+| Local tree | `FastlaneMetadata` | `FastlaneIosMetadata` |
+| Executable | `colaxy-store-publish` | `colaxy-store-publish-ios` |
 
 ## What it replaces
 
-`fastlane supply` — all of it. Metadata, images, app bundles, and tracks.
+`fastlane supply` — all of it. Metadata, images, app bundles and tracks.
 
-`deliver` and `pilot` are Apple's, and are out of scope. So is `gym`: wrapping
-`xcodebuild` in Dart calls the same binary and improves nothing.
+`deliver` — the metadata and screenshot halves. Apple's binary upload
+(`buildUploads`, added in App Store Connect API 4.1) is not implemented yet.
+
+`pilot` is out of scope for now. So is `gym`: wrapping `xcodebuild` in Dart
+calls the same binary and improves nothing.
 
 ## Install
 
@@ -287,6 +303,93 @@ default, so a failure retries the chunk rather than the whole file.
 replaces a track's entire release list — sending only the new release would
 drop a halted rollout or a still-serving older one.
 
+## The App Store side
+
+```bash
+export ASC_KEY_ID=ABCD123456 ASC_ISSUER_ID=… ASC_APP_ID=6740000000
+export ASC_P8="$(cat AuthKey_ABCD123456.p8)"
+
+dart run colaxy_store_publish:publish-ios --doctor   # read-only
+dart run colaxy_store_publish:publish-ios            # writes, immediately
+```
+
+The key must be a **team** key; an individual key is rejected by several
+endpoints, which is the same limit `colaxy_store_console` hit on sales reports.
+
+### Metadata splits across two resources
+
+The fastlane directory is flat and says nothing about this. The API is not.
+
+| file | resource | attribute |
+|---|---|---|
+| `name.txt` | `appInfoLocalizations` | `name` |
+| `subtitle.txt` | `appInfoLocalizations` | `subtitle` |
+| `privacy_url.txt` | `appInfoLocalizations` | `privacyPolicyUrl` |
+| `description.txt` | `appStoreVersionLocalizations` | `description` |
+| `keywords.txt` | `appStoreVersionLocalizations` | `keywords` |
+| `release_notes.txt` | `appStoreVersionLocalizations` | `whatsNew` |
+| `promotional_text.txt` | `appStoreVersionLocalizations` | `promotionalText` |
+| `support_url.txt` | `appStoreVersionLocalizations` | `supportUrl` |
+| `marketing_url.txt` | `appStoreVersionLocalizations` | `marketingUrl` |
+
+Three go one way, six the other, through two different records with two
+different editability windows. Google Play's equivalent is a single `Listing`.
+
+> **An app has several `appInfo` records — one per state — and writing through
+> the wrong one succeeds while changing nothing anybody can see.** There is no
+> local symptom: `200`, success reported, old name still on the store. Worse,
+> `/v1/apps/{id}/appInfos` accepts **no filter parameters at all**, so the
+> state cannot be pushed to the server. `AppInfosApi.editable` fetches every
+> record and picks the editable one, and the publisher stops rather than
+> guessing when there is none.
+
+### Screenshots are three steps and a wait
+
+```text
+POST  /v1/appScreenshots      reserve; answers upload operations
+PUT   assets.apple.com/…      the bytes, chunked, to another host
+PATCH /v1/appScreenshots/{id} commit with uploaded: true + MD5
+GET   /v1/appScreenshots/{id} poll until processing settles
+```
+
+The bytes never touch the API — **every request body in the specification is
+JSON** — so they go to a URL Apple hands back, without the bearer token.
+`AppScreenshot` is one of the resources that requires `sourceFileChecksum`;
+several newer asset types do not, so it cannot be inferred from the pattern.
+
+If the upload fails after the reservation is made, the reservation is deleted.
+An uncommitted one shows as a grey placeholder and blocks submission, which is
+worse than the upload simply having failed.
+
+Processing is **asynchronous**: an asset can upload cleanly and be rejected
+minutes later. Waiting is on by default; `--no-wait` turns it off.
+
+### Device slots need a translation table
+
+Google Play's nine `imageType` values are exactly the directory names on disk,
+so Android needs no mapping. Apple has 33 `ScreenshotDisplayType` values that
+match nothing `colaxy_screenshot` writes, so `byCaptureName` bridges them —
+`iphone65` → `APP_IPHONE_65`, `ipadPro13` → `APP_IPAD_PRO_3GEN_129`,
+`mac` → `APP_DESKTOP`.
+
+A capture whose device this package cannot place is **reported, not dropped**:
+`AppStorePublishReport.unmappedScreenshots` lists them, and `--doctor` warns.
+
+> ⚠️ `ipadPro13` → `APP_IPAD_PRO_3GEN_129` comes from a developer forum
+> report, not the specification — Apple's website labels and the API's
+> generation numbers are known to disagree. Confirm it before trusting a
+> release to it.
+
+### There is no dry run, and failures do not abort
+
+`edits.validate` has no App Store equivalent, and imitating it locally would
+check different things than the store does. Narrow a run with
+`--no-app-info` / `--no-version-text` / `--no-screenshots` instead.
+
+A locale that fails is recorded in `failedLocales` and the run continues. With
+no rollback, stopping early leaves the store just as half-updated, minus the
+locales that would have worked.
+
 ## API reference
 
 ### Entry points
@@ -318,15 +421,35 @@ drop a halted rollout or a still-serving older one.
 | `PlayDoctor` | Credentials, permissions, and what the store already has |
 | `DoctorCheck` | One check's result |
 
+### App Store
+
+| Class | Purpose |
+|---|---|
+| `AppStorePublisher` | Holds the authenticated client; exposes the APIs |
+| `AppStoreMetadataPublisher` | Writes a fastlane tree. No transaction |
+| `AppStoreVersionsApi` | `list`, `editable` |
+| `AppInfosApi` | `list`, `editable` — filters locally, the endpoint cannot |
+| `AppStoreVersionLocalizationsApi` | `list`, `get`, `update`, `delete` |
+| `AppInfoLocalizationsApi` | `list`, `get`, `update` |
+| `AppScreenshotsApi` | `sets`, `ensureSet`, `list`, `upload`, `delete`, `deleteAll`, `awaitProcessing` |
+| `AssetUploader` | Chunked transfer to Apple's asset host, plus the MD5 |
+| `FastlaneIosMetadata` | `locales`, `listing`, `screenshots`, `unmappedScreenshots` |
+| `FastlaneIosListing` | One locale's text, split into its two halves |
+
 ### Command line
 
 `dart run colaxy_store_publish:publish` — `--check`, `--doctor`, `--dry-run`,
 `--metadata=DIR`, `--locales=a,b`, `--replace-screenshots`,
 `--feature-graphic`, `--error-if-in-review`, `--skip-check`, `--allow-empty`.
-See `--help`. Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`.
+Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`.
 
-Exits `0` on success, `1` when the store rejected something or the check found
-errors, `64` for bad arguments or missing credentials.
+`dart run colaxy_store_publish:publish-ios` — `--doctor`, `--root=DIR`,
+`--locales=a,b`, `--no-app-info`, `--no-version-text`, `--no-screenshots`,
+`--replace-screenshots`, `--no-wait`, `--platform=IOS`. Credentials come from
+`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_P8` and `ASC_APP_ID`.
+
+Both exit `0` on success, `1` when the store rejected something or a check
+found errors, `64` for bad arguments or missing credentials. See `--help`.
 
 ### Values
 
@@ -337,6 +460,9 @@ errors, `64` for bad arguments or missing credentials.
 | `ChangesInReviewBehavior` | What committing does to a review in flight |
 | `PlayAiGeneratedState` | The developer's AI attestation on an image |
 | `PlayEditState` | `open`, `committed`, `discarded` |
+| `ScreenshotDisplayType` | All 33 App Store device slots, plus `byCaptureName` |
+| `AppStoreVersionState` | 20 values; only `PREPARE_FOR_SUBMISSION` is writable |
+| `AppVersionState` | 15 values — a **different** enum on the same resource |
 
 ### Failures
 
@@ -351,8 +477,20 @@ pipeline that reads and writes has one set to handle. Added here:
 
 ## Not verified against a live account
 
-Every claim above comes from reading the `androidpublisher/v3` client and from
-tests against a mock. **No call in this package has been made against a real
-Play Console account yet.** In this repository's experience that gap has
-produced real errors before, so treat the first run against a live app as the
-verification step: use `dryRun: true`, and start with one locale.
+Every claim above comes from reading the specifications — the
+`androidpublisher/v3` generated client for Google Play, Apple's own OpenAPI
+document (4.4.1) for the App Store — and from tests against a mock. **No call
+in this package has been made against a real store account yet.**
+
+In this repository's experience that gap has produced real errors before, so
+treat the first run against a live app as the verification step:
+
+- **Google Play**: `--check`, then `--doctor`, then `--dry-run`. The dry run
+  is Google's own validation, so it is a genuine rehearsal.
+- **App Store**: `--doctor` reads only. There is no dry run to follow it with,
+  so start with `--locales=` naming one locale and `--no-screenshots`, and
+  widen from there.
+
+Two mappings are secondary sources rather than specification, and are marked
+in the code as well: `ipadPro13` → `APP_IPAD_PRO_3GEN_129`, and the claim that
+writing through a non-editable `appInfo` silently no-ops.
