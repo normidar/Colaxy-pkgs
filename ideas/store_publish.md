@@ -50,15 +50,18 @@ fastlane supply の規約は `changelogs/<versionCode>.txt` で、`default.txt` 
 → U-5 の答え: **リリース単位** (`TrackRelease.releaseNotes`) であり、
 実装側は `<versionCode>.txt` → `default.txt` の順に探す形にした。
 
-### 0-3. `featureGraphic.png` が規約外の場所にある
+### 0-3. `featureGraphic.png` が規約外の場所にあった ✅ **修正済み**
 
-`colaxy_screenshot` は `fastlane/metadata/android/featureGraphic.png` に書く。
+`colaxy_screenshot` は `fastlane/metadata/android/featureGraphic.png` に書いていた。
 supply の規約は `<locale>/images/featureGraphic.png` なので、
-**`fastlane supply` もこれを拾っていなかった**はず。
+**`fastlane supply` もこれを拾っていなかった。**
+つまり毎回生成されて、どのツールにも上げられていなかった。
 
-→ `FastlaneMetadata.strayFeatureGraphic` として明示的に露出し、
-`PlayPublishOptions.uploadStrayFeatureGraphic` (既定 `false`) でのみ全ロケールに送る。
-**本来の直し方は `colaxy_screenshot` 側を規約に合わせること**で、これは別件。
+→ **`colaxy_screenshot` v0.10.0 で規約に合わせた** (各ロケールの `images/` に書く)。
+`colaxy_store_publish` 側は旧ツリーのために
+`FastlaneMetadata.strayFeatureGraphic` と
+`PlayPublishOptions.uploadStrayFeatureGraphic` (既定 `false`) を残し、
+`--check` が残骸を報告する。
 
 ### 0-4. `commit` にレビュー破壊のパラメータがあった (調査で見落とし)
 
@@ -321,8 +324,8 @@ Play 側の実装は済んだので、順序が変わった。
    **U-7 / U-9 / U-10 もここで一緒に潰れる。**
 2. ~~`colaxy_localization` の説明文が上限を超えうる欠陥を直す~~
    ✅ **完了 (v0.2.1)。** [dart_native_pipeline.md](dart_native_pipeline.md) 4-A
-3. `colaxy_screenshot` の `featureGraphic.png` の場所を規約に合わせる (0-3)。
-   これは `colaxy_store_publish` ではなく `colaxy_screenshot` の修正。
+3. ~~`colaxy_screenshot` の `featureGraphic.png` の場所を規約に合わせる~~
+   ✅ **完了 (v0.10.0)。** 0-3
 4. `colaxy_localization` が `changelogs/<versionCode>.txt` を書けるようにするか判断 (0-2)。
    今は `default.txt` だけなので、バージョンごとのリリースノートが書けない。
 5. **認証・権限の検査を `--check` に足す** (Stage 9-1 の残り半分)。

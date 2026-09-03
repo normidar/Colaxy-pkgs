@@ -178,12 +178,17 @@ your_app/
 │   │   └── zh-Hant/
 │   └── metadata/
 │       └── android/
-│           ├── featureGraphic.png
-│           ├── en-US/images/phoneScreenshots/
-│           ├── ja-JP/images/phoneScreenshots/
-│           ├── zh-CN/images/phoneScreenshots/
-│           └── zh-TW/images/phoneScreenshots/
+│           ├── en-US/images/
+│           │   ├── featureGraphic.png
+│           │   └── phoneScreenshots/
+│           ├── ja-JP/images/
+│           ├── zh-CN/images/
+│           └── zh-TW/images/
 ```
+
+フィーチャーグラフィックは1枚だけ描画し (コピーを持たないため `en-US` 固定)、
+各ロケールの `images/` に同じ画像を書き出します。Google Play はリスティング単位で
+保持するため、fastlane の規約もこの場所です。
 
 ## Supported Locales
 

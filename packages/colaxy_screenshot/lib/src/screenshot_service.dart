@@ -179,7 +179,13 @@ class ScreenshotService {
     }
   }
 
-  /// Feature Graphic Page generate
+  /// Renders the Android feature graphic and writes it to every locale.
+  ///
+  /// The graphic is captured once with `en-US` forced, because it carries no
+  /// copy of its own. Google Play still stores a feature graphic per listing,
+  /// so the same image is written into each locale's `images/` directory —
+  /// that is where the fastlane layout keeps it, and where every tool that
+  /// uploads one looks.
   Future<void> getFeatureGraphicScreenshot() async {
     _appKey = GlobalKey();
 
@@ -266,9 +272,23 @@ class ScreenshotService {
     final imageBytes = await _captureBoundary('feature graphic');
     final pngImage = _decode(imageBytes, 'feature graphic');
     final resizedImage = copyResize(pngImage, width: 1024, height: 500);
-    File(
-      '$appPath/fastlane/metadata/android/featureGraphic.png',
-    ).writeAsBytesSync(encodePng(resizedImage));
+    final png = encodePng(resizedImage);
+
+    // One graphic, written into every locale's listing.
+    //
+    // The graphic itself is locale-independent — it is rendered with `en-US`
+    // forced above — so writing it once at `android/featureGraphic.png` looked
+    // right. It is not where the fastlane layout puts it, and nothing reads it
+    // there: `fastlane supply` and `colaxy_store_publish` both look under
+    // `<locale>/images/`, so the feature graphic was silently never uploaded.
+    for (final locale in config.supportedLocales) {
+      final path =
+          '$appPath/fastlane/metadata/android/${_androidLocaleName(locale)}'
+          '/images/featureGraphic.png';
+      File(path)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(png);
+    }
   }
 
   /// Build the app widget with the given locale

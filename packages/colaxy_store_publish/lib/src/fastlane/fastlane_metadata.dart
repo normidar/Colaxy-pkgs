@@ -84,13 +84,15 @@ class FastlaneMetadata {
   /// A feature graphic sitting directly in the `android` directory.
   ///
   /// **Not part of the fastlane supply convention**, which puts it at
-  /// `<locale>/images/featureGraphic.png`. `colaxy_screenshot` writes it here
-  /// instead, as a single locale-independent file — so a project using both
-  /// packages has a feature graphic that `supply` never picked up either.
+  /// `<locale>/images/featureGraphic.png`. `colaxy_screenshot` wrote it here
+  /// before its 0.10.0 — as a single locale-independent file that `supply`
+  /// never picked up either — so a tree generated before then has a feature
+  /// graphic nothing has ever uploaded.
   ///
   /// It is surfaced rather than silently used because uploading one image to
   /// every locale is a decision, not a detail. `PlayPublishOptions` has a
-  /// flag for it, off by default.
+  /// flag for it, off by default. Regenerating with a current
+  /// `colaxy_screenshot` is the better fix.
   File? get strayFeatureGraphic {
     for (final extension in const ['.png', '.jpg', '.jpeg']) {
       final file = File(p.join(directory.path, 'featureGraphic$extension'));

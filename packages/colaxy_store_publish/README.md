@@ -106,12 +106,17 @@ Unknown files and directories are skipped, not rejected — a metadata tree also
 holds iOS material.
 
 > **`android/featureGraphic.png` is outside the fastlane convention.**
-> `colaxy_screenshot` writes the feature graphic there, as a single
-> locale-independent file, rather than at
+> `colaxy_screenshot` wrote the feature graphic there before its 0.10.0, as a
+> single locale-independent file rather than at
 > `<locale>/images/featureGraphic.png`. `fastlane supply` never picked it up
-> either. It is exposed as `FastlaneMetadata.strayFeatureGraphic` and published
-> only when `PlayPublishOptions.uploadStrayFeatureGraphic` is on, because
-> sending one image to every locale is a decision rather than a detail.
+> either, so on those trees the graphic was generated on every run and never
+> uploaded by anything.
+>
+> It is exposed as `FastlaneMetadata.strayFeatureGraphic` and published only
+> when `PlayPublishOptions.uploadStrayFeatureGraphic` is on, because sending
+> one image to every locale is a decision rather than a detail. Regenerating
+> with a current `colaxy_screenshot` is the better fix; `--check` reports the
+> leftover file either way.
 
 ## Edits are visible
 

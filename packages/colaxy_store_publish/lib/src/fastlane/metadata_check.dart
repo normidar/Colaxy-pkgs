@@ -345,11 +345,11 @@ class MetadataCheck {
     return [
       MetadataIssue.warning(
         'A feature graphic sits outside the fastlane layout and will not be '
-        'uploaded. colaxy_screenshot writes it here; supply never read it '
-        'either.',
+        'uploaded. colaxy_screenshot wrote it here before 0.10.0; supply '
+        'never read it either.',
         path: stray.path,
-        fix: 'set uploadStrayFeatureGraphic, or move it to '
-            '<locale>/images/featureGraphic.png',
+        fix: 'regenerate with colaxy_screenshot 0.10.0 or later, then delete '
+            'this file',
       ),
     ];
   }

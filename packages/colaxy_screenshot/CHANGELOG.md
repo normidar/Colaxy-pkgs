@@ -1,3 +1,20 @@
+## 0.10.0
+
+### Fixed
+- The Android feature graphic is written to
+  `fastlane/metadata/android/<locale>/images/featureGraphic.png` instead of
+  `fastlane/metadata/android/featureGraphic.png`. The old path is not part of
+  the fastlane layout and nothing reads it: `fastlane supply` and
+  `colaxy_store_publish` both look under `<locale>/images/`, so the feature
+  graphic was generated on every run and never uploaded by either.
+
+  The graphic is still rendered once — it carries no copy, so `en-US` is
+  forced — and the same image is now written into each configured locale,
+  which is how Google Play stores it.
+
+  Delete the old `android/featureGraphic.png` after upgrading;
+  `colaxy_store_publish --check` reports it if you forget.
+
 ## 0.9.0
 
 ### Fixed

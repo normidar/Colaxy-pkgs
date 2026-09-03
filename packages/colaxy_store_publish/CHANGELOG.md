@@ -41,9 +41,10 @@ store went through `fastlane supply`.
 - Directory names under `images/` are already the API's `imageType` values, and
   locale directory names are sent verbatim. Neither has a translation table.
 - `strayFeatureGraphic` surfaces `android/featureGraphic.png`, which
-  `colaxy_screenshot` writes outside the fastlane convention and which
-  `fastlane supply` never picked up either. Publishing it to every locale is
-  opt-in.
+  `colaxy_screenshot` wrote outside the fastlane convention before its 0.10.0
+  and which `fastlane supply` never picked up either. Publishing it to every
+  locale is opt-in; regenerating with a current `colaxy_screenshot` is the
+  better fix.
 
 ### Checking the tree
 - `MetadataCheck` reports structural problems before anything is sent, and the
