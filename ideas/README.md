@@ -10,8 +10,9 @@
 
 | 文書 | 内容 | ステータス |
 |---|---|---|
-| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想。Stage 1〜4 は実装済み |
-| [store_publish.md](store_publish.md) | ストアへの投入層 | **実装済み (Play 側)・実アカウント未検証** |
+| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想。Stage A / 1〜4 は完了 |
+| [store_publish.md](store_publish.md) | ストアへの投入層 (Play 側) | **実装済み・実アカウント未検証** |
+| [app_store_connect_api.md](app_store_connect_api.md) | **ASC API の投入系の実測。** 公式 OpenAPI 4.4.1 を読んだ結果 | **調査完了・実装未着手** |
 | [firebase_reporting.md](firebase_reporting.md) | Firebase のレポート/管理情報を読むパッケージ | **保留 (作らない)** |
 | [repo_structure.md](repo_structure.md) | パッケージのディレクトリグループ化 | 未着手・低リスク・見送り中 |
 
@@ -19,7 +20,8 @@
 
 1. **[dart_native_pipeline.md](dart_native_pipeline.md)** — 何を目指しているかと、そこまでの全段階
 2. **[store_publish.md](store_publish.md)** — Play 側の投入層。実装済みの内容と、実装して分かったこと
-3. 残り2つは独立した話題
+3. **[app_store_connect_api.md](app_store_connect_api.md)** — Apple 側の実測。ここから Stage 5 以降を設計する
+4. 残り2つは独立した話題
 
 ## 現状の要約 (2026-09-03 更新)
 
@@ -32,7 +34,12 @@
 - **Stage 4 (投入前の検証) は完了。** ネットワーク不要なので実アカウント検証を待たない。
   **fastlane では原理的にできなかった部分**で、既に `colaxy_localization` の欠陥を1件
   見つけている ([dart_native_pipeline.md](dart_native_pipeline.md) 4-A)
-- **未知は App Store Connect 側だけ** (Stage A)。ここは着手していない
+- **Stage A (ASC 側の調査) も完了。** 公式 OpenAPI 4.4.1 を読み、
+  Play 側と信頼度が揃った。**最大の発見は「壁 A の消滅」** —
+  Apple もバイナリを API で上げられるようになっていた (`buildUploads`、WWDC25)。
+  この ideas フォルダが前提にしていた記述が1つ古くなっていた
+- **残る未知は実データだけ。** 両ストアとも仕様は読んだが、
+  **どちらも実アカウントに1度も叩いていない**
 
 ## 書き方の約束
 

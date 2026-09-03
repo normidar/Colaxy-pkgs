@@ -218,14 +218,17 @@ appImageTypeUnspecified   ← "Do not use" と明記されている
 Play 側の `commit` を隠さず、ASC 側は「途中失敗時に何が残るか」を型かドキュメントで
 明示すること。
 
-### 4-2. バイナリのアップロードは線を引く
+### 4-2. バイナリのアップロードは線を引く → **引き直した**
 
 - **Play**: `EditsBundlesResource.upload` で aab を上げられる (実測)。
-- **Apple**: ASC API ではバイナリを上げられず、**Transporter / altool が必要**と理解している
-  (⚠️ 要確認)。
+- ~~**Apple**: ASC API ではバイナリを上げられず、Transporter / altool が必要~~
+  → ❌ **これは古い。** `buildUploads` で上げられる
+  ([app_store_connect_api.md](app_store_connect_api.md) 0節)。
 
-→ **「メタデータとスクショは両ストア、バイナリは Play のみ」と正直に線を引く。**
-両対応に見せかけると、Apple 側で必ず破綻する。
+→ ~~「バイナリは Play のみ」~~
+**両ストアともバイナリを API で上げられる。ただし方式が違う** —
+Play は API が直接ファイルを受け、Apple は必ず予約して別エンドポイントへ送る。
+**「両対応」と言えるようになったが、共通インターフェースで包める意味ではない。**
 
 ### 4-3. `deleteall` の危険性
 
@@ -301,9 +304,9 @@ Play 側の `commit` を隠さず、ASC 側は「途中失敗時に何が残る�
 
 | # | 事項 | 状態 |
 |---|---|---|
-| U-1 | **ASC 側の API を一切確認していない。** メタデータ更新 (`appStoreVersionLocalizations` 系?)、スクショ (`appScreenshotSets` / reservation + chunk upload?) | **未着手。** この文書の Apple 側の記述は全て推測のまま |
-| U-2 | ASC が本当に逐次反映か。トランザクション相当の仕組みが無いか | **未着手** |
-| U-3 | Apple のバイナリアップロードが本当に ASC API 不可か | **未着手** |
+| U-1 | **ASC 側の API を一切確認していない。** メタデータ更新 (`appStoreVersionLocalizations` 系?)、スクショ (`appScreenshotSets` / reservation + chunk upload?) | ✅ **解決。** 公式 OpenAPI 4.4.1 を読んだ → [app_store_connect_api.md](app_store_connect_api.md)。**メタデータは2リソースに割れる**という当時見えていなかった非対称あり |
+| U-2 | ASC が本当に逐次反映か。トランザクション相当の仕組みが無いか | ✅ **解決。逐次反映で正しい。** トランザクションは無い |
+| U-3 | Apple のバイナリアップロードが本当に ASC API 不可か | ✅ **解決。可能になっていた。** 4-2 の線を引き直した |
 | U-4 | `EditsImagesResource.upload` の実際の制約 (最大サイズ、必要枚数、解像度) | **調べないと決めた** (0-9)。ローカル検証はしない |
 | U-5 | `changelogs/` → リリースノートへの対応。トラック単位かリリース単位か | **解決 (0-2)。** リリース単位 (`TrackRelease.releaseNotes`) |
 | U-6 | エディットの有効期限。放置した `edits` がどうなるか | **半分解決 (0-6)。** `expiryTimeSeconds` で取得できる。実際の長さは未確認 |
@@ -338,11 +341,13 @@ Play 側の実装は済んだので、順序が変わった。
 4. `colaxy_localization` が `changelogs/<versionCode>.txt` を書けるようにするか判断 (0-2)。
    今は `default.txt` だけなので、バージョンごとのリリースノートが書けない。
 5. ~~認証・権限の検査を足す~~ ✅ **完了。** `--doctor` / `PlayDoctor` (Stage 9-1)
-6. **ASC 側の調査 (U-1〜U-3)。** 手元に読めるものが無いので、ここが最大の未知。
-   Apple の OpenAPI 仕様を確認して、Play 側と同じ粒度の表を作る。
-   **これが終わるまで ASC 側の設計を決めない。**
-7. その時点で ASC 側をどこまで揃えるか決める。非対称が大きすぎるなら、
-   「Play 完全対応 + ASC はメタデータのみ」で切る判断もある。
+6. ~~ASC 側の調査 (U-1〜U-3)~~ ✅ **完了。**
+   [app_store_connect_api.md](app_store_connect_api.md) に実測の表がある
+7. **ASC 側をどこまで揃えるか決める。** 調査の結果、
+   **バイナリまで含めた全対応が可能**になった (壁 A の消滅)。
+   ただし投入の形が Play と重ならないので、**別パッケージにする**のが妥当。
+   最初の一歩は `colaxy_store_console` の既存の ASC 認証で
+   `appInfos` / `appStoreVersions` を実際に読むこと (U-A2 / U-A4)。
 
 ---
 

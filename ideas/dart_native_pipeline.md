@@ -81,16 +81,28 @@ fastlane の `snapshot` / `screengrab` は**シミュレータ/エミュレー�
 
 ## 4. 残る2つの壁
 
-### 壁 A: Apple のバイナリアップロード
+### 壁 A: Apple のバイナリアップロード → ❌ **消滅した**
 
-ASC API にはバイナリを上げる口が無く、**Transporter (iTMSTransporter、Java 製) か
-`altool` / `notarytool`** が必要 (⚠️ 要確認 = [store_publish.md](store_publish.md) の U-3)。
+> **この節の前提は間違いだった。** 調査時 (2026-08-29) は正しく、Apple 自身も
+> フォーラムでそう回答していたが、**WWDC25 で Build Upload API が追加され、
+> ASC API 4.1 で出荷済み**。詳細は
+> [app_store_connect_api.md](app_store_connect_api.md) 0節。
 
-**fastlane も内部で同じものを呼んでいるだけ**なので、fastlane を外してもこの依存は消えない。
-消えるのは Ruby であって、Apple のツールではない。
+~~ASC API にはバイナリを上げる口が無く、Transporter か altool / notarytool が必要~~
 
-Google Play 側は `EditsBundlesResource.upload` で aab を上げられる (実測済み) ため、
-**この壁は Apple 側にしか無い**。
+**`POST /v1/buildUploads` → `POST /v1/buildUploadFiles` → `uploadOperations` で転送
+→ `PATCH { uploaded: true }`** で完結する。公式 OpenAPI 4.4.1 に
+`deprecated: false` で存在することを実測。
+
+→ **Transporter も altool も要らない。** D-2 / U-3 の答えは「可能」。
+`notarytool` はそもそも App Store 提出とは無関係 (App Store 外で配布する
+Developer ID 署名の macOS アプリ用) で、ここに並べていたのが誤り。
+
+Google Play 側は `EditsBundlesResource.upload` で aab を上げられる (実測済み)。
+**両ストアともバイナリを API で上げられる**が、**方式は違う**:
+Play は multipart / resumable で API が直接ファイルを受け、
+Apple は必ず予約して別エンドポイントへ送る (ASC API のリクエストボディは
+966パス全部が JSON。実測)。
 
 ### 壁 B: コード署名
 
@@ -113,11 +125,15 @@ Google Play 側は `EditsBundlesResource.upload` で aab を上げられる (実
 
 | 解釈 | 可否 |
 |---|---|
-| 外部プロセスを一切呼ばない | ❌ 不可能。`xcodebuild` と Transporter は Apple のもの |
+| 外部プロセスを一切呼ばない | ⚠️ **署名だけ残る。** Transporter は不要になった (壁 A) が、`xcodebuild` と `security` は Apple のもの |
 | **Ruby ランタイムと gem 依存を消す** | ✅ **ほぼ可能。今のリポジトリの延長線上** |
 
 そして**実際の痛みは後者**。bundler / gem のバージョン地獄、CI での Ruby セットアップ、
-Fastfile の DSL が主なコストであって、Transporter を1回叩くこと自体は苦痛ではない。
+Fastfile の DSL が主なコストであって、`xcodebuild` を1回叩くこと自体は苦痛ではない。
+
+> **調査後の更新**: 上の1行目は当初「不可能」と書いていた。
+> Transporter が要らなくなったので、**残るのは署名とビルドだけ**になった。
+> 「iOS のバイナリを配るのに Dart 以外のプロセスが要る」という制約は消えている。
 
 > **目標: 「fastlane 全廃」ではなく「Fastfile を書かなくて済む状態」。**
 > Ruby も Gemfile.lock も Fastfile も無く、Apple のツールだけを薄く呼ぶ状態。
@@ -146,20 +162,29 @@ Stage A と Stage 1 は並行して進められる。
 
 ---
 
-### Stage A — Apple 側の空白を埋める (調査のみ、実装なし)
+### Stage A — Apple 側の空白を埋める ✅ **完了**
 
-現時点で Apple に関する記述は**全て推測**。ここを埋めないと Stage 5 以降の設計ができない。
+結果は **[app_store_connect_api.md](app_store_connect_api.md)** に全部ある。
+公式 OpenAPI 仕様 (**4.4.1**、966 paths / 1393 schemas) をダウンロードして実際に読んだ。
+Play 側が生成クライアントの実物を読んだのと**同じ基準**になった。
 
-| # | 内容 |
-|---|---|
-| A-1 | **ASC の OpenAPI 仕様を取得し、投入系エンドポイントを Play 側と同じ粒度で表にする。** メタデータ (`appStoreVersionLocalizations` ?)、スクショ (`appScreenshotSets` / `appScreenshots` ?)、ビルド (`builds`)、TestFlight (`betaGroups` / `betaTesters`)、証明書 (`certificates` / `profiles` / `devices`) |
-| A-2 | **バイナリアップロードの可否を確定する** (D-2 / [store_publish.md](store_publish.md) U-3)。不可なら Transporter / `altool` / `notarytool` のどれが必要かまで |
-| A-3 | **ASC がトランザクションを持つか確認する** ([store_publish.md](store_publish.md) U-2)。Play の `edits` に相当する仕組みが無いなら、逐次反映を前提に失敗時の状態を設計する |
-| A-4 | **fastlane の `deliver` / `supply` が内部で何を呼んでいるか読む** (D-4)。Apple の非公開挙動が判明している可能性が高く、最も効率の良い情報源 |
-| A-5 | ASC のスクショが reservation + チャンク分割 + チェックサムの多段かどうか確認 |
+| # | 内容 | 結果 |
+|---|---|---|
+| A-1 | ASC の OpenAPI 仕様を取得し、投入系エンドポイントを Play 側と同じ粒度で表にする | ✅ 表は [app_store_connect_api.md](app_store_connect_api.md) の 1〜6節 |
+| A-2 | **バイナリアップロードの可否を確定する** | ✅ **可能。壁 A は消滅** (`buildUploads`、WWDC25 / API 4.1)。`notarytool` は最初から無関係だった |
+| A-3 | ASC がトランザクションを持つか | ✅ **持たない。** 409 で弾かれる。一番近いロールバックは `DELETE /v1/appStoreVersions/{id}` |
+| A-4 | fastlane の `deliver` が内部で何を呼んでいるか | ✅ `Spaceship::ConnectAPI` (旧 Tunes から移行済み)。Transporter はバイナリ専用で、メタデータ/画像には使っていない |
+| A-5 | スクショが reservation + チャンク + チェックサムの多段か | ✅ **そのとおり。** `AppScreenshot` は `sourceFileChecksum` を要求する側 (要求しないリソースもある) |
 
-**完了条件**: Apple 側の表が Play 側と同じ粒度で埋まり、「API でできること / できないこと」
-の線が引かれている。**推測で埋めた箇所はゼロ**であること。
+**完了条件**: Apple 側の表が Play 側と同じ粒度で埋まり、「API でできること /
+できないこと」の線が引かれている。**推測で埋めた箇所はゼロ**であること。
+→ **達成。** 仕様由来と二次情報 (フォーラム・ブログ) は文書内で明示的に分けてある。
+
+> **調査して分かった最大のこと: 前提が1つ古くなっていた。**
+> 「Apple はバイナリを API で上げられない」は調査時点では正しく、
+> Apple 自身がそう回答していた。**それが変わっていた。**
+> ideas フォルダの「推測で表を埋めない」という約束は、
+> 推測を防ぐだけでなく**前提が変わったことに気づく**ためにも効いた。
 
 > **原則**: `colaxy_store_console` の教訓「**転記した表は、転記元の粒度のまま持つ**。
 > まとめた時点でバグが入る」(R-1) をここで適用する。Apple の表を要約しない。
@@ -275,13 +300,15 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 
 ### Stage 5 — ASC のメタデータ投入
 
-**Stage A の完了が前提。** ここから Apple 側。
+**Stage A は完了済み。** ここから Apple 側。設計は
+[app_store_connect_api.md](app_store_connect_api.md) の実測に基づける。
 
 | # | 内容 |
 |---|---|
-| 5-1 | Stage A-1 の表に基づいてメタデータ更新を実装 |
-| 5-2 | **逐次反映なら、途中失敗時に何が残るかを型かドキュメントで明示する。** Play の `commit` と同じインターフェースで包まない (4-1) |
-| 5-3 | `fastlane/metadata/` の iOS 側ディレクトリ構造への対応 |
+| 5-1 | **メタデータは2リソースに割れる。** `AppInfoLocalization` (name / subtitle / privacyPolicyUrl) と `AppStoreVersionLocalization` (description / keywords / whatsNew / promotionalText / supportUrl)。`colaxy_localization` の8ファイルが **3 : 5 に分かれる** |
+| 5-2 | **逐次反映なので、途中失敗時に何が残るかを型かドキュメントで明示する。** Play の `commit` と同じインターフェースで包まない (4-1)。トランザクションが無いことは実測で確定 |
+| 5-3 | `fastlane/metadata/<iosLocale>/` の読み取り。Android 側と違い**平坦なディレクトリが2リソースに割れる**ので、`FastlaneMetadata` の素直な移植にはならない |
+| 5-4 | **`appInfos` を状態で絞ってから書く。** アプリは状態ごとに複数の `appInfo` を持ち、間違った方に書くと**成功として報告されたまま何も起きない** (U-A2)。Android 側で `MetadataCheck` が潰したのと同じ種類の失敗 |
 
 **完了条件**: 実アカウントで1ロケール更新。**消えるもの**: `deliver` のメタデータ部分。
 
@@ -291,9 +318,11 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 
 | # | 内容 |
 |---|---|
-| 6-1 | Stage A-5 の結果に応じて、reservation → チャンク分割 → チェックサム → commit の多段を実装 |
+| 6-1 | **`POST appScreenshotSets` → `POST appScreenshots` → `uploadOperations` で分割転送 → `PATCH {uploaded, sourceFileChecksum}`。** A-5 で確定した多段。`AppScreenshot` は**チェックサムを要求する側** (MD5) |
 | 6-2 | `colaxy_screenshot` の `fastlane/screenshots/<locale>` からの読み取り |
-| 6-3 | デバイスサイズ種別のマッピング (Apple はディスプレイサイズ単位で、Play の `imageType` とは体系が違う) |
+| 6-3 | **`ScreenshotDisplayType` への変換表を書く。33値ある。** `colaxy_screenshot` のファイル名 (`iphone65` / `ipadPro13` / `mac`) は enum と一致しないので、**Play 側と違って変換表が避けられない** |
+| 6-4 | **`appScreenshotSets` に `PATCH` は無い** (実測)。差し替えはセットごと削除して作り直す。Android 側の `replaceScreenshots` と同じく既定で無効にする |
+| 6-5 | アップロードは非同期で処理される。提出前に状態をポーリングする必要がある (fastlane も同じことをしている) |
 
 **完了条件**: 実アカウントで1ロケール分反映。**消えるもの**: `deliver` の残り。
 
@@ -303,29 +332,33 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 
 | # | 内容 |
 |---|---|
-| 7-1 | `betaGroups` / `betaTesters` の操作 |
-| 7-2 | ビルドの TestFlight 配布 |
-| 7-3 | 審査提出。**既定で無効にする**。誤って提出すると取り消しが面倒で、`verify` を読み取り専用にしたのと同じ判断 |
+| 7-1 | `betaGroups` (`POST,GET,PATCH,DELETE`) / `betaTesters` (`POST,GET,DELETE`) の操作 |
+| 7-2 | ビルドの TestFlight 配布。外部テスターには `betaAppReviewSubmissions` の POST も要る |
+| 7-3 | 審査提出は **`reviewSubmissions` + `reviewSubmissionItems`**。**`appStoreVersionSubmissions` は `DELETE` しか無い** (実測) ので、それを使えと書いている古い記事に従わないこと |
+| 7-4 | 提出は**既定で無効にする**。誤って提出すると取り消しが面倒で、`verify` を読み取り専用にしたのと同じ判断 |
 
 **消えるもの**: `pilot`。
 
 ---
 
-### Stage 8 — 署名とバイナリ (ここで初めて `Process.run` が入る)
+### Stage 8 — 署名とバイナリ
 
-**壁 A / 壁 B。** ここは「Dart 化」ではなく「Apple のツールを薄く呼ぶ」。
+**壁 B のみ。壁 A は消えた** ([app_store_connect_api.md](app_store_connect_api.md) 0節)。
+`Process.run` が入るのは**署名とビルドだけ**で、アップロードは HTTP で足りる。
 
 | # | 内容 |
 |---|---|
-| 8-1 | ASC API から証明書 / プロビジョニングプロファイルを取得 (D-1) |
-| 8-2 | `security` コマンドでキーチェーンに導入する薄いラッパ |
-| 8-3 | `xcodebuild` / `flutter build ipa` の呼び出し。**ラッパを厚くしない** (3節: CLI のラッパを書いても何も得しない) |
-| 8-4 | Transporter / `altool` / `notarytool` でのアップロード (A-2 の結果次第)。認証に ASC API キーを流用できるか確認 (D-3) |
+| 8-1 | ASC API から証明書 / プロビジョニングプロファイルを取得。**D-1 の答えは「取れる」** — `certificates` (`POST,GET,PATCH,DELETE`) / `profiles` (`POST,GET,DELETE`、**PATCH 無し**) / `devices` (`POST,GET,PATCH`、**DELETE 無し**、無効化は PATCH) |
+| 8-2 | `security` コマンドでキーチェーンに導入する薄いラッパ ← **ここは残る (壁 B)** |
+| 8-3 | `xcodebuild` / `flutter build ipa` の呼び出し。**ラッパを厚くしない** (3節: CLI のラッパを書いても何も得しない) ← **ここも残る (壁 B)** |
+| 8-4 | ~~Transporter / altool / notarytool~~ → **`buildUploads` で API から上げる。** 予約 → `uploadOperations` で分割転送 → `PATCH {uploaded, sourceFileChecksums}` → `state` が `COMPLETE` になるまでポーリング。**D-3 (altool の認証) は問い自体が消えた** |
 | 8-5 | **`match` 相当は作らない。** 個人開発では不要。必要になった時点で別途設計する (7節) |
+| 8-6 | `BuildUpload` は `assetFile` / `assetDescriptionFile` / `assetSpiFile` の3つのリレーションを持つ。**`.ipa` を1つ投げれば済むのかは未検証** (U-A3) |
 
 **完了条件**: **Fastfile / Gemfile / Ruby なしで iOS のリリースが1回通る。**
 
-**消えるもの**: **fastlane そのもの。** ただし Apple 純正ツールへの依存は残る (これは想定内)。
+**消えるもの**: **fastlane そのもの。**
+Apple 純正ツールへの依存も**署名とビルドだけに縮んだ** — 転送は Dart で完結する。
 
 ---
 
@@ -401,10 +434,10 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 
 | # | 事項 | 状態 |
 |---|---|---|
-| D-1 | ASC API で証明書 / プロビジョニングプロファイルを取得できるか。できる場合の粒度 | 未着手 |
-| D-2 | Apple のバイナリアップロードが本当に ASC API 不可か (= [store_publish.md](store_publish.md) U-3) | 未着手 |
-| D-3 | `notarytool` / `altool` を Dart から呼ぶ際の認証方式 (ASC API キーを流用できるか) | 未着手 |
-| D-4 | fastlane の `deliver` が内部で何を呼んでいるか。ソースを読んで確認する価値がある | 未着手 |
+| D-1 | ASC API で証明書 / プロビジョニングプロファイルを取得できるか。できる場合の粒度 | ✅ **解決。取れる。** メソッドの粒度は Stage 8-1 |
+| D-2 | Apple のバイナリアップロードが本当に ASC API 不可か (= [store_publish.md](store_publish.md) U-3) | ✅ **解決。可能になっていた** (`buildUploads`)。**前提が古かった** |
+| D-3 | `notarytool` / `altool` を Dart から呼ぶ際の認証方式 (ASC API キーを流用できるか) | ✅ **問いが消えた。** D-2 の結果、どちらも呼ばない |
+| D-4 | fastlane の `deliver` が内部で何を呼んでいるか。ソースを読んで確認する価値がある | ✅ **解決。** `Spaceship::ConnectAPI` (旧 Tunes から移行済み)。Transporter はバイナリ専用 |
 | D-5 | Play の aab アップロードにサイズ上限やレジューム機構があるか | **半分解決。** レジュームは `ResumableUploadOptions` として存在し、既定で使う実装にした。**サイズ上限は未確認** |
 | **D-6** | **Play 側の実装が実アカウントで動くか** (= [store_publish.md](store_publish.md) U-8) | **新規。Stage 1〜3 の完了条件** |
 
@@ -412,7 +445,14 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 
 ## 10. 一行まとめ
 
-**Android は生成から投入まで純 Dart で閉じた** (`colaxy_store_publish`、Stage 1〜3)。
+**Android は生成から投入まで純 Dart で閉じた** (`colaxy_store_publish`、Stage 1〜4)。
 **ただし実アカウントで1度も叩いていないので、まだ「動く」とは言えない。**
-残るのは Apple 側で、署名とバイナリの2点だけ Apple 純正ツールを薄く呼ぶ必要がある。
-目標は fastlane の全廃ではなく、**Fastfile を書かなくて済む状態**。
+
+**Apple 側は調査が終わり (Stage A)、壁 A が消えた。**
+バイナリまで API で上げられるので、Apple 純正ツールが要るのは**署名とビルドだけ**。
+残る非対称はトランザクションの不在・メタデータが2リソースに割れること・
+画像種別が33値で変換表が要ること
+([app_store_connect_api.md](app_store_connect_api.md))。
+
+目標は fastlane の全廃ではなく **Fastfile を書かなくて済む状態**だったが、
+**全廃の方が当初の想定より近い**。
