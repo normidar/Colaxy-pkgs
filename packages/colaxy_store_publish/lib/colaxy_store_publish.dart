@@ -14,6 +14,8 @@ export 'package:colaxy_store_publish/src/core/store_publish_exception.dart';
 export 'package:colaxy_store_publish/src/fastlane/fastlane_image_set.dart';
 export 'package:colaxy_store_publish/src/fastlane/fastlane_listing.dart';
 export 'package:colaxy_store_publish/src/fastlane/fastlane_metadata.dart';
+export 'package:colaxy_store_publish/src/fastlane/metadata_check.dart';
+export 'package:colaxy_store_publish/src/fastlane/metadata_issue.dart';
 export 'package:colaxy_store_publish/src/google_play/changes_in_review_behavior.dart';
 export 'package:colaxy_store_publish/src/google_play/play_ai_generated_state.dart';
 export 'package:colaxy_store_publish/src/google_play/play_api_guard.dart';

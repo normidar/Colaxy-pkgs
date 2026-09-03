@@ -45,6 +45,35 @@ store went through `fastlane supply`.
   `fastlane supply` never picked up either. Publishing it to every locale is
   opt-in.
 
+### Checking the tree
+- `MetadataCheck` reports structural problems before anything is sent, and the
+  `colaxy-store-publish` executable exposes it as `--check` — no network, no
+  credentials.
+- The point is *silent* mistakes. `FastlaneMetadata` skips what it does not
+  recognise, so a directory named `phonescreenshots` uploads nothing and
+  reports success. Misspelled slots, App Store file names in the Android tree,
+  unselectable changelog names, unsupported image suffixes, empty slots and the
+  stray feature graphic are all otherwise invisible.
+- Google's documented text limits are reported as warnings, counted in
+  grapheme clusters so an emoji does not inflate the count. Warnings, because
+  the store is the authority.
+- This is what `fastlane supply` could not do: the generator and the publisher
+  had to be the same language first. It already earns its place —
+  `colaxy_localization` validates a description against 4000 characters and
+  *then* appends the minimum-version footer, so a description at the limit is
+  over it on disk.
+
+### Command line
+- `dart run colaxy_store_publish:publish`, with `--check`, `--dry-run`,
+  `--locales`, `--replace-screenshots`, `--feature-graphic`,
+  `--error-if-in-review`, `--skip-check` and `--allow-empty`.
+- Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`, matching
+  `colaxy_store_console`'s verify tool, including the key-or-path
+  accommodation.
+- Blocking check problems refuse the publish by default.
+- An edit that staged nothing is discarded rather than committed, because
+  committing an empty edit still cancels a review in progress.
+
 ### Safety
 - Nothing is deleted unless asked. Screenshot uploads append;
   `replaceScreenshots` empties the slot first, and `listings.deleteAll` is

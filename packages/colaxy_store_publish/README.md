@@ -18,6 +18,17 @@ await publisher.edit(
 );
 ```
 
+Or from the command line:
+
+```bash
+export PLAY_KEY_JSON="$(cat secrets/play-api.json)"
+export PLAY_PACKAGE=com.example.app
+
+dart run colaxy_store_publish:publish --check     # local only, no network
+dart run colaxy_store_publish:publish --dry-run   # Google validates, nothing ships
+dart run colaxy_store_publish:publish             # publishes
+```
+
 ## Google Play only
 
 This package does not touch App Store Connect, and will not grow a unified
@@ -165,6 +176,48 @@ Check `PlayPublishReport.isEmpty` before committing an unattended run.
   the descriptions. The publisher reads the store's listings once and merges
   each local one over what is there.
 
+## Checking the tree before you upload
+
+```bash
+dart run colaxy_store_publish:publish --check
+```
+
+Makes no network calls and needs no credentials, so it fits in a pre-commit
+hook or ahead of a build. `MetadataCheck` is the same thing as a library.
+
+It looks for two kinds of problem, and nothing else.
+
+**Silent mistakes.** `FastlaneMetadata` skips what it does not recognise —
+it has to, since a metadata tree also holds iOS material. So a directory named
+`phonescreenshots` uploads zero screenshots, reports success, and is
+indistinguishable from a run that worked. The check is the only place that
+ever becomes visible:
+
+```text
+warning [ja-JP]: Not a Google Play image slot; every file under it is ignored.
+                 → rename to phoneScreenshots
+    fastlane/metadata/android/ja-JP/images/phonescreenshots
+```
+
+Also caught: App Store file names that landed in the Android tree
+(`description.txt`), changelog files named after neither a version code nor
+`default`, image suffixes that are not PNG or JPEG, empty slot directories,
+and the stray feature graphic when it would go nowhere.
+
+**Google's documented text limits**, as warnings — title 30, short description
+80, full description 4000, counted in user-perceived characters rather than
+UTF-16 code units so an emoji does not inflate the count. These are the store's
+rules and the store enforces them; repeating them here saves a round trip and
+never vetoes.
+
+> This is the one thing `fastlane supply` could not do, and it only became
+> possible because the generator and the publisher are now the same language.
+> A worked example: `colaxy_localization` checks a description against 4000
+> characters and *then* appends the minimum-version footer, so a description at
+> the limit exceeds it on disk. Nothing could catch that before.
+
+Errors block a publish by default; warnings do not. `--skip-check` overrides.
+
 ## Image validation is Google's job
 
 Dimensions, aspect ratios, file sizes, how many screenshots a listing needs —
@@ -223,6 +276,18 @@ drop a halted rollout or a still-serving older one.
 | `FastlaneMetadata` | `locales`, `listing`, `imageSets`, `strayFeatureGraphic` |
 | `FastlaneListing` | One locale's text and changelogs |
 | `FastlaneImageSet` | One locale's files for one slot |
+| `MetadataCheck` | Structural problems in the tree, before any request |
+| `MetadataIssue` | One problem, with the fix for it |
+
+### Command line
+
+`dart run colaxy_store_publish:publish` — `--check`, `--dry-run`,
+`--metadata=DIR`, `--locales=a,b`, `--replace-screenshots`,
+`--feature-graphic`, `--error-if-in-review`, `--skip-check`, `--allow-empty`.
+See `--help`. Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`.
+
+Exits `0` on success, `1` when the store rejected something or the check found
+errors, `64` for bad arguments or missing credentials.
 
 ### Values
 

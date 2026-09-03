@@ -10,7 +10,7 @@
 
 | 文書 | 内容 | ステータス |
 |---|---|---|
-| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想。Stage 1〜3 は実装済み |
+| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想。Stage 1〜4 は実装済み |
 | [store_publish.md](store_publish.md) | ストアへの投入層 | **実装済み (Play 側)・実アカウント未検証** |
 | [firebase_reporting.md](firebase_reporting.md) | Firebase のレポート/管理情報を読むパッケージ | **保留 (作らない)** |
 | [repo_structure.md](repo_structure.md) | パッケージのディレクトリグループ化 | 未着手・低リスク・見送り中 |
@@ -29,6 +29,9 @@
   aab / トラック)。`fastlane supply` の置き換えは**コード上は完了**
 - ただし**実アカウントに対して1度も叩いていない**。`colaxy_store_console` で
   「モックでは検出できない誤りが5件」出た前例があるので、**ここは未完了**とみなす
+- **Stage 4 (投入前の検証) は完了。** ネットワーク不要なので実アカウント検証を待たない。
+  **fastlane では原理的にできなかった部分**で、既に `colaxy_localization` の欠陥を1件
+  見つけている ([dart_native_pipeline.md](dart_native_pipeline.md) 4-A)
 - **未知は App Store Connect 側だけ** (Stage A)。ここは着手していない
 
 ## 書き方の約束

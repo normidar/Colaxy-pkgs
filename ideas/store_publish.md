@@ -316,16 +316,23 @@ Play 側の `commit` を隠さず、ASC 側は「途中失敗時に何が残る�
 Play 側の実装は済んだので、順序が変わった。
 
 1. **実アカウントで1ロケールを通す (U-8)。** ここが完了条件。
-   `dryRun: true` で `insert` → `listings.update` → `validate` → `delete` を先に通し、
-   その後 commit まで。**U-7 / U-9 / U-10 もここで一緒に潰れる。**
-2. `colaxy_screenshot` の `featureGraphic.png` の場所を規約に合わせる (0-3)。
+   `dart run colaxy_store_publish:publish --dry-run` で
+   `insert` → `listings.update` → `validate` → `delete` を先に通し、その後 commit まで。
+   **U-7 / U-9 / U-10 もここで一緒に潰れる。**
+2. **`colaxy_localization` の説明文が上限を超えうる欠陥を直す**
+   ([dart_native_pipeline.md](dart_native_pipeline.md) 4-A)。
+   4000文字を検査した**後で**「最低対応バージョン」の行を追記しているため、
+   上限ぎりぎりの説明文がディスク上で超える。Stage 4 の検証層を作って初めて見つかった。
+3. `colaxy_screenshot` の `featureGraphic.png` の場所を規約に合わせる (0-3)。
    これは `colaxy_store_publish` ではなく `colaxy_screenshot` の修正。
-3. `colaxy_localization` が `changelogs/<versionCode>.txt` を書けるようにするか判断 (0-2)。
+4. `colaxy_localization` が `changelogs/<versionCode>.txt` を書けるようにするか判断 (0-2)。
    今は `default.txt` だけなので、バージョンごとのリリースノートが書けない。
-4. **ASC 側の調査 (U-1〜U-3)。** 手元に読めるものが無いので、ここが最大の未知。
+5. **認証・権限の検査を `--check` に足す** (Stage 9-1 の残り半分)。
+   実アカウントが要るので U-8 と同時にやる。
+6. **ASC 側の調査 (U-1〜U-3)。** 手元に読めるものが無いので、ここが最大の未知。
    Apple の OpenAPI 仕様を確認して、Play 側と同じ粒度の表を作る。
    **これが終わるまで ASC 側の設計を決めない。**
-5. その時点で ASC 側をどこまで揃えるか決める。非対称が大きすぎるなら、
+7. その時点で ASC 側をどこまで揃えるか決める。非対称が大きすぎるなら、
    「Play 完全対応 + ASC はメタデータのみ」で切る判断もある。
 
 ---

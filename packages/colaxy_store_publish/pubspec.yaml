@@ -1,9 +1,13 @@
 dependencies:
+  characters: ^1.4.0
   colaxy_store_console: ^0.1.0
   googleapis: ^17.0.0
   http: ^1.6.0
   meta: ^1.19.0
   path: ^1.9.0
+executables:
+  # Publishes a fastlane metadata tree, and checks one without a network.
+  colaxy-store-publish: publish
 description: Publish Android listings, screenshots and app bundles to Google
   Play from pure Dart. Reads the fastlane supply directory layout, so it drops
   in where `fastlane supply` was, without a Ruby toolchain.
