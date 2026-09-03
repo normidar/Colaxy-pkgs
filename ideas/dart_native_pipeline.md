@@ -328,14 +328,37 @@ Google が明記している文字数上限 (書記素クラスタで数える)�
 
 ---
 
-### Stage 7 — TestFlight / 提出
+### Stage 7 — TestFlight / 提出 ✅ **実装済み**
 
-| # | 内容 |
-|---|---|
-| 7-1 | `betaGroups` (`POST,GET,PATCH,DELETE`) / `betaTesters` (`POST,GET,DELETE`) の操作 |
-| 7-2 | ビルドの TestFlight 配布。外部テスターには `betaAppReviewSubmissions` の POST も要る |
-| 7-3 | 審査提出は **`reviewSubmissions` + `reviewSubmissionItems`**。**`appStoreVersionSubmissions` は `DELETE` しか無い** (実測) ので、それを使えと書いている古い記事に従わないこと |
-| 7-4 | 提出は**既定で無効にする**。誤って提出すると取り消しが面倒で、`verify` を読み取り専用にしたのと同じ判断 |
+| # | 内容 | 実装 |
+|---|---|---|
+| 7-1 | `betaGroups` / `betaTesters` の操作 | ✅ `BetaGroupsApi` / `BetaTestersApi`。**グループからのビルド削除だけ実装していない** — `DELETE` にボディが要るのに共有クライアントが送れず、POST のパスを発明するのは推測になるため |
+| 7-2 | ビルドの TestFlight 配布。外部テスターには `betaAppReviewSubmissions` の POST も要る | ✅ `TestFlightApi.distribute` が一連でやる |
+| 7-3 | 審査提出は **`reviewSubmissions` + `reviewSubmissionItems`** | ✅ `ReviewSubmissionsApi`。**`prepare` は submission と item の両方を作るが提出はしない**。item を忘れると「提出できるが何も提出されない」submission になる |
+| 7-4 | 提出は**既定で無効にする** | ✅ **どこからも自動で呼ばれない。** CLI にフラグすら無く、`prepare` → `submit` の2行を手で書かせる |
+
+#### 7-A. 実装して分かった「静かに失敗する」経路が2つ
+
+**Stage 7 で最も重要なのはここ。** どちらもリクエストは全部成功を返す。
+
+1. **外部グループにビルドを割り当てただけでは誰にも届かない。**
+   `READY_FOR_BETA_SUBMISSION` のまま止まる。
+   `betaAppReviewSubmissions` を POST して初めて動く
+2. **輸出コンプライアンスの回答が無いビルドは誰にも届かない。**
+   `MISSING_EXPORT_COMPLIANCE` のまま止まる
+
+→ `TestFlightApi.distribute` が両方を検出して警告する。
+また**種別が不明なグループは外部として扱う** — 内部と仮定すると
+審査を飛ばしてビルドが宙に浮き、理由がどこにも出ない。
+
+`InternalBetaState` (7値) と `ExternalBetaState` (13値) は**別の enum**で、
+審査サイクルを持つのは外部だけ (実測)。
+
+#### 7-B. テスター向けのノートは listing の `whatsNew` ではない
+
+`betaBuildLocalizations.whatsNew` と
+`appStoreVersionLocalizations.whatsNew` は**別リソースの別フィールド**。
+`colaxy_localization` の `release_notes.txt` 1つから**2回書く**ことになる。
 
 **消えるもの**: `pilot`。
 
@@ -381,7 +404,7 @@ Apple 純正ツールへの依存も**署名とビルドだけに縮んだ** —
 | **Stage 3** | **`supply` 全体** | **Android のみ不要** | ✅ 実装済み・未検証 |
 | Stage 4 | (中間形式の型検証) | — | ✅ **完了。** ネットワーク不要なので実アカウント検証を待たない |
 | Stage 5〜6 | `deliver` のメタデータと画像 | まだ | ✅ 実装済み・未検証 |
-| Stage 7 | `pilot` | まだ | 未着手 |
+| Stage 7 | `pilot` | まだ | ✅ 実装済み・未検証 |
 | **Stage 8** | **fastlane 全体** | **完全に不要** | 未着手 (`buildUploads` で壁 A は消滅済み) |
 
 > **「実装済み・未検証」を「完了」と書かないこと。** `colaxy_store_console` では
@@ -455,8 +478,8 @@ Apple 純正ツールへの依存も**署名とビルドだけに縮んだ** —
 画像種別が33値で変換表が要ること
 ([app_store_connect_api.md](app_store_connect_api.md))。
 
-残るのは **Stage 7 (TestFlight / 提出) と Stage 8 (署名とバイナリ)**、
-そして**両ストアの実アカウント検証**。
+残るのは **Stage 8 (署名とバイナリ)** と、**両ストアの実アカウント検証**だけ。
+`supply` / `deliver` / `pilot` は置き換わっている。
 
 目標は fastlane の全廃ではなく **Fastfile を書かなくて済む状態**だったが、
 **全廃の方が当初の想定より近い**。

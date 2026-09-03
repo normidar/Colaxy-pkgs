@@ -1,6 +1,6 @@
 # App Store Connect API: 投入系の実測
 
-**ステータス: 調査完了 (Stage A)。Stage 5〜6 は実装済み・実アカウント未検証。**
+**ステータス: 調査完了 (Stage A)。Stage 5〜7 は実装済み・実アカウント未検証。**
 
 調査日: 2026-09-03。[dart_native_pipeline.md](dart_native_pipeline.md) の Stage A
 「Apple 側の空白を埋める」の結果。それまで Apple に関する記述は
@@ -373,12 +373,15 @@ API では `APP_IPAD_PRO_3GEN_129` として返る、という報告がある。
 | U-A6 | `colaxy_screenshot` のファイル名 → `ScreenshotDisplayType` の対応表 | `iphone65` / `ipadPro13` / `mac` の3つだけなので小さいが、実物で確認が要る |
 | U-A7 | `.pkg` (macOS) も `buildUploads` で上げられるか。三者ツールは `.ipa` のみと言う (二次) | `Platform` に `MAC_OS` はあるので、仕様上は通るはず |
 | U-A8 | ドライラン相当が本当に無いか。966パスを目視で確認したわけではない | Play との差が一番大きいところ |
+| **U-A9** | **`betaGroups` の `isInternalGroup` が実際に返るか。** 返らない場合、実装は全グループを外部扱いにしてベータ審査を投げる | 内部グループに対して不要な審査を投げることになる。逆よりは安全だが、余計な待ちが入る |
+| U-A10 | `reviewSubmissions` の `state` に実際どんな値が入るか。仕様では enum ではなく素の文字列 | 状態で分岐する実装ができない |
+| U-A11 | `betaGroups/{id}/relationships/builds` の `DELETE` にどんなボディが要るか | 未実装のまま残している唯一の操作 |
 
 ---
 
 ## 10. 次の一歩
 
-Stage 5〜6 は実装済み。`colaxy_store_console` の `AppStoreConnectClient` を
+Stage 5〜7 は実装済み。`colaxy_store_console` の `AppStoreConnectClient` を
 そのまま土台にしたので、認証・リトライ・ページングの作業はゼロだった
 (5節の「再利用できる既存資産」が Apple 側でもそのまま効いた)。
 
@@ -392,8 +395,12 @@ Stage 5〜6 は実装済み。`colaxy_store_console` の `AppStoreConnectClient`
 2. 1ロケールだけ `--locales=ja --no-screenshots` で書く (Stage 5)
 3. スクショを1枚通す (Stage 6)。**U-A5 (分割の並列度) / U-A6 (`ipadPro13` の
    対応先)** がここで片付く。特に U-A6 は二次情報のままなので要確認
-4. `buildUploads` を実装する (Stage 8 の前倒し)。U-A3 / U-A7
-5. TestFlight と提出 (Stage 7)。`reviewSubmissions` 側を使うこと
+4. **TestFlight を内部グループで1回通す。**
+   `--testflight=<内部グループ名>`。**外部グループで先に試さないこと** —
+   ベータ審査が走るので取り消しが効かない。U-A9 がここで片付く
+5. `buildUploads` を実装する (Stage 8)。U-A3 / U-A7 — **残る唯一の未実装**
+6. ~~TestFlight と提出 (Stage 7)~~ ✅ **実装完了。** 分かったことは
+   [dart_native_pipeline.md](dart_native_pipeline.md) 7-A / 7-B
 
 > **Apple 側には dry-run が無い**ので、Play のような「安全な予行演習」ができない。
 > `--doctor` は読み取り専用にとどめ、書き込みの検証は

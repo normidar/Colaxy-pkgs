@@ -67,8 +67,11 @@ class between them.
 `deliver` — the metadata and screenshot halves. Apple's binary upload
 (`buildUploads`, added in App Store Connect API 4.1) is not implemented yet.
 
-`pilot` is out of scope for now. So is `gym`: wrapping `xcodebuild` in Dart
-calls the same binary and improves nothing.
+`pilot` — TestFlight group assignment, tester notes, tester invitations and
+beta review submission.
+
+`gym` stays out of scope: wrapping `xcodebuild` in Dart calls the same binary
+and improves nothing.
 
 ## Install
 
@@ -380,6 +383,51 @@ A capture whose device this package cannot place is **reported, not dropped**:
 > generation numbers are known to disagree. Confirm it before trusting a
 > release to it.
 
+### TestFlight: assigning a build is not enough
+
+```bash
+dart run colaxy_store_publish:publish-ios --testflight=Internal,Beta
+```
+
+Giving a build to an **external** group succeeds, shows the build against the
+group in App Store Connect, and delivers it to nobody. It sits at
+`READY_FOR_BETA_SUBMISSION` until something posts a `betaAppReviewSubmissions`.
+Every request involved reports success.
+
+`TestFlightApi.distribute` does the whole sequence — tester notes, group
+assignment, and the beta review submission when any group needs one — and
+warns about the two states that strand a build:
+
+- an external group with no beta review submission,
+- a build with **no export compliance answer**, which sits in
+  `MISSING_EXPORT_COMPLIANCE` and reaches nobody.
+
+A group whose kind Apple did not report is treated as **external**. Assuming
+internal would skip the review and strand the build with nothing saying why.
+
+> Tester notes are `betaBuildLocalizations.whatsNew`, which is **not** the
+> `appStoreVersionLocalizations.whatsNew` on the public listing. They come
+> from the same `release_notes.txt` but are two separate writes to two
+> resources with different lifetimes.
+
+### Submitting for review is never automatic
+
+`appStoreVersionSubmissions` accepts `DELETE` only, so anything telling you to
+POST there is describing an endpoint that no longer does that. The current
+path is three requests, and the middle one is easy to miss:
+
+```dart
+final submission = await publisher.reviewSubmissions.prepare(
+  platform: 'IOS',
+  appStoreVersionId: version.id,
+);            // creates the submission *and* its item — submits nothing
+await publisher.reviewSubmissions.submit(submission.id);   // this submits
+```
+
+A submission with no item is valid, submittable, and submits nothing. There is
+no combined convenience and no CLI flag: cancelling a submission costs a review
+cycle, so the second line stays a line you have to write.
+
 ### There is no dry run, and failures do not abort
 
 `edits.validate` has no App Store equivalent, and imitating it locally would
@@ -433,6 +481,11 @@ locales that would have worked.
 | `AppInfoLocalizationsApi` | `list`, `get`, `update` |
 | `AppScreenshotsApi` | `sets`, `ensureSet`, `list`, `upload`, `delete`, `deleteAll`, `awaitProcessing` |
 | `AssetUploader` | Chunked transfer to Apple's asset host, plus the MD5 |
+| `AppStoreBuildsApi` | `list`, `latest`, `betaDetail`, `setExportCompliance`, `setTesterNote`, `submitForBetaReview` |
+| `BetaGroupsApi` | `list`, `byName`, `create`, `addBuild`, `testers`, `addTesters` |
+| `BetaTestersApi` | `list`, `invite`, `remove` |
+| `TestFlightApi` | `distribute` — assignment, notes and beta review in one |
+| `ReviewSubmissionsApi` | `list`, `prepare`, `submit`, `cancel` |
 | `FastlaneIosMetadata` | `locales`, `listing`, `screenshots`, `unmappedScreenshots` |
 | `FastlaneIosListing` | One locale's text, split into its two halves |
 
@@ -443,10 +496,12 @@ locales that would have worked.
 `--feature-graphic`, `--error-if-in-review`, `--skip-check`, `--allow-empty`.
 Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`.
 
-`dart run colaxy_store_publish:publish-ios` — `--doctor`, `--root=DIR`,
-`--locales=a,b`, `--no-app-info`, `--no-version-text`, `--no-screenshots`,
-`--replace-screenshots`, `--no-wait`, `--platform=IOS`. Credentials come from
-`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_P8` and `ASC_APP_ID`.
+`dart run colaxy_store_publish:publish-ios` — `--doctor`,
+`--testflight=A,B`, `--root=DIR`, `--locales=a,b`, `--no-app-info`,
+`--no-version-text`, `--no-screenshots`, `--replace-screenshots`, `--no-wait`,
+`--platform=IOS`, `--no-beta-review`, `--build=NUMBER`. Credentials come from
+`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_P8` and `ASC_APP_ID`. **No flag submits
+for review.**
 
 Both exit `0` on success, `1` when the store rejected something or a check
 found errors, `64` for bad arguments or missing credentials. See `--help`.
@@ -463,6 +518,8 @@ found errors, `64` for bad arguments or missing credentials. See `--help`.
 | `ScreenshotDisplayType` | All 33 App Store device slots, plus `byCaptureName` |
 | `AppStoreVersionState` | 20 values; only `PREPARE_FOR_SUBMISSION` is writable |
 | `AppVersionState` | 15 values — a **different** enum on the same resource |
+| `InternalBetaState` / `ExternalBetaState` | Also different: only the external one has the beta review cycle |
+| `BetaTesterState` / `BetaInviteType` | Where a tester is, and how they got there |
 
 ### Failures
 

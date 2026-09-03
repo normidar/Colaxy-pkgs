@@ -131,6 +131,38 @@ store went through `fastlane supply`.
   cannot place are reported in `unmappedScreenshots` rather than dropped.
 - `colaxy-store-publish-ios` executable, with `--doctor` (read-only).
 
+### TestFlight and submission
+- `TestFlightApi.distribute` does the whole sequence: tester notes, group
+  assignment, and the beta review submission when a group needs one.
+- It exists because **assigning a build to an external group is not enough**.
+  The assignment succeeds, App Store Connect shows the build against the
+  group, and no tester receives it — the build sits at
+  `READY_FOR_BETA_SUBMISSION` until something posts a
+  `betaAppReviewSubmissions`. Every request in that failure reports success.
+- A group whose kind Apple did not report is treated as **external**.
+  Assuming internal would skip the review and strand the build silently.
+- Warns on the other state that strands a build: no export compliance answer
+  leaves it in `MISSING_EXPORT_COMPLIANCE`, reaching nobody.
+- `InternalBetaState` and `ExternalBetaState` are modelled separately, as the
+  specification has them. Only the external one carries the review cycle.
+- Tester notes are `betaBuildLocalizations.whatsNew`, **not** the listing's
+  `whatsNew`. Same `release_notes.txt`, two resources, two writes.
+- `AppStoreBuildsApi` is read-only for creating builds — `/v1/builds` accepts
+  `GET` only — and `latest` sorts on `uploadedDate` rather than trusting the
+  response order, which is not documented as newest-first.
+- Removing a build from a group is deliberately absent: the endpoint needs a
+  request body on `DELETE`, which the shared client cannot send, and
+  inventing a POST path instead would have been a guess.
+
+### Submitting for review
+- `ReviewSubmissionsApi`, and **nothing calls it automatically**. Cancelling a
+  submission costs a review cycle, so it stays two explicit lines with no
+  combined convenience and no CLI flag.
+- `prepare` creates the submission *and* its item. A submission with no item
+  is valid, submittable, and submits nothing — the easiest step to miss.
+- `appStoreVersionSubmissions` accepts `DELETE` only, so documentation telling
+  you to POST there is describing something that no longer works that way.
+
 ### Not yet verified
 No call has been made against a real account on either store. The API surface
 comes from reading the `androidpublisher/v3` generated client and Apple's own

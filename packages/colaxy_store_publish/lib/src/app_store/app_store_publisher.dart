@@ -3,10 +3,15 @@ import 'package:colaxy_store_publish/src/app_store/app_info.dart';
 import 'package:colaxy_store_publish/src/app_store/app_info_localizations_api.dart';
 import 'package:colaxy_store_publish/src/app_store/app_infos_api.dart';
 import 'package:colaxy_store_publish/src/app_store/app_screenshots_api.dart';
+import 'package:colaxy_store_publish/src/app_store/app_store_builds_api.dart';
 import 'package:colaxy_store_publish/src/app_store/app_store_version.dart';
 import 'package:colaxy_store_publish/src/app_store/app_store_version_localizations_api.dart';
 import 'package:colaxy_store_publish/src/app_store/app_store_versions_api.dart';
 import 'package:colaxy_store_publish/src/app_store/asset_uploader.dart';
+import 'package:colaxy_store_publish/src/app_store/beta_groups_api.dart';
+import 'package:colaxy_store_publish/src/app_store/beta_testers_api.dart';
+import 'package:colaxy_store_publish/src/app_store/review_submissions_api.dart';
+import 'package:colaxy_store_publish/src/app_store/test_flight_api.dart';
 import 'package:http/http.dart' as http;
 
 /// The entry point for publishing to the App Store.
@@ -112,6 +117,28 @@ class AppStorePublisher {
 
   /// The app's app-wide info records.
   AppInfosApi get appInfos => AppInfosApi(client: _client, appId: appId);
+
+  /// The app's builds. Read-only as far as creating them goes.
+  AppStoreBuildsApi get builds =>
+      AppStoreBuildsApi(client: _client, appId: appId);
+
+  /// The app's TestFlight groups.
+  BetaGroupsApi get betaGroups =>
+      BetaGroupsApi(client: _client, appId: appId);
+
+  /// The account's TestFlight testers.
+  BetaTestersApi get betaTesters => BetaTestersApi(client: _client);
+
+  /// Getting a build to TestFlight groups, beta review included.
+  TestFlightApi get testFlight =>
+      TestFlightApi(builds: builds, groups: betaGroups, onLog: onLog);
+
+  /// Submitting a version to App Store review.
+  ///
+  /// Nothing else in this package calls it: submitting is the one action a
+  /// pipeline takes that a human cannot quietly undo.
+  ReviewSubmissionsApi get reviewSubmissions =>
+      ReviewSubmissionsApi(client: _client, appId: appId);
 
   /// Screenshots, which need an uploader as well as the API.
   AppScreenshotsApi get screenshots =>

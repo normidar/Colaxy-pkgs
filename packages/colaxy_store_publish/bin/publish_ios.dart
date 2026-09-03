@@ -27,7 +27,17 @@ rather than aborting the run.
 Modes
   --doctor        Check the credentials and report what is writable, then
                   stop. Reads only; nothing is created or changed.
+  --testflight=GROUPS
+                  Give the latest build to these TestFlight groups (comma
+                  separated), then stop. Writes tester notes from
+                  release_notes.txt, and submits for beta review when any
+                  group is external — without that, an external group is
+                  assigned the build and no tester ever receives it.
   (none)          Write the metadata. This publishes.
+
+There is no submit-for-review flag. Submitting is the one action here that a
+human cannot quietly undo, so it stays a deliberate two-line call through
+ReviewSubmissionsApi rather than something a CI job can reach by accident.
 
 Options
   --root=DIR      The project directory holding fastlane/ (default: .).
@@ -45,6 +55,11 @@ Options
                   Processing is asynchronous and can reject an asset that
                   uploaded cleanly, so waiting is on by default.
   --platform=IOS  Narrow the version lookup (IOS, MAC_OS, TV_OS, VISION_OS).
+  --no-beta-review
+                  With --testflight, skip the beta review submission. Leaves
+                  external groups without the build.
+  --build=NUMBER  With --testflight, pick a build number instead of the
+                  most recently uploaded one.
 
 Environment
   ASC_KEY_ID      10-character key ID.
@@ -72,6 +87,8 @@ Future<void> main(List<String> args) async {
         !arg.startsWith('--root=') &&
         !arg.startsWith('--locales=') &&
         !arg.startsWith('--platform=') &&
+        !arg.startsWith('--testflight=') &&
+        !arg.startsWith('--build=') &&
         !const {
           '--doctor',
           '--no-app-info',
@@ -79,6 +96,7 @@ Future<void> main(List<String> args) async {
           '--no-screenshots',
           '--replace-screenshots',
           '--no-wait',
+          '--no-beta-review',
         }.contains(arg),
   );
   if (unknown.isNotEmpty) {
@@ -126,6 +144,18 @@ Future<void> main(List<String> args) async {
       return;
     }
 
+    final groups = _option(args, '--testflight=');
+    if (groups != null) {
+      await _testFlight(
+        publisher,
+        metadata,
+        groupNames: _locales(groups)?.toList() ?? const [],
+        buildNumber: _option(args, '--build='),
+        submitForBetaReview: !args.contains('--no-beta-review'),
+      );
+      return;
+    }
+
     final report = await AppStoreMetadataPublisher(
       publisher: publisher,
       metadata: metadata,
@@ -160,6 +190,56 @@ Future<void> main(List<String> args) async {
   } finally {
     publisher.close();
   }
+}
+
+/// Gives a build to TestFlight groups, with the tester notes from disk.
+///
+/// The release notes come from the same `release_notes.txt` the App Store
+/// listing uses, but they are a different field on a different resource —
+/// two writes, not one.
+Future<void> _testFlight(
+  AppStorePublisher publisher,
+  FastlaneIosMetadata metadata, {
+  required List<String> groupNames,
+  required bool submitForBetaReview,
+  String? buildNumber,
+}) async {
+  if (groupNames.isEmpty) {
+    stderr.writeln('--testflight needs at least one group name.');
+    exitCode = 64;
+    return;
+  }
+
+  final build = await publisher.builds.latest(version: buildNumber);
+  if (build == null) {
+    stderr.writeln(
+      buildNumber == null
+          ? 'No build found. Upload one first — this package cannot yet, '
+                'though the API can (buildUploads).'
+          : 'No build numbered $buildNumber.',
+    );
+    exitCode = 1;
+    return;
+  }
+  stdout.writeln('build ${build.version} (${build.processingState})');
+
+  final notes = <String, String>{};
+  try {
+    for (final locale in metadata.locales()) {
+      final text = metadata.listing(locale).releaseNotes;
+      if (text != null) notes[locale] = text;
+    }
+  } on StoreConsoleException {
+    // No metadata tree is fine here: distributing a build does not need one.
+  }
+
+  final detail = await publisher.testFlight.distribute(
+    buildId: build.id,
+    groupNames: groupNames,
+    testerNotes: notes,
+    submitForBetaReview: submitForBetaReview,
+  );
+  stdout.writeln(detail ?? 'distributed; Apple reported no TestFlight state');
 }
 
 /// Reports what the credentials reach, without writing anything.
@@ -208,6 +288,15 @@ Future<void> _doctor(
   } on StoreConsoleException catch (error) {
     stdout.writeln('FAIL   local locales            ${error.message}');
   }
+
+  final groups = await publisher.betaGroups.list();
+  stdout.writeln(
+    groups.isEmpty
+        ? 'WARN   TestFlight groups        none'
+        : 'PASS   TestFlight groups        '
+              '${groups.map((g) => '${g.name}'
+                  '${g.needsBetaReview ? ' (external)' : ''}').join(', ')}',
+  );
 
   if (version == null || appInfo == null) exitCode = 1;
 }
