@@ -25,6 +25,7 @@ export PLAY_KEY_JSON="$(cat secrets/play-api.json)"
 export PLAY_PACKAGE=com.example.app
 
 dart run colaxy_store_publish:publish --check     # local only, no network
+dart run colaxy_store_publish:publish --doctor    # credentials and permissions
 dart run colaxy_store_publish:publish --dry-run   # Google validates, nothing ships
 dart run colaxy_store_publish:publish             # publishes
 ```
@@ -223,6 +224,37 @@ never vetoes.
 
 Errors block a publish by default; warnings do not. `--skip-check` overrides.
 
+## Checking the account
+
+```bash
+dart run colaxy_store_publish:publish --doctor
+```
+
+The other half, and the part `MetadataCheck` cannot know. Setting up a service
+account has several independent failure points, and every one of them shows up
+as the same unhelpful `401` or `403` partway through a publish: the key is
+valid but the account was never invited; it was invited but has no permission
+on this app; it can read the app but not edit it; the package name names an app
+it cannot see.
+
+```text
+PASS   Edit permission              opened edit 08154711…, expires 2026-09-04…
+PASS   Store listings               3 locales: en-US, ja-JP, zh-TW
+PASS   Release tracks               internal (1), production (2)
+PASS   Local vs store locales       new here: de-DE
+PASS   Cleanup                      discarded edit 08154711…; nothing written
+```
+
+**It opens an edit and discards it.** That is a deliberate write and the only
+way to prove edit permission — reading a listing succeeds for an account that
+could never publish. A discarded edit leaves nothing behind, but it does hold
+the app's edit lock while it exists, so this is not something to run in a loop.
+Nothing else is written and nothing is committed.
+
+`EMPTY` is not `PASS`: an app with no listing yet proves the credentials and
+the request shape, not that reading a listing works. `PlayDoctor` is the same
+thing as a library.
+
 ## Image validation is Google's job
 
 Dimensions, aspect ratios, file sizes, how many screenshots a listing needs —
@@ -283,10 +315,12 @@ drop a halted rollout or a still-serving older one.
 | `FastlaneImageSet` | One locale's files for one slot |
 | `MetadataCheck` | Structural problems in the tree, before any request |
 | `MetadataIssue` | One problem, with the fix for it |
+| `PlayDoctor` | Credentials, permissions, and what the store already has |
+| `DoctorCheck` | One check's result |
 
 ### Command line
 
-`dart run colaxy_store_publish:publish` — `--check`, `--dry-run`,
+`dart run colaxy_store_publish:publish` — `--check`, `--doctor`, `--dry-run`,
 `--metadata=DIR`, `--locales=a,b`, `--replace-screenshots`,
 `--feature-graphic`, `--error-if-in-review`, `--skip-check`, `--allow-empty`.
 See `--help`. Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`.

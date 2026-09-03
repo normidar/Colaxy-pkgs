@@ -64,8 +64,23 @@ store went through `fastlane supply`.
   *then* appends the minimum-version footer, so a description at the limit is
   over it on disk.
 
+### Checking the account
+- `PlayDoctor`, and `--doctor` on the executable: credentials, permissions,
+  and what the store already has. The half `MetadataCheck` cannot know.
+- It opens an edit and discards it. That is the only way to prove edit
+  permission — reading a listing succeeds for an account that could never
+  publish. Nothing else is written and nothing is committed.
+- Setting up a service account has several independent failure points, and
+  every one of them surfaces as the same `401` or `403` partway through a
+  publish. Each is now a separate line with its own verdict.
+- `EMPTY` is distinct from `PASS`, as in `colaxy_store_console`'s verify tool:
+  an app with no listing yet proves the credentials, not the decoding.
+- It also reports which locales exist locally but not on the store, and which
+  the store has that a publish will leave alone. Neither is an error.
+
 ### Command line
-- `dart run colaxy_store_publish:publish`, with `--check`, `--dry-run`,
+- `dart run colaxy_store_publish:publish`, with `--check`, `--doctor`,
+  `--dry-run`,
   `--locales`, `--replace-screenshots`, `--feature-graphic`,
   `--error-if-in-review`, `--skip-check` and `--allow-empty`.
 - Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`, matching

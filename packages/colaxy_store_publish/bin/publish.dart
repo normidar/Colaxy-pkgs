@@ -20,9 +20,14 @@ Usage: dart run colaxy_store_publish:publish [options]
 Modes
   --check         Check the local tree and stop. Makes no network calls, needs
                   no credentials. Safe in a pre-commit hook.
+  --doctor        Check the credentials, the permissions and what the store
+                  already has, then stop. Opens an edit and discards it, which
+                  is the only way to prove edit permission — reading a listing
+                  succeeds for an account that could never publish. Nothing
+                  else is written and nothing is committed.
   --dry-run       Stage every change in a Play edit, have Google validate it,
                   then discard. Nothing reaches the store.
-  (neither)       Stage the changes and commit the edit. This publishes.
+  (none)          Stage the changes and commit the edit. This publishes.
 
 Options
   --metadata=DIR  The fastlane/metadata/android directory
@@ -74,6 +79,7 @@ Future<void> main(List<String> args) async {
         !arg.startsWith('--locales=') &&
         !const {
           '--check',
+          '--doctor',
           '--dry-run',
           '--replace-screenshots',
           '--feature-graphic',
@@ -91,6 +97,7 @@ Future<void> main(List<String> args) async {
   }
 
   final checkOnly = args.contains('--check');
+  final doctorOnly = args.contains('--doctor');
   final dryRun = args.contains('--dry-run');
   final metadata = _metadata(_option(args, '--metadata='));
   final locales = _locales(_option(args, '--locales='));
@@ -113,7 +120,10 @@ Future<void> main(List<String> args) async {
     if (blocking > 0) exitCode = 1;
     return;
   }
-  if (blocking > 0 && !args.contains('--skip-check')) {
+  // The doctor is about the account, not the tree, so a broken tree must not
+  // stop it — a missing metadata directory is the most likely reason someone
+  // is checking their credentials in the first place.
+  if (blocking > 0 && !doctorOnly && !args.contains('--skip-check')) {
     stderr.writeln(
       'Refusing to publish with ${_count(blocking, 'blocking problem')}. '
       'Fix them, or pass --skip-check.',
@@ -144,6 +154,23 @@ Future<void> main(List<String> args) async {
   } on StoreConsoleException catch (error) {
     stderr.writeln(error);
     exitCode = 1;
+    return;
+  }
+
+  if (doctorOnly) {
+    final checks = await PlayDoctor(
+      publisher: publisher,
+      metadata: metadata,
+    ).run();
+    publisher.close();
+
+    stdout.writeln();
+    checks.forEach(stdout.writeln);
+    final failed = checks
+        .where((check) => check.outcome == DoctorOutcome.fail)
+        .length;
+    stdout.writeln('\n${_count(failed, 'failure')}.');
+    if (failed > 0) exitCode = 1;
     return;
   }
 

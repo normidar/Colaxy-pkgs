@@ -33,6 +33,8 @@ export 'package:colaxy_store_publish/src/google_play/play_release_status.dart';
 export 'package:colaxy_store_publish/src/google_play/play_track.dart';
 export 'package:colaxy_store_publish/src/google_play/play_track_release.dart';
 export 'package:colaxy_store_publish/src/google_play/play_tracks_api.dart';
+export 'package:colaxy_store_publish/src/publish/doctor_check.dart';
+export 'package:colaxy_store_publish/src/publish/play_doctor.dart';
 export 'package:colaxy_store_publish/src/publish/play_metadata_publisher.dart';
 export 'package:colaxy_store_publish/src/publish/play_publish_options.dart';
 export 'package:colaxy_store_publish/src/publish/play_publish_report.dart';
