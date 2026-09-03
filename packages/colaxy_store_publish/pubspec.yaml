@@ -1,0 +1,26 @@
+dependencies:
+  colaxy_store_console: ^0.1.0
+  googleapis: ^17.0.0
+  http: ^1.6.0
+  meta: ^1.19.0
+  path: ^1.9.0
+description: Publish Android listings, screenshots and app bundles to Google
+  Play from pure Dart. Reads the fastlane supply directory layout, so it drops
+  in where `fastlane supply` was, without a Ruby toolchain.
+dev_dependencies:
+  test: ^1.24.0
+  very_good_analysis: ^10.3.0
+environment:
+  sdk: ^3.8.0
+repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_store_publish
+issue_tracker: https://github.com/normidar/colaxy-pkgs/issues
+name: colaxy_store_publish
+homepage: https://github.com/normidar/colaxy-pkgs/tree/main/packages/colaxy_store_publish
+topics:
+  - google-play
+  - fastlane
+  - publishing
+  - release
+  - android
+version: 0.1.0
+resolution: workspace

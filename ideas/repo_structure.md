@@ -1,9 +1,12 @@
 # リポジトリ構成: パッケージのグループ化
 
-**ステータス: 未着手。低リスクなので、やるなら早い方がよい**(7節の理由)。
+**ステータス: 見送り中。** 2026-09-03 に「当面は `packages/` 直下の平坦のままでよい」
+という判断があったため、実行していない。低リスクなので、やるなら早い方がよい
+(7節の理由) という評価自体は変わらない。
 
-調査日: 2026-08-29。パッケージが10個になり、性格の違うものが `packages/` 直下に
-平坦に並んでいるため、まとめたいという話から。
+調査日: 2026-08-29。更新: 2026-09-03。
+パッケージが10個になり、性格の違うものが `packages/` 直下に平坦に並んでいるため、
+まとめたいという話から。
 
 ---
 
@@ -13,17 +16,19 @@
 |---|---|
 | ✅ **検証済み** | 全パッケージの `pubspec.yaml` を読み、Flutter 依存の有無・CLI の有無・URL フィールドの数を確認 |
 | ✅ **検証済み** | ルートの `workspace:` / `melos:` の定義を確認 |
+| ✅ **検証済み** | S-2 / S-4 を実測で解消 (10節) |
 | ⚠️ **未検証** | 移動を実際に試していない。`workspace` グロブの挙動は定義からの推論 |
 
 ---
 
-## 1. 現状 (実測)
+## 1. 現状 (実測・2026-09-03 時点で12個)
 
 | パッケージ | 種別 | CLI | 性格 |
 |---|---|---|---|
 | `colaxy_icons_launcher` | **純 Dart** | ✅ | リリースツール |
 | `colaxy_localization` | **純 Dart** | ✅ | リリースツール |
 | `colaxy_store_console` | **純 Dart** | ✅ (`verify`) | リリースツール |
+| `colaxy_store_publish` | **純 Dart** | — | リリースツール (**新規**) |
 | `colaxy_screenshot` | **Flutter** | — | リリースツール (**例外**) |
 | `app_info_tile` | Flutter | — | UI 部品 |
 | `app_lang_selector` | Flutter | — | UI 部品 |
@@ -31,8 +36,18 @@
 | `colaxy_adaptive_scaffold` | Flutter | — | UI 部品 |
 | `colaxy_tutorial` | Flutter | — | UI 部品 |
 | `riverpod_helper` | Flutter | — | UI / 状態管理 |
+| `zaim_api` | **純 Dart** | — | **どちらでもない** (外部 API クライアント) |
 
-10個すべてが `packages/` 直下に平坦に並んでいる。
+12個すべてが `packages/` 直下に平坦に並んでいる。
+
+> **5節の分割軸が1つ崩れた。** 調査時は10個で「リリースツール 4 : UI 部品 6」に
+> きれいに割れていたが、`zaim_api` は**どちらにも入らない**。
+> 外部サービスのクライアントであって、このリポジトリのリリース工程とは無関係。
+> 実行するなら `apis/` のような第3グループを作るか、`zaim_api` を直下に残すかの
+> 判断が先に要る。**2軸で足りるという前提はもう成り立たない。**
+>
+> 一方 `colaxy_store_publish` は素直に `tools/` に入る (4節の「将来 store_publish」が
+> そのまま該当)。
 
 ---
 
@@ -124,15 +139,18 @@ workspace:
 
 ### 6-2. `repository:` と `homepage:` の URL が全部切れる
 
-全10パッケージが以下の形式を持つ (実測):
+全パッケージが以下の形式を持つ (実測):
 
 ```yaml
 homepage:   https://github.com/normidar/colaxy-pkgs/tree/main/packages/<name>
 repository: https://github.com/normidar/colaxy-pkgs/tree/main/packages/<name>
 ```
 
-→ **20箇所の更新が必要** (2フィールド × 10パッケージ)。
+→ **24箇所の更新が必要** (2フィールド × 12パッケージ)。
 `issue_tracker:` はパスを含まない (`/issues`) ので影響なし。
+
+> 調査時は20箇所だった。**5日で4箇所増えた**ことが 6-3 の「遅らせるほど損」を
+> そのまま裏づけている。
 
 ### 6-3. 公開済みバージョンのリンクは直せない
 
@@ -189,12 +207,13 @@ pub.dev は**そのバージョンの pubspec に書かれた URL** を表示す
 
 ## 10. 未検証事項
 
-| # | 事項 |
-|---|---|
-| S-1 | `workspace: packages/*/*` が期待どおり動くか。実際に試していない |
-| S-2 | CI 設定 (GitHub Actions など) にパスの直書きがあるか |
-| S-3 | 各パッケージの `example/` が相対パス参照を持っていないか |
-| S-4 | `pubspec_overrides.yaml` (melos の `usePubspecOverrides: true`) が相対パスを持つか。持つ場合は再生成が必要 |
+| # | 事項 | 状態 |
+|---|---|---|
+| S-1 | `workspace: packages/*/*` が期待どおり動くか。実際に試していない | **未検証** |
+| S-2 | CI 設定 (GitHub Actions など) にパスの直書きがあるか | ✅ **解消。** `.github/workflows/ci.yml` と `Makefile` に `packages/` を含む行はゼロ |
+| S-3 | 各パッケージの `example/` が相対パス参照を持っていないか | **未検証** |
+| S-4 | `pubspec_overrides.yaml` (melos の `usePubspecOverrides: true`) が相対パスを持つか | ✅ **解消。** コミットされたものは1つも無い。melos が bootstrap 時に生成するので、移動後に再 bootstrap すれば済む |
+| **S-5** | **`zaim_api` をどのグループに置くか** | **新規。2軸で割れないので、実行前に判断が要る** (1節) |
 
 ---
 

@@ -1,10 +1,13 @@
-# ストアへの投入層 (`colaxy_store_publish` 仮)
+# ストアへの投入層 (`colaxy_store_publish`)
 
-**ステータス: 未着手。ただし優先度は高い。**
+**ステータス: Play 側は実装済み。実アカウント未検証。ASC 側は未着手。**
 
-調査日: 2026-08-29。`colaxy_store_console` の Firebase 拡張を検討した際に、
-リポジトリ全体を見渡して見つかった穴。Firebase 案 ([firebase_reporting.md](firebase_reporting.md))
-を保留にしたのに対し、**こちらは着手する価値がある**という判断。
+調査日: 2026-08-29。実装日: 2026-09-03。
+`colaxy_store_console` の Firebase 拡張を検討した際に、リポジトリ全体を見渡して
+見つかった穴。Firebase 案 ([firebase_reporting.md](firebase_reporting.md))
+を保留にしたのに対し、**こちらは着手する価値がある**という判断だった。
+
+パッケージ名は `colaxy_store_publish` に確定 (6節の候補から選択)。
 
 ---
 
@@ -14,8 +17,93 @@
 |---|---|
 | ✅ **検証済み** | Google Play 側は `googleapis` 17.0.0 の `androidpublisher/v3.dart` を**実際に読んだ**。リソース・メソッド・モデルのフィールド・`imageType` の許容値は実物 |
 | ✅ **検証済み** | `colaxy_localization` / `colaxy_screenshot` / `colaxy_store_console` のソースを読み、出力パスと既存の API 利用範囲を確認 |
+| ✅ **検証済み** | **実装した。** モック (`MockClient`) に対するテスト81件が通る |
+| ⚠️ **未検証** | **実アカウントに対して1度も叩いていない。** ここが最大の残リスク (7節 U-8) |
 | ⚠️ **未検証** | **App Store Connect 側は一切確認していない。** Apple は `googleapis` に含まれないので手元で読めるものが無い。本文中の ASC の記述は全て**要確認** |
-| ⚠️ **未検証** | 実アカウントに対して1度も叩いていない |
+
+---
+
+## 0. 実装して分かったこと (調査時の記述との差分)
+
+**調査の表が実物とズレていた箇所が4つ、調査で見落としていた API が3つあった。**
+`colaxy_store_console` の「実データでしか分からないことがある」という教訓は、
+今回は**実データを見る前のソース読解の段階で**同じ形で出た。
+
+### 0-1. ファイル名が違った (3節の表の誤り)
+
+調査時の表は `short_description` / `full_description` と書いていたが、
+`colaxy_localization` が実際に書くのは **`.txt` 付き**:
+
+| 実際の出力 | `Listing` |
+|---|---|
+| `title.txt` | `title` |
+| `short_description.txt` | `shortDescription` |
+| `full_description.txt` | `fullDescription` |
+| `changelogs/default.txt` | トラックのリリースノート |
+
+**まとめた時点でバグが入る (R-1)** がそのまま再現した形。
+
+### 0-2. `changelogs/` は `default.txt` しか生成されない
+
+fastlane supply の規約は `changelogs/<versionCode>.txt` で、`default.txt` は
+フォールバック。`colaxy_localization` は `default.txt` だけを書く。
+→ U-5 の答え: **リリース単位** (`TrackRelease.releaseNotes`) であり、
+実装側は `<versionCode>.txt` → `default.txt` の順に探す形にした。
+
+### 0-3. `featureGraphic.png` が規約外の場所にある
+
+`colaxy_screenshot` は `fastlane/metadata/android/featureGraphic.png` に書く。
+supply の規約は `<locale>/images/featureGraphic.png` なので、
+**`fastlane supply` もこれを拾っていなかった**はず。
+
+→ `FastlaneMetadata.strayFeatureGraphic` として明示的に露出し、
+`PlayPublishOptions.uploadStrayFeatureGraphic` (既定 `false`) でのみ全ロケールに送る。
+**本来の直し方は `colaxy_screenshot` 側を規約に合わせること**で、これは別件。
+
+### 0-4. `commit` にレビュー破壊のパラメータがあった (調査で見落とし)
+
+`edits.commit` は `changesInReviewBehavior` と `changesNotSentForReview` を取る。
+**既定値は `CANCEL_IN_REVIEW_AND_SUBMIT`** — つまり
+**メタデータを1行直しただけの投入が、審査中のリリースの審査を取り消して出し直す。**
+
+調査時にこれを見落としていたのは、4-1 で `edits` を「トランザクションだから安全」と
+まとめた結果、commit の引数を読まなかったため。**トランザクション性と、
+commit が外の状態に与える影響は別の話**だった。
+
+→ `ChangesInReviewBehavior` として露出。`errorIfInReview` を選べるようにした。
+
+### 0-5. `images.upload` に `aiGeneratedState` が増えていた
+
+AI 生成かどうかの開発者による申告。Google が検出するのではなく自己申告。
+省略可なので既定では送らない。`PlayAiGeneratedState` として露出。
+
+### 0-6. `AppEdit.expiryTimeSeconds` が存在した → U-6 が半分解決
+
+エディットの有効期限は**レスポンスに入っている**。
+`PlayEditSession.expiresAt` / `timeRemaining` として露出した。
+残る未検証は「実際に何分か」だけ。
+
+### 0-7. `listings.get` / `tracks.get` の 404 が二義的
+
+ロケールのリスティングが無い場合と、**エディットが死んでいる場合**が
+どちらも 404 で返る。後者を「まだ無い」と解釈すると、
+**何も投入していないのに成功として報告する**実装になる。
+
+→ `get` を `list` 経由で実装し、404 の経路を通らないようにした。
+リスティングは多くても数十件なので、追加リクエスト1回のコストで曖昧さが消える。
+
+### 0-8. `tracks.update` はリリース配列を丸ごと置換する
+
+新しいリリース1件だけを送ると、**halted のロールアウトや旧リリースが消える**。
+→ `PlayTracksApi.release` は必ず先に読んでマージする。
+
+### 0-9. U-4 の判断: 画像のローカル検証はしない
+
+`EditsImagesResource.upload` の制約 (サイズ・解像度・必要枚数) は調べていない。
+**調べずに実装した**のが正しいという判断で、
+Phase 2 の「ドキュメント化されていない値をローカルで強制しない」原則をそのまま適用。
+ローカルで見るのは「リクエストが組み立てられないもの」だけ
+(ファイルが無い / 拡張子が PNG でも JPEG でもない)。
 
 ---
 
@@ -88,16 +176,18 @@ appImageTypeUnspecified   ← "Do not use" と明記されている
 | `android/<locale>/images/phoneScreenshots` | `phoneScreenshots` |
 | `android/<locale>/images/sevenInchScreenshots` | `sevenInchScreenshots` |
 | `android/<locale>/images/tenInchScreenshots` | `tenInchScreenshots` |
-| `fastlane/metadata/android/featureGraphic.png` | `featureGraphic` |
+| `fastlane/metadata/android/featureGraphic.png` | `featureGraphic` ⚠️ **規約外の場所。0-3 参照** |
 
 **`colaxy_localization` の出力も `Listing` のフィールドに1対1で対応する:**
 
 | ファイル | `Listing` |
 |---|---|
 | `title.txt` | `title` |
-| `short_description` | `shortDescription` |
-| `full_description` | `fullDescription` |
-| `changelogs/` | トラックのリリースノート (`Track` 側) |
+| `short_description.txt` | `shortDescription` |
+| `full_description.txt` | `fullDescription` |
+| `changelogs/default.txt` | リリースのリリースノート (`TrackRelease` 側) |
+
+> 上の表は 0-1 / 0-2 で実物に合わせて修正済み。当初は `.txt` を落として書いていた。
 
 両方が fastlane の supply 規約に従っているため、**変換テーブルを新規に発明する必要がない**。
 やることは実質「これらのファイルを読んで API を呼ぶ」だけ。
@@ -172,59 +262,77 @@ Play 側の `commit` を隠さず、ASC 側は「途中失敗時に何が残る�
 
 ---
 
-## 6. 設計方針の案
+## 6. 設計方針 (実装済み)
 
-- **パッケージは分ける。** `colaxy_store_console` は「読む」で完結していて、
-  publish 済み (v0.1.0)。投入という真逆の性格を混ぜると、
-  「読むだけのつもりで入れた依存が書ける」状態になる。
-- **入力は fastlane 規約のディレクトリ。** 独自の中間形式を作らない (3節の理由)。
-- **`commit` を隠さない。** Play のトランザクションは利点なので、
-  「変更を積む」→「commit する」を利用者に見せる。dry-run は `validate` で自然に実装できる。
-- **破壊的操作は個別フラグ。** `deleteall` 系は既定で無効。
-- **バイナリは Play のみ**と最初から明示。
+方針は5つとも当初案のまま採用した。変更した点はない。
+
+- **パッケージは分けた。** `colaxy_store_publish` として独立。
+  ただし**依存の向きは `publish → console`** にした。
+  `PlayServiceAccount` / `RetryPolicy` / 例外階層を再利用するためで、
+  逆向き (console が publish に依存) ではないので
+  「読むだけのつもりで入れた依存が書ける」問題は起きない。
+  `RetryPolicy` と例外階層を2つ持つと、`GoogleApiError` のコメントが警告している
+  「2つのクライアントが 403 の意味で食い違う」がそのまま起きる。
+- **入力は fastlane 規約のディレクトリ。** 独自の中間形式は作っていない。
+- **`commit` を隠さない。** `PlayEditSession` が `validate` / `commit` /
+  `discard` / `discardQuietly` を持つ。dry-run は `edits.validate` そのもの。
+- **破壊的操作は個別フラグ。** `replaceScreenshots` (既定 `false`)。
+  `listings.deleteAll` はメソッドとしては存在するが、**どこからも呼ばれない**。
+- **バイナリは Play のみ。** README の冒頭に非対称の表を置いた。
+
+追加で必要になった方針が1つ:
+
+- **リスティングは読んでからマージする。** `listings.update` は全体置換なので、
+  `title.txt` しか無いロケールを素直に送ると**説明文が消える**。
+  ストアの現状を1回だけ読んで重ねる。これは調査時の設計に無かった。
 
 ### 名前
 
-`colaxy_store_publish` が候補。ただし `colaxy_store_console` と紛らわしいかもしれない。
-`colaxy_store_upload` / `colaxy_store_supply` (fastlane の supply に寄せる) も候補。
-範囲が確定してから決める。
+`colaxy_store_publish` に確定。
 
 ---
 
 ## 7. 未検証事項
 
-着手時に最初に潰すもの。`colaxy_store_console` で実データ検証が5件の誤りを暴いた前例がある。
+`colaxy_store_console` で実データ検証が5件の誤りを暴いた前例がある。
 
-| # | 事項 | なぜ重要か |
+| # | 事項 | 状態 |
 |---|---|---|
-| U-1 | **ASC 側の API を一切確認していない。** メタデータ更新 (`appStoreVersionLocalizations` 系?)、スクショ (`appScreenshotSets` / reservation + chunk upload?) | この文書の Apple 側の記述は全て推測。設計の半分が未確定 |
-| U-2 | ASC が本当に逐次反映か。トランザクション相当の仕組みが無いか | 4-1 の非対称が前提になっているので、外れると設計が変わる |
-| U-3 | Apple のバイナリアップロードが本当に ASC API 不可か | 可能なら「Play のみ」の線引きが不要になる |
-| U-4 | `EditsImagesResource.upload` の実際の制約 (最大サイズ、必要枚数、解像度) | ローカル検証すべきか、Google に弾かせるべきかの判断。`colaxy_store_console` の「ドキュメント化されていない値をローカルで強制しない」原則が効く |
-| U-5 | `changelogs/` → `Track` のリリースノートへの対応。トラック単位かリリース単位か | `colaxy_localization` との接続点 |
-| U-6 | エディットの有効期限。放置した `edits` がどうなるか | 失敗時のクリーンアップ設計に直結 |
-| U-7 | 同時に複数の `edits` を開いた場合の挙動 | CI で並列実行されうる |
+| U-1 | **ASC 側の API を一切確認していない。** メタデータ更新 (`appStoreVersionLocalizations` 系?)、スクショ (`appScreenshotSets` / reservation + chunk upload?) | **未着手。** この文書の Apple 側の記述は全て推測のまま |
+| U-2 | ASC が本当に逐次反映か。トランザクション相当の仕組みが無いか | **未着手** |
+| U-3 | Apple のバイナリアップロードが本当に ASC API 不可か | **未着手** |
+| U-4 | `EditsImagesResource.upload` の実際の制約 (最大サイズ、必要枚数、解像度) | **調べないと決めた** (0-9)。ローカル検証はしない |
+| U-5 | `changelogs/` → リリースノートへの対応。トラック単位かリリース単位か | **解決 (0-2)。** リリース単位 (`TrackRelease.releaseNotes`) |
+| U-6 | エディットの有効期限。放置した `edits` がどうなるか | **半分解決 (0-6)。** `expiryTimeSeconds` で取得できる。実際の長さは未確認 |
+| U-7 | 同時に複数の `edits` を開いた場合の挙動 | **推測で実装した。** 409 を `PlayEditConflictException` にして再試行しない。**409 が実際に返るかは未確認** |
+| **U-8** | **実アカウントに対して1度も叩いていない** | **新規。最大の残リスク** |
+| U-9 | `changesInReviewBehavior` の既定が本当にレビューを取り消すか (0-4) | discovery document の記述のみ。実挙動は未確認 |
+| U-10 | `bundles.upload` のサイズ上限。resumable が既定で正しいか | 未確認。resumable にしたのは「大きいファイルだから」という判断のみ |
 
 ---
 
-## 8. 最初の一歩
+## 8. 次の一歩
 
-1. **ASC 側の調査 (U-1〜U-3)。** 手元に読めるものが無いので、ここが最大の未知。
+Play 側の実装は済んだので、順序が変わった。
+
+1. **実アカウントで1ロケールを通す (U-8)。** ここが完了条件。
+   `dryRun: true` で `insert` → `listings.update` → `validate` → `delete` を先に通し、
+   その後 commit まで。**U-7 / U-9 / U-10 もここで一緒に潰れる。**
+2. `colaxy_screenshot` の `featureGraphic.png` の場所を規約に合わせる (0-3)。
+   これは `colaxy_store_publish` ではなく `colaxy_screenshot` の修正。
+3. `colaxy_localization` が `changelogs/<versionCode>.txt` を書けるようにするか判断 (0-2)。
+   今は `default.txt` だけなので、バージョンごとのリリースノートが書けない。
+4. **ASC 側の調査 (U-1〜U-3)。** 手元に読めるものが無いので、ここが最大の未知。
    Apple の OpenAPI 仕様を確認して、Play 側と同じ粒度の表を作る。
-   **これが終わるまで設計を決めない。**
-2. Play 側だけで `insert` → `listings.update` → `validate` → `commit` を通す。
-   既存の `PlayServiceAccount` がそのまま使えるはずなので、認証の作業はゼロのはず。
-3. `colaxy_localization` の出力ディレクトリを読んで `Listing` に詰める変換を書く。
-   3節のとおり1対1なので、ここは短い。
-4. `EditsImagesResource.upload` でスクショを1枚上げる。`imageType` は
-   `colaxy_screenshot` の出力ディレクトリ名がそのまま使える。
-5. **その時点で ASC 側をどこまで揃えるか決める。** 非対称が大きすぎるなら、
-   「Play 完全対応 + ASC はメタデータのみ」で最初のリリースを切る判断もある。
+   **これが終わるまで ASC 側の設計を決めない。**
+5. その時点で ASC 側をどこまで揃えるか決める。非対称が大きすぎるなら、
+   「Play 完全対応 + ASC はメタデータのみ」で切る判断もある。
 
 ---
 
 ## 9. 一行まとめ
 
-**このリポジトリは投入用の入力を Dart で全部生成しているのに、投入だけ Ruby の fastlane に
-依存している。** 埋めるべきは1箇所で、Play 側は API・認証・変換テーブルが全て揃っており、
-未知は ASC 側だけ。
+**Play 側の投入は埋まった。** `colaxy_store_publish` が `fastlane supply` の
+メタデータ・画像・aab・トラックを全部置き換えている。
+**ただし実アカウントで1度も叩いていないので、まだ「動く」とは言えない** (U-8)。
+未知は ASC 側と、実データ検証。

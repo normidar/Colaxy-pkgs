@@ -1,0 +1,91 @@
+import 'package:colaxy_store_publish/src/google_play/play_ai_generated_state.dart';
+import 'package:meta/meta.dart';
+
+/// What a metadata publish should and should not do.
+///
+/// Two of these defaults are the ones that matter, and both err the same way:
+/// **nothing is deleted unless asked**.
+///
+/// - [replaceScreenshots] is `false`, so uploads append. Google Play has no
+///   "replace this set" call; replacing means emptying the slot first, and
+///   emptying a slot destroys screenshots that may never have existed
+///   locally.
+/// - [uploadStrayFeatureGraphic] is `false`, so the locale-independent
+///   `featureGraphic.png` that `colaxy_screenshot` writes is left alone.
+///   Sending one image to every locale is a decision.
+///
+/// ## Parameters
+///
+/// ### Optional
+/// - **[locales]**: Which locale directories to publish (default: `null`,
+///   meaning every one found).
+/// - **[publishListings]**: Whether to write listing text (default: `true`).
+/// - **[publishImages]**: Whether to upload images (default: `true`).
+/// - **[replaceScreenshots]**: Whether to empty a multi-image slot before
+///   uploading into it (default: `false`).
+/// - **[uploadStrayFeatureGraphic]**: Whether to send the non-standard
+///   `android/featureGraphic.png` to every published locale
+///   (default: `false`).
+/// - **[aiGeneratedState]**: Attestation attached to every uploaded image
+///   (default: `null`, attesting nothing).
+///
+/// ## Example
+///
+/// ```dart
+/// // A screenshot refresh for two locales, replacing what is on the store.
+/// const options = PlayPublishOptions(
+///   locales: {'ja-JP', 'en-US'},
+///   publishListings: false,
+///   replaceScreenshots: true,
+/// );
+/// ```
+@immutable
+class PlayPublishOptions {
+  /// Creates publish options.
+  const PlayPublishOptions({
+    this.locales,
+    this.publishListings = true,
+    this.publishImages = true,
+    this.replaceScreenshots = false,
+    this.uploadStrayFeatureGraphic = false,
+    this.aiGeneratedState,
+  });
+
+  /// Which locale directories to publish, or `null` for all of them.
+  ///
+  /// A locale named here that has no directory is reported as skipped rather
+  /// than raised: a list of locales is usually shared configuration, and one
+  /// entry running ahead of the translations should not fail the release.
+  final Set<String>? locales;
+
+  /// Whether to write listing text.
+  final bool publishListings;
+
+  /// Whether to upload images.
+  final bool publishImages;
+
+  /// Whether to empty a multi-image slot before uploading into it.
+  ///
+  /// Destructive, and irreversible from the local side: the deleted
+  /// screenshots are only recoverable if the same files exist on disk. Off by
+  /// default, which means repeated runs accumulate screenshots — visible in
+  /// Play Console, and recoverable by hand.
+  ///
+  /// Single-image slots — icon, feature graphic, TV banner — ignore this.
+  /// Google replaces those on upload regardless.
+  final bool replaceScreenshots;
+
+  /// Whether to send `android/featureGraphic.png` to every published locale.
+  ///
+  /// That path is outside the fastlane convention; see
+  /// `FastlaneMetadata.strayFeatureGraphic`. Per-locale feature graphics at
+  /// `<locale>/images/featureGraphic.png` are published normally and are
+  /// unaffected by this flag.
+  final bool uploadStrayFeatureGraphic;
+
+  /// Attestation attached to every uploaded image.
+  final PlayAiGeneratedState? aiGeneratedState;
+
+  /// Whether [locale] should be published under these options.
+  bool includes(String locale) => locales?.contains(locale) ?? true;
+}

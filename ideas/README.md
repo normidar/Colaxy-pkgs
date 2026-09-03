@@ -10,23 +10,26 @@
 
 | 文書 | 内容 | ステータス |
 |---|---|---|
-| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想 |
-| [store_publish.md](store_publish.md) | ストアへの投入層。上記 Stage 1〜3 の実装計画 | **優先度高・未着手** |
+| [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | 構想。Stage 1〜3 は実装済み |
+| [store_publish.md](store_publish.md) | ストアへの投入層 | **実装済み (Play 側)・実アカウント未検証** |
 | [firebase_reporting.md](firebase_reporting.md) | Firebase のレポート/管理情報を読むパッケージ | **保留 (作らない)** |
-| [repo_structure.md](repo_structure.md) | パッケージのディレクトリグループ化 | 未着手・低リスク |
+| [repo_structure.md](repo_structure.md) | パッケージのディレクトリグループ化 | 未着手・低リスク・見送り中 |
 
 ## 読む順
 
 1. **[dart_native_pipeline.md](dart_native_pipeline.md)** — 何を目指しているかと、そこまでの全段階
-2. **[store_publish.md](store_publish.md)** — 最初に手を付けるべきものの詳細
+2. **[store_publish.md](store_publish.md)** — Play 側の投入層。実装済みの内容と、実装して分かったこと
 3. 残り2つは独立した話題
 
-## 現状の要約
+## 現状の要約 (2026-09-03 更新)
 
 - 生成側 (アイコン・スクショ・メタデータ) と監視側 (ストア API) は**完成済み**
 - 全パッケージで `Process.run` の使用が**ゼロ**
-- **投入だけが fastlane (Ruby) に依存**しており、そこが唯一の穴
-- Play 側は API・認証・変換テーブルが揃っている。**未知は App Store Connect 側だけ**
+- **`colaxy_store_publish` を作成し、Play 側の投入を実装した** (リスティング / 画像 /
+  aab / トラック)。`fastlane supply` の置き換えは**コード上は完了**
+- ただし**実アカウントに対して1度も叩いていない**。`colaxy_store_console` で
+  「モックでは検出できない誤りが5件」出た前例があるので、**ここは未完了**とみなす
+- **未知は App Store Connect 側だけ** (Stage A)。ここは着手していない
 
 ## 書き方の約束
 

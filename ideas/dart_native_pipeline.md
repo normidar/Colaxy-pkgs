@@ -1,9 +1,10 @@
 # Fastlane を使わない Flutter リリースパイプライン
 
-**ステータス: 構想。** このリポジトリが結果的に向かっている方向を明文化したもの。
-具体的な実装計画は [store_publish.md](store_publish.md) にある。
+**ステータス: 構想。Stage 1〜3 は実装済み (実アカウント未検証)。**
+このリポジトリが結果的に向かっている方向を明文化したもの。
+Play 側の実装内容と、実装して分かったことは [store_publish.md](store_publish.md) にある。
 
-調査日: 2026-08-29。
+調査日: 2026-08-29。Stage 1〜3 実装日: 2026-09-03。
 
 ---
 
@@ -25,15 +26,16 @@
                     ┌─────────────── すべて Dart ───────────────┐
 
   アイコン生成   →   スクショ生成   →   メタデータ生成   →   投入   →   監視
-  icons_launcher    screenshot         localization       (未着手)   store_console
-       ✅                ✅                  ✅              ❌          ✅
-
+  icons_launcher    screenshot         localization    store_publish  store_console
+       ✅                ✅                  ✅          ✅ Play のみ      ✅
+                                                        ❌ ASC 未着手
                     └──────────────────────────────────────────┘
                                        ↑
                               Ruby / fastlane / Gemfile なし
 ```
 
-現状、この流れの中で **投入だけが Ruby (fastlane) に依存している**。
+**Android はこの流れが全部 Dart で閉じた** (Stage 3 完了)。
+iOS 側は投入が空いたままで、そこは Stage 5 以降。
 
 ---
 
@@ -45,7 +47,8 @@
 | `colaxy_screenshot` | スクショ生成 | **なし** (`RepaintBoundary` + `toImage`) |
 | `colaxy_localization` | メタデータ生成 | **なし** |
 | `colaxy_store_console` | ストアから読む | **なし** (HTTP のみ) |
-| **投入** | — | **fastlane (Ruby)** |
+| `colaxy_store_publish` | **Play へ投入** | **なし** (HTTP のみ) |
+| **ASC への投入** | — | **fastlane (Ruby)** のまま |
 
 ### `colaxy_screenshot` の方式が効いている
 
@@ -163,54 +166,57 @@ Stage A と Stage 1 は並行して進められる。
 
 ---
 
-### Stage 1 — Play のメタデータ投入
+### Stage 1 — Play のメタデータ投入 ✅ **実装済み**
 
-Play 側は API が確定済みなので、ここから実装を始められる。
+`colaxy_store_publish` として実装。
 
-| # | 内容 |
-|---|---|
-| 1-1 | **`PlayEditSession`** — `insert` → 変更 → `validate` → `commit` / `delete` を型で表す。**`commit` を隠さない** (4-1 の非対称を隠すと嘘になる)。未 commit で破棄されるのが既定 |
-| 1-2 | **fastlane 規約のディレクトリ読み取り。** `fastlane/metadata/android/<locale>/` の `title.txt` / `short_description` / `full_description` / `video`。独自の中間形式は作らない ([store_publish.md](store_publish.md) 3節) |
-| 1-3 | **`Listing` へのマッピングと `listings.update`。** ロケール名は BCP-47 (`de-AT`)。`colaxy_localization` の出力と1対1 |
-| 1-4 | **dry-run は `validate` で実装する。** 自前で検証を書かない。Google に判定させる |
-| 1-5 | **`deleteall` は既定で無効。** ローカルに無いロケールを消す操作なので、明示フラグ (`--prune-locales` など) でのみ有効 |
+| # | 内容 | 実装 |
+|---|---|---|
+| 1-1 | **`PlayEditSession`** — `insert` → 変更 → `validate` → `commit` / `delete` を型で表す。**`commit` を隠さない**。未 commit で破棄されるのが既定 | ✅ `PlayEditSession` + `PlayEditState`。`discardQuietly` も追加 |
+| 1-2 | **fastlane 規約のディレクトリ読み取り。** 独自の中間形式は作らない | ✅ `FastlaneMetadata`。ファイル名は `.txt` 付きだった ([store_publish.md](store_publish.md) 0-1) |
+| 1-3 | **`Listing` へのマッピングと `listings.update`** | ✅ `PlayListing`。**ロケール名の変換表は持たない** — Play の許容リストは変わるので、そのまま送って Google に弾かせる |
+| 1-4 | **dry-run は `validate` で実装する** | ✅ `edit(body, dryRun: true)` |
+| 1-5 | **`deleteall` は既定で無効** | ✅ `listings.deleteAll` はどこからも呼ばれない |
+| **1-6** | **(追加) リスティングは読んでからマージする** | `listings.update` は全体置換なので、`title.txt` だけのロケールを送ると説明文が消える。当初の設計に無かった |
 
 **完了条件**: MockClient のテストが通り、かつ**実アカウントで1ロケールのリスティングが
-実際に更新される**こと。`colaxy_store_console` の検証で「モックでは検出できない誤りが5件」
-出た前例があるので、モックだけで完了としない。
+実際に更新される**こと。→ **テストは通った (81件)。実アカウントは未検証なので未完了。**
 
 **消えるもの**: `supply` のメタデータ部分。
 
 ---
 
-### Stage 2 — Play の画像投入
+### Stage 2 — Play の画像投入 ✅ **実装済み**
 
-| # | 内容 |
-|---|---|
-| 2-1 | **`images.upload`。** `imageType` は `colaxy_screenshot` の出力ディレクトリ名がそのまま使える (`phoneScreenshots` / `sevenInchScreenshots` / `tenInchScreenshots` / `featureGraphic`) |
-| 2-2 | **`appImageTypeUnspecified` は送らない。** discovery document に "Do not use" と明記されている |
-| 2-3 | **画像のサイズ・解像度をローカルで検証しない。** Phase 2 の `version` と同じ原則。ドキュメント化されていない制約を強制すると、実際には通る組み合わせを塞ぐ |
-| 2-4 | **`images.deleteall` も既定で無効** (1-5 と同じ扱い)。差し替えでは既存画像が残ることを明示する |
-| 2-5 | **アップロード失敗時のリトライ。** Phase 0-2 の `RetryPolicy` を使う。画像は本文より失敗しやすい |
+| # | 内容 | 実装 |
+|---|---|---|
+| 2-1 | **`images.upload`。** `imageType` は `colaxy_screenshot` の出力ディレクトリ名がそのまま使える | ✅ `PlayImageType.byDirectoryName`。変換表なし |
+| 2-2 | **`appImageTypeUnspecified` は送らない** | ✅ enum に含めていないので表現不可能 |
+| 2-3 | **画像のサイズ・解像度をローカルで検証しない** | ✅ 見るのは「存在するか」と「PNG/JPEG か」だけ |
+| 2-4 | **`images.deleteall` も既定で無効** | ✅ `replaceScreenshots` (既定 `false`)。単一枠は Google が置換するので削除しない |
+| 2-5 | **アップロード失敗時のリトライ** | ✅ `PlayApiGuard`。ストリームはクロージャ内で開く (再試行時に空にならないように) |
+| **2-6** | **(追加) `aiGeneratedState`** | 調査時に見落としていた新フィールド ([store_publish.md](store_publish.md) 0-5) |
 
-**完了条件**: 実アカウントで1ロケール分のスクショが実際に反映されること。
+**完了条件**: 実アカウントで1ロケール分のスクショが実際に反映されること。→ **未検証。**
 
 **消えるもの**: `supply` の画像部分。
 
 ---
 
-### Stage 3 — Play のバイナリとトラック → **Android が独立**
+### Stage 3 — Play のバイナリとトラック ✅ **実装済み**
 
-| # | 内容 |
-|---|---|
-| 3-1 | **`bundles.upload` で aab を上げる。** サイズ上限とレジューム機構の有無を確認 (D-5) |
-| 3-2 | **`tracks.update`。** `internal` / `alpha` / `beta` / `production` |
-| 3-3 | **`changelogs/` → リリースノートへの対応。** `colaxy_localization` の出力との接続点。トラック単位かリリース単位かを確認 ([store_publish.md](store_publish.md) U-5) |
-| 3-4 | **段階的公開 (`userFraction`) の扱い。** 既定では使わず、明示指定時のみ |
-| 3-5 | **`edits` の有効期限と、放置されたエディットのクリーンアップ** ([store_publish.md](store_publish.md) U-6)。CI で失敗した時にゴミが残らないようにする |
-| 3-6 | **並列実行時の挙動確認** (U-7)。CI で複数ジョブが同時に `edits.insert` した場合 |
+| # | 内容 | 実装 |
+|---|---|---|
+| 3-1 | **`bundles.upload` で aab を上げる。** サイズ上限とレジューム機構の有無を確認 (D-5) | ✅ 既定で resumable。**サイズ上限は未確認** |
+| 3-2 | **`tracks.update`** | ✅ `PlayTracksApi`。**`tracks.update` はリリース配列の全体置換**だったので、`release` は先に読んでマージする ([store_publish.md](store_publish.md) 0-8) |
+| 3-3 | **`changelogs/` → リリースノートへの対応** | ✅ **リリース単位** (`TrackRelease.releaseNotes`)。U-5 解決 |
+| 3-4 | **段階的公開 (`userFraction`)** | ✅ `inProgress` のときのみ必須。整合性はローカルで検査する (Google のルールが明文化されているため) |
+| 3-5 | **`edits` の有効期限とクリーンアップ** | ✅ `expiresAt` で取得。`edit()` は失敗時に必ず破棄する |
+| 3-6 | **並列実行時の挙動確認** (U-7) | ⚠️ **推測で実装。** 409 を `PlayEditConflictException` にして再試行しない。実挙動未確認 |
+| **3-7** | **(追加) `changesInReviewBehavior`** | **既定が「審査中のものを取り消して出し直す」。** 調査時に完全に見落としていた ([store_publish.md](store_publish.md) 0-4) |
 
 **完了条件**: **`fastlane supply` を一度も呼ばずに Android のリリースが1回通る。**
+→ **コードは揃った。実アカウントで通してはいない。**
 
 **消えるもの**: **`supply` が丸ごと。Android 側は fastlane から完全に独立する。**
 
@@ -302,14 +308,18 @@ Play 側は API が確定済みなので、ここから実装を始められる�
 
 ### 各段階で消えるもの (一覧)
 
-| 段階 | fastlane から消えるもの | Ruby が要らなくなるか |
-|---|---|---|
-| Stage 0 (現在) | `snapshot` / `screengrab` | — |
-| Stage 1〜2 | `supply` のメタデータと画像 | まだ |
-| **Stage 3** | **`supply` 全体** | **Android のみ不要** |
-| Stage 5〜6 | `deliver` | まだ |
-| Stage 7 | `pilot` | まだ |
-| **Stage 8** | **fastlane 全体** | **完全に不要** |
+| 段階 | fastlane から消えるもの | Ruby が要らなくなるか | 状態 |
+|---|---|---|---|
+| Stage 0 | `snapshot` / `screengrab` | — | ✅ 完了 |
+| Stage 1〜2 | `supply` のメタデータと画像 | まだ | ✅ 実装済み・未検証 |
+| **Stage 3** | **`supply` 全体** | **Android のみ不要** | ✅ 実装済み・未検証 |
+| Stage 4 | (中間形式の型検証) | — | 未着手 |
+| Stage 5〜6 | `deliver` | まだ | 未着手 (Stage A 待ち) |
+| Stage 7 | `pilot` | まだ | 未着手 |
+| **Stage 8** | **fastlane 全体** | **完全に不要** | 未着手 |
+
+> **「実装済み・未検証」を「完了」と書かないこと。** `colaxy_store_console` では
+> モックで通ったあと実データで5件の誤りが出た。今回も同じ段階にいる。
 
 ---
 
@@ -356,19 +366,20 @@ Play 側は API が確定済みなので、ここから実装を始められる�
 
 ## 9. 未検証事項
 
-| # | 事項 |
-|---|---|
-| D-1 | ASC API で証明書 / プロビジョニングプロファイルを取得できるか。できる場合の粒度 |
-| D-2 | Apple のバイナリアップロードが本当に ASC API 不可か (= [store_publish.md](store_publish.md) U-3) |
-| D-3 | `notarytool` / `altool` を Dart から呼ぶ際の認証方式 (ASC API キーを流用できるか) |
-| D-4 | fastlane の `deliver` が内部で何を呼んでいるか。ソースを読んで確認する価値がある |
-| D-5 | Play の aab アップロードにサイズ上限やレジューム機構があるか |
+| # | 事項 | 状態 |
+|---|---|---|
+| D-1 | ASC API で証明書 / プロビジョニングプロファイルを取得できるか。できる場合の粒度 | 未着手 |
+| D-2 | Apple のバイナリアップロードが本当に ASC API 不可か (= [store_publish.md](store_publish.md) U-3) | 未着手 |
+| D-3 | `notarytool` / `altool` を Dart から呼ぶ際の認証方式 (ASC API キーを流用できるか) | 未着手 |
+| D-4 | fastlane の `deliver` が内部で何を呼んでいるか。ソースを読んで確認する価値がある | 未着手 |
+| D-5 | Play の aab アップロードにサイズ上限やレジューム機構があるか | **半分解決。** レジュームは `ResumableUploadOptions` として存在し、既定で使う実装にした。**サイズ上限は未確認** |
+| **D-6** | **Play 側の実装が実アカウントで動くか** (= [store_publish.md](store_publish.md) U-8) | **新規。Stage 1〜3 の完了条件** |
 
 ---
 
 ## 10. 一行まとめ
 
-**このリポジトリは既に生成側を全て純 Dart で完結させ、外部プロセス依存もゼロにしている。
-残るのは投入だけで、Android は完全に独立可能、Apple は署名とバイナリの2点で
-Apple 純正ツールを薄く呼ぶ必要がある。** 目標は fastlane の全廃ではなく、
-**Fastfile を書かなくて済む状態**。
+**Android は生成から投入まで純 Dart で閉じた** (`colaxy_store_publish`、Stage 1〜3)。
+**ただし実アカウントで1度も叩いていないので、まだ「動く」とは言えない。**
+残るのは Apple 側で、署名とバイナリの2点だけ Apple 純正ツールを薄く呼ぶ必要がある。
+目標は fastlane の全廃ではなく、**Fastfile を書かなくて済む状態**。
