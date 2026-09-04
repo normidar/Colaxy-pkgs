@@ -56,8 +56,12 @@ What to stage
                   what an unattended job usually wants.
   --user-fraction=0.1
                   Share of users for --status=inProgress.
-  --skip-metadata Do not touch listings or screenshots. Metadata is staged by
-                  default, matching `upload_to_play_store`.
+  --skip-metadata Do not touch listings or screenshots at all.
+  --skip-screenshots
+                  Stage listing text but no images. Both are staged by
+                  default, matching `upload_to_play_store`; these two flags
+                  are its `skip_upload_metadata` and
+                  `skip_upload_screenshots`.
 
 Options
   --metadata=DIR  The fastlane/metadata/android directory
@@ -121,6 +125,7 @@ Future<void> main(List<String> args) async {
           '--error-if-in-review',
           '--skip-check',
           '--skip-metadata',
+          '--skip-screenshots',
           '--allow-empty',
         }.contains(arg),
   );
@@ -142,6 +147,7 @@ Future<void> main(List<String> args) async {
 
   final options = PlayPublishOptions(
     locales: locales,
+    publishImages: !args.contains('--skip-screenshots'),
     replaceScreenshots: args.contains('--replace-screenshots'),
     uploadStrayFeatureGraphic: args.contains('--feature-graphic'),
   );

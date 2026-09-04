@@ -72,6 +72,10 @@ Environment
   ASC_ISSUER_ID   Issuer UUID.
   ASC_P8          The .p8 contents, or a path to the file.
   ASC_APP_ID      Numeric app ID from the App Store Connect URL.
+  ASC_BUNDLE_ID   Alternative to ASC_APP_ID: the bundle identifier, e.g.
+                  com.example.app. Looked up through the API, so a pipeline
+                  does not have to carry a numeric id it cannot read off the
+                  project.
 
 The key must be a *team* key. An individual key is rejected by several
 endpoints — colaxy_store_console found the same on the sales reports.
@@ -119,21 +123,68 @@ Future<void> main(List<String> args) async {
   final keyId = _env('ASC_KEY_ID');
   final issuerId = _env('ASC_ISSUER_ID');
   final p8 = _env('ASC_P8');
-  final appId = _env('ASC_APP_ID');
-  if (keyId == null || issuerId == null || p8 == null || appId == null) {
+  final bundleId = _env('ASC_BUNDLE_ID');
+  var appId = _env('ASC_APP_ID');
+  if (keyId == null || issuerId == null || p8 == null ||
+      (appId == null && bundleId == null)) {
     stderr
       ..writeln(
-        'ASC_KEY_ID, ASC_ISSUER_ID, ASC_P8 and ASC_APP_ID are all required.',
+        'ASC_KEY_ID, ASC_ISSUER_ID, ASC_P8 and one of ASC_APP_ID / '
+        'ASC_BUNDLE_ID are required.',
       )
       ..writeln('Run with --help.');
     exitCode = 64;
     return;
   }
 
+  final AppStoreApiKey apiKey;
+  try {
+    apiKey = _apiKey(keyId: keyId, issuerId: issuerId, p8: p8);
+  } on StoreConsoleException catch (error) {
+    stderr.writeln(error);
+    exitCode = 1;
+    return;
+  }
+
+  if (appId == null) {
+    // Resolving the numeric id from the bundle identifier keeps one less
+    // piece of configuration in the pipeline: the bundle id is in the
+    // project, the numeric id is only in a URL.
+    final lookup = AppStoreConnectClient(apiKey: apiKey);
+    try {
+      final apps = await lookup
+          .resources('/v1/apps', query: {'filter[bundleId]': bundleId})
+          .toList();
+      final match = apps
+          .where(
+            (a) =>
+                (a['attributes'] as Map<String, dynamic>?)?['bundleId'] ==
+                bundleId,
+          )
+          .toList();
+      if (match.isEmpty) {
+        stderr.writeln(
+          'No App Store app with bundle id "$bundleId" is visible to this '
+          'key. Check the bundle id, and that the key reaches the right team.',
+        );
+        exitCode = 1;
+        return;
+      }
+      appId = match.first['id'] as String;
+      stdout.writeln('Resolved $bundleId to app $appId');
+    } on StoreConsoleException catch (error) {
+      stderr.writeln(error);
+      exitCode = 1;
+      return;
+    } finally {
+      lookup.close();
+    }
+  }
+
   final AppStorePublisher publisher;
   try {
     publisher = AppStorePublisher.authenticate(
-      apiKey: _apiKey(keyId: keyId, issuerId: issuerId, p8: p8),
+      apiKey: apiKey,
       appId: appId,
       onLog: (message) => stderr.writeln('[asc] $message'),
     );
