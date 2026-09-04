@@ -1,6 +1,8 @@
 # ストアへの投入層 (`colaxy_store_publish`)
 
-**ステータス: Play 側は実装済み。実アカウント未検証。ASC 側は未着手。**
+**ステータス: Play 側は実装済み。読み取りとエディット生成/破棄は実アカウントで
+検証済み (10節)、書き込みは未検証。ASC 側は
+[app_store_connect_api.md](app_store_connect_api.md) に移した。**
 
 調査日: 2026-08-29。実装日: 2026-09-03。
 `colaxy_store_console` の Firebase 拡張を検討した際に、リポジトリ全体を見渡して
@@ -17,9 +19,10 @@
 |---|---|
 | ✅ **検証済み** | Google Play 側は `googleapis` 17.0.0 の `androidpublisher/v3.dart` を**実際に読んだ**。リソース・メソッド・モデルのフィールド・`imageType` の許容値は実物 |
 | ✅ **検証済み** | `colaxy_localization` / `colaxy_screenshot` / `colaxy_store_console` のソースを読み、出力パスと既存の API 利用範囲を確認 |
-| ✅ **検証済み** | **実装した。** モック (`MockClient`) に対するテスト81件が通る |
-| ⚠️ **未検証** | **実アカウントに対して1度も叩いていない。** ここが最大の残リスク (7節 U-8) |
-| ⚠️ **未検証** | **App Store Connect 側は一切確認していない。** Apple は `googleapis` に含まれないので手元で読めるものが無い。本文中の ASC の記述は全て**要確認** |
+| ✅ **検証済み** | **実装した。** モック (`MockClient`) に対するテストが通る |
+| ✅ **実アカウント検証済み (2026-09-04)** | **`--doctor` が実アカウントで通った。** `edits.insert` / `listings.list` / `tracks.list` / `edits.delete` が動作。10節 |
+| ⚠️ **未検証** | **書き込み経路 (`listings.update` / `images.upload` / `commit`) は未検証** |
+| ✅ **解決済み** | ~~App Store Connect 側は一切確認していない~~ → 公式 OpenAPI 4.4.1 を読み、実装もした。[app_store_connect_api.md](app_store_connect_api.md) |
 
 ---
 
@@ -84,7 +87,7 @@ AI 生成かどうかの開発者による申告。Google が検出するので�
 
 エディットの有効期限は**レスポンスに入っている**。
 `PlayEditSession.expiresAt` / `timeRemaining` として露出した。
-残る未検証は「実際に何分か」だけ。
+✅ **実測で有効期間はちょうど2時間** (10節)。U-6 は完全解決。
 
 ### 0-7. `listings.get` / `tracks.get` の 404 が二義的
 
@@ -309,9 +312,9 @@ Play は API が直接ファイルを受け、Apple は必ず予約して別エ�
 | U-3 | Apple のバイナリアップロードが本当に ASC API 不可か | ✅ **解決。可能になっていた。** 4-2 の線を引き直した |
 | U-4 | `EditsImagesResource.upload` の実際の制約 (最大サイズ、必要枚数、解像度) | **調べないと決めた** (0-9)。ローカル検証はしない |
 | U-5 | `changelogs/` → リリースノートへの対応。トラック単位かリリース単位か | **解決 (0-2)。** リリース単位 (`TrackRelease.releaseNotes`) |
-| U-6 | エディットの有効期限。放置した `edits` がどうなるか | **半分解決 (0-6)。** `expiryTimeSeconds` で取得できる。実際の長さは未確認 |
+| U-6 | エディットの有効期限 | ✅ **完全解決。** `expiryTimeSeconds` で取得でき、**実測で有効期間はちょうど2時間** (10節) |
 | U-7 | 同時に複数の `edits` を開いた場合の挙動 | **推測で実装した。** 409 を `PlayEditConflictException` にして再試行しない。**409 が実際に返るかは未確認** |
-| **U-8** | **実アカウントに対して1度も叩いていない** | **新規。最大の残リスク** |
+| **U-8** | **実アカウント検証** | ⚠️ **半分解決。** 読み取りとエディットの生成/破棄は通った (10節)。**書き込みと commit は未検証** |
 | U-9 | `changesInReviewBehavior` の既定が本当にレビューを取り消すか (0-4) | discovery document の記述のみ。実挙動は未確認 |
 | U-10 | `bundles.upload` のサイズ上限。resumable が既定で正しいか | 未確認。resumable にしたのは「大きいファイルだから」という判断のみ |
 
@@ -360,3 +363,44 @@ Play 側の実装は済んだので、順序が変わった。
 メタデータ・画像・aab・トラックを全部置き換えている。
 **ただし実アカウントで1度も叩いていないので、まだ「動く」とは言えない** (U-8)。
 未知は ASC 側と、実データ検証。
+
+---
+
+## 10. 実アカウントでの検証 (2026-09-04)
+
+`colaxy_store_console` の `.env` の実資格情報で `--doctor` を実行した。
+エディットを1つ開いて即破棄しただけで、ストアには何も書いていない。
+
+```
+PASS   Edit permission     opened edit …, expires 2026-09-04 02:39:18.000Z
+PASS   Store listings      6 locales: en-US, es-ES, ja-JP, pt-PT, tr-TR, zh-CN
+PASS   Release tracks      production (1), beta (0), alpha (0), internal (1)
+PASS   Cleanup             discarded edit …; nothing was written
+```
+
+**一発で通った。** 動作が確認できたもの:
+
+- `edits.insert` — サービスアカウントに編集権限があること
+- `edits.delete` — 破棄が効くこと
+- `listings.list` の解析 — 6ロケール
+- `tracks.list` の解析 — 4トラックとリリース件数
+
+### U-6 完全解決: **エディットの有効期間はちょうど2時間**
+
+作成時刻から失効まで **2時間ぴったり**だった (実測)。
+
+**これは設計に効く数字。** 多ロケール × 多デバイスのスクショを
+1エディットの中で上げると、2時間を超えうる。超えた瞬間に
+`PlayEditExpiredException` になり、**staged した変更は全部消える**。
+
+→ `PlayEditSession.expiresAt` / `timeRemaining` を露出しておいたのは正解だった。
+長い投入では**残り時間を見て分割する**運用が要る可能性がある。
+
+### まだ未検証
+
+| # | 事項 |
+|---|---|
+| U-8a | `listings.update` / `images.upload` が実際に通るか。`--dry-run` で確認できる (validate して破棄するので安全) |
+| U-9 | `changesInReviewBehavior` の既定が本当に審査を取り消すか。**commit しないと分からない** |
+| U-7 | 並列に `edits.insert` した場合の 409。2ジョブ同時実行が要る |
+| U-10 | `bundles.upload` のサイズ上限 |

@@ -1,6 +1,7 @@
 # App Store Connect API: 投入系の実測
 
-**ステータス: 調査完了 (Stage A)。Stage 5〜8 (バイナリ) は実装済み・実アカウント未検証。**
+**ステータス: 調査完了 (Stage A)。Stage 5〜8 (バイナリ) は実装済み。
+読み取り経路は実アカウントで検証済み (12節)、書き込み経路は未検証。**
 
 調査日: 2026-09-03。[dart_native_pipeline.md](dart_native_pipeline.md) の Stage A
 「Apple 側の空白を埋める」の結果。それまで Apple に関する記述は
@@ -14,7 +15,8 @@
 |---|---|
 | ✅ **検証済み** | **Apple 公式の OpenAPI 仕様 (`openapi.oas.json`) をダウンロードして実際に読んだ。** `info.version` は **4.4.1**、966 paths / 1393 schemas。パス・メソッド・スキーマ属性・enum の値は**実物** |
 | ✅ **検証済み** | Play 側と同じ基準。あちらは `googleapis` の生成クライアントを読んだ ([store_publish.md](store_publish.md))。**ようやく両者の信頼度が揃った** |
-| ⚠️ **未検証** | **実アカウントに対して1度も叩いていない。** Play 側と同じ状態 |
+| ✅ **実アカウント検証済み (2026-09-04)** | **読み取り経路を実際に叩いた。** `appInfos` / `appStoreVersions` / `betaGroups`。12節に結果 |
+| ⚠️ **未検証** | **書き込み経路は1度も叩いていない。** メタデータ PATCH、スクショ、`buildUploads`、TestFlight |
 | ⚠️ **二次情報** | 運用上の注意 (レート制限、既知の不具合、altool の制約) はフォーラムとブログ由来。**仕様ではないので別扱い**。本文では「二次」と明記する |
 
 > **表を要約しない** ([dart_native_pipeline.md](dart_native_pipeline.md) の R-1)。
@@ -179,11 +181,12 @@ locale, description, keywords, whatsNew, promotionalText, marketingUrl, supportU
 > [store_publish.md](store_publish.md) 3節の発見はディレクトリ名が
 > `imageType` と同一だったから成り立った話で、ここには対応物が無い。
 
-### 静かに失敗する経路 (二次・要検証)
+### 静かに失敗する経路 ✅ **実アカウントで確認済み (12-1)**
 
-**アプリは `appInfo` を複数持つ** (状態ごとに1つ、例えば公開中と
-`PREPARE_FOR_SUBMISSION` 用)。**間違った方に書くと何も起きないまま成功する**と
-報告されている。書く前に状態で絞る必要がある。
+**アプリは `appInfo` を複数持つ。** 実測で2つあり、状態が違った
+(`READY_FOR_SALE` と `REJECTED`)。**間違った方に書くと何も起きないまま成功する**
+という部分だけは二次情報のままだが、**複数あること自体は確定**。
+書く前に状態で絞る必要がある。
 
 この「成功として報告されるが何も起きない」形は、
 `colaxy_store_publish` の `MetadataCheck` が Android 側で潰したのと同じ種類。
@@ -214,7 +217,9 @@ REPLACED_WITH_NEW_VERSION, NOT_APPLICABLE
 
 `AppVersionState` という**別の15値の enum も存在する** (実測)。
 `PROCESSING_FOR_DISTRIBUTION` / `READY_FOR_DISTRIBUTION` を持ち、
-`AppStoreVersionState` には無い。**どちらをいつ使うのかは未検証 (U-A4)。**
+`AppStoreVersionState` には無い。
+✅ **U-A4 解決 (12-2)**: **両方とも常に埋まり、語彙が違う**
+(`READY_FOR_SALE` ⇄ `READY_FOR_DISTRIBUTION`)。別名ではなく別の状態機械。
 
 > **[store_publish.md](store_publish.md) 4-1 の判断は正しかった。**
 > 「統一インターフェースで包むと『両方ロールバックできる』という嘘になる」。
@@ -382,9 +387,9 @@ API では `APP_IPAD_PRO_3GEN_129` として返る、という報告がある。
 | # | 事項 | なぜ重要か |
 |---|---|---|
 | U-A1 | **実アカウントで1度も叩いていない。** この文書は仕様の読解 | Play 側と同じ段階。前例では実データで5件の誤りが出た |
-| U-A2 | `appInfos` が状態ごとに複数ある件 (二次)。間違った方に書くと無反応か | 「成功として報告されるが何も起きない」形。最も高くつく |
+| U-A2 | `appInfos` が状態ごとに複数ある件 | ✅ **複数あることは確認 (12-1)。** 「無反応になるか」だけ二次情報のまま |
 | U-A3 | ~~3つのファイル関係に何を入れるのか~~ | ✅ **仕様で解決。** `assetType` / `uti` が enum だった (0節)。**残るのは「description と spi が必須か」だけ** — 実装は本体1つだけ送る |
-| U-A4 | `AppStoreVersionState` (20値) と `AppVersionState` (15値) の使い分け | 状態で分岐する実装の前提 |
+| U-A4 | ~~2つの state enum の使い分け~~ | ✅ **解決 (12-2)。** 両方埋まり語彙が違う。`filter` が受ける `appStoreState` に分岐を揃えた |
 | U-A5 | `uploadOperations` の並列度とリトライ。Apple がレート制限をかけるという報告 (二次) | 分割アップロードの設計に直結 |
 | U-A6 | `colaxy_screenshot` のファイル名 → `ScreenshotDisplayType` の対応表 | `iphone65` / `ipadPro13` / `mac` の3つだけなので小さいが、実物で確認が要る |
 | U-A7 | `.pkg` (macOS) も `buildUploads` で上げられるか。三者ツールは `.ipa` のみと言う (二次) | `Platform` に `MAC_OS` はあるので、仕様上は通るはず |
@@ -433,3 +438,78 @@ Stage 5〜7 と Stage 8 のバイナリ投入は実装済み。`colaxy_store_con
 残る非対称は**トランザクションの不在**と**メタデータが2リソースに割れること**、
 そして**画像の種別が33値で変換表が要ること**。
 共通化できるのは認証とリトライだけで、投入の形は重ならない。
+
+---
+
+## 12. 実アカウントでの検証 (2026-09-04)
+
+`colaxy_store_console` の `.env` にある実資格情報で**読み取り経路だけ**叩いた。
+書き込みは1つもしていない。識別子は伏せ、形と件数のみ記録する。
+
+### 12-1. U-A2 は事実だった ✅ **確認**
+
+**これまで二次情報 (フォーラム投稿) だけを根拠にしていた最大の懸念が裏付けられた。**
+
+```
+GET /v1/apps/{id}/appInfos  →  count = 2
+  appStoreState=READY_FOR_SALE  state=READY_FOR_DISTRIBUTION
+  appStoreState=REJECTED        state=REJECTED
+```
+
+**アプリは本当に `appInfo` を複数持つ。** `infos.first` を取る実装だったら
+`READY_FOR_SALE` の record に書き込んでいた — 成功を返して何も変わらない、
+という当初から警戒していた失敗そのもの。
+`AppInfosApi.editable` が状態で絞る設計は**必要だった**ことが確定した。
+
+### 12-2. U-A4 解決 ✅ 両方とも埋まる。ただし語彙が違う
+
+```
+GET /v1/apps/{id}/appStoreVersions  →  count = 11
+  appStoreState=READY_FOR_SALE   appVersionState=READY_FOR_DISTRIBUTION
+  appStoreState=REJECTED         appVersionState=REJECTED
+```
+
+**両方のフィールドが常に埋まっていて、値の語彙が違う** —
+`READY_FOR_SALE` ⇄ `READY_FOR_DISTRIBUTION`。別名ではなく別の状態機械。
+`filter[appStoreState]` が受け付けるのは前者なので、
+**分岐も前者に揃える**という実装の判断はこれで正当化された。
+
+### 12-3. ⚠️ **新しい問題: `isEditable` が狭すぎる**
+
+このアプリには **`PREPARE_FOR_SUBMISSION` のバージョンも `appInfo` も無い。**
+11バージョンのうち10が `READY_FOR_SALE`、1つが `REJECTED`。
+
+つまり **`--doctor` は正しく「書ける場所が無い」と報告した**のだが、
+同時に**「却下されたバージョンを直して出し直す」という最も普通の作業が
+できない**ことも意味する。Apple は `REJECTED` / `METADATA_REJECTED` /
+`DEVELOPER_REJECTED` のバージョンのメタデータ編集を許すはずだが、
+実装は `PREPARE_FOR_SUBMISSION` だけを書き込み窓にしている。
+
+**これは推測で広げてはいけない。** どの状態でどのフィールドが編集可能かは
+Apple が明文化しておらず、ロケールごとに違うという報告もある (二次)。
+広げ方を決めるには**却下状態のバージョンに実際に PATCH を投げて確かめる**
+必要があり、それは実アプリへの書き込みになる。→ U-A12。
+
+### 12-4. macOS 版が存在する → U-A7 が実務的な問題になった
+
+`platform=MAC_OS` のバージョンが1つあった。
+**`.pkg` を `buildUploads` で上げられるかは未検証**のままなので、
+このアプリの macOS 側は現状カバーできていない可能性がある。
+
+### 12-5. U-A9 は検証できなかった
+
+```
+GET /v1/apps/{id}/betaGroups  →  count = 0
+```
+
+TestFlight グループが1つも無いので、`isInternalGroup` が返るかどうかは
+**確かめられなかった**。実装は「不明なら外部扱い」で安全側に倒してある。
+
+### 12-6. 未検証のまま残ったもの
+
+| # | 事項 |
+|---|---|
+| U-A12 | **却下状態のバージョンにメタデータを PATCH できるか** (12-3)。実アプリへの書き込みが要る |
+| U-A5 / U-A6 | スクショの分割転送と `ipadPro13` の対応先。書き込みが要る |
+| U-A7 | `.pkg` を `buildUploads` で上げられるか (12-4) |
+| U-A9 | `isInternalGroup` が返るか (12-5)。グループを作らないと確かめられない |

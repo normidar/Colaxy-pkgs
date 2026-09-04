@@ -1,12 +1,13 @@
 # Fastlane を使わない Flutter リリースパイプライン
 
-**ステータス: Stage A / 1〜7 と Stage 8 のバイナリまで実装済み (実アカウント未検証)。
-残るのは署名 (壁 B) のみ。**
+**ステータス: Stage A / 1〜7 と Stage 8 のバイナリまで実装済み。
+読み取り経路は実アカウントで検証済み、書き込みは未検証。
+残るのは署名 (壁 B) と書き込み検証。**
 このリポジトリが結果的に向かっている方向を明文化したもの。
 Play 側は [store_publish.md](store_publish.md)、
 Apple 側は [app_store_connect_api.md](app_store_connect_api.md) にある。
 
-調査日: 2026-08-29。実装日: 2026-09-03。
+調査日: 2026-08-29。実装日: 2026-09-03。実アカウント検証: 2026-09-04。
 
 ---
 
@@ -18,7 +19,8 @@ Apple 側は [app_store_connect_api.md](app_store_connect_api.md) にある。
 | ✅ **検証済み** | `colaxy_screenshot` が `RepaintBoundary` + `toImage` で描画していること |
 | ✅ **検証済み** | `androidpublisher/v3` の投入系 API ([store_publish.md](store_publish.md) 参照) |
 | ✅ **検証済み** | **Apple 側も公式 OpenAPI 4.4.1 を読んだ** ([app_store_connect_api.md](app_store_connect_api.md))。当初「全般的に未確認」だった行はこれで置き換わった |
-| ⚠️ **未検証** | **両ストアとも実アカウントに1度も叩いていない。** ここが唯一かつ最大の残リスク |
+| ✅ **実アカウント検証済み (2026-09-04)** | **両ストアの読み取り経路を実際に叩いた。** Play の `--doctor` は一発で通った。詳細は [store_publish.md](store_publish.md) 10節と [app_store_connect_api.md](app_store_connect_api.md) 12節 |
+| ⚠️ **未検証** | **書き込み経路は両ストアとも未検証。** ここが最大の残リスク |
 | ⚠️ **未検証** | コード署名まわり (壁 B) は未着手のまま |
 
 ---
@@ -210,7 +212,9 @@ Play 側が生成クライアントの実物を読んだのと**同じ基準**�
 | **1-6** | **(追加) リスティングは読んでからマージする** | `listings.update` は全体置換なので、`title.txt` だけのロケールを送ると説明文が消える。当初の設計に無かった |
 
 **完了条件**: MockClient のテストが通り、かつ**実アカウントで1ロケールのリスティングが
-実際に更新される**こと。→ **テストは通った (81件)。実アカウントは未検証なので未完了。**
+実際に更新される**こと。→ **テストは通り、実アカウントで読み取りとエディットの
+生成/破棄も通った ([store_publish.md](store_publish.md) 10節)。
+`listings.update` はまだ叩いていないので未完了。**
 
 **消えるもの**: `supply` のメタデータ部分。
 

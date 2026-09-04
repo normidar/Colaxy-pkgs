@@ -11,8 +11,8 @@
 | 文書 | 内容 | ステータス |
 |---|---|---|
 | [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | Stage A / 1〜7 + バイナリ完了。**残るは署名のみ** |
-| [store_publish.md](store_publish.md) | ストアへの投入層 (Play 側) | **実装済み・実アカウント未検証** |
-| [app_store_connect_api.md](app_store_connect_api.md) | **ASC API の投入系の実測。** 公式 OpenAPI 4.4.1 を読んだ結果と、Stage 5〜8 の設計 | **実装済み・実アカウント未検証** |
+| [store_publish.md](store_publish.md) | ストアへの投入層 (Play 側) | **実装済み。読み取りは実アカウント検証済み** |
+| [app_store_connect_api.md](app_store_connect_api.md) | **ASC API の投入系の実測。** 公式 OpenAPI 4.4.1 を読んだ結果と、Stage 5〜8 の設計 | **実装済み。読み取りは実アカウント検証済み** |
 | [firebase_reporting.md](firebase_reporting.md) | Firebase のレポート/管理情報を読むパッケージ | **保留 (作らない)** |
 | [repo_structure.md](repo_structure.md) | パッケージのディレクトリグループ化 | 未着手・低リスク・見送り中 |
 
@@ -44,8 +44,13 @@
 - **`supply` / `deliver` / `pilot` に加え、Transporter と altool も要らなくなった**
 - **残るのは iOS のコード署名 (壁 B) だけ。** ここは `security` / `xcodebuild` を
   薄く呼ぶ層で、Dart 化する価値は無い
-- **そして実データ。** 両ストアとも仕様は読んだが、
-  **どちらも実アカウントに1度も叩いていない**
+- **実データ検証を開始した (2026-09-04)。** `colaxy_store_console` の `.env` の
+  実資格情報で両ストアの読み取り経路を叩いた。**Play の `--doctor` は一発で通った**
+- **二次情報だった U-A2 が事実だと確認できた** — `appInfo` は本当に複数あり、
+  状態が違う。`infos.first` を取る実装なら公開中の record に書き込んでいた
+- **U-6 完全解決: Play のエディットは有効期間ちょうど2時間。**
+  長い投入は1エディットに収まらない可能性がある
+- **残るのは書き込み経路の検証。** 両ストアとも1度も書いていない
 
 ## 書き方の約束
 
