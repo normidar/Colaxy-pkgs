@@ -96,9 +96,11 @@ void main() {
       );
     });
 
-    test('names the missing Play Console permission on a 403', () {
+    test('names the missing Play Console permission on a 401', () {
+      // 401 is what Play answers for a service account that was never
+      // invited, so the diagnosis can be stated outright.
       final recorder = Recorder()
-        ..enqueue(apiError(403, 'forbidden'), status: 403);
+        ..enqueue(apiError(401, 'unauthorized'), status: 401);
       final guard = PlayApiGuard(retryPolicy: const RetryPolicy.none());
 
       expect(
@@ -111,6 +113,61 @@ void main() {
           isA<StoreAuthException>().having(
             (error) => error.message,
             'message',
+            contains('Users and permissions'),
+          ),
+        ),
+      );
+    });
+
+    test('does not call a rejected request a permission problem', () {
+      // Real data: `edits.validate` answers
+      //   403 "This app has more than 8 screenshots for language ja-JP."
+      // with an empty `errors` array — indistinguishable by status from a
+      // permission failure. Reporting it as StoreAuthException told the
+      // caller to check permissions that were fine.
+      final recorder = Recorder()
+        ..enqueue(
+          apiError(403, 'This app has more than 8 screenshots for ja-JP.'),
+          status: 403,
+        );
+      final guard = PlayApiGuard(retryPolicy: const RetryPolicy.none());
+
+      expect(
+        () => PlayEditSession.open(
+          api: publisherApi(recorder),
+          packageName: 'com.example.app',
+          guard: guard,
+        ),
+        throwsA(
+          allOf(
+            isA<StoreApiException>().having(
+              (error) => error.message,
+              'message',
+              contains('more than 8 screenshots'),
+            ),
+            isNot(isA<StoreAuthException>()),
+          ),
+        ),
+      );
+    });
+
+    test('a 403 still carries the permission hint, in detail', () {
+      // The hint is real for the other kind of 403, so it stays reachable —
+      // just not as the headline.
+      final recorder = Recorder()
+        ..enqueue(apiError(403, 'forbidden'), status: 403);
+      final guard = PlayApiGuard(retryPolicy: const RetryPolicy.none());
+
+      expect(
+        () => PlayEditSession.open(
+          api: publisherApi(recorder),
+          packageName: 'com.example.app',
+          guard: guard,
+        ),
+        throwsA(
+          isA<StoreApiException>().having(
+            (error) => error.detail,
+            'detail',
             contains('Users and permissions'),
           ),
         ),

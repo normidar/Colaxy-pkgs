@@ -11,7 +11,7 @@
 | 文書 | 内容 | ステータス |
 |---|---|---|
 | [dart_native_pipeline.md](dart_native_pipeline.md) | **全体構想。** fastlane を使わない Flutter リリースパイプライン。全9段階のステップ | Stage A / 1〜7 + バイナリ完了。**残るは署名のみ** |
-| [store_publish.md](store_publish.md) | ストアへの投入層 (Play 側) | **実装済み。読み取りは実アカウント検証済み** |
+| [store_publish.md](store_publish.md) | ストアへの投入層 (Play 側) | **実装済み。書き込み経路まで実アカウント検証済み** |
 | [app_store_connect_api.md](app_store_connect_api.md) | **ASC API の投入系の実測。** 公式 OpenAPI 4.4.1 を読んだ結果と、Stage 5〜8 の設計 | **実装済み。読み取りは実アカウント検証済み** |
 | [firebase_reporting.md](firebase_reporting.md) | Firebase のレポート/管理情報を読むパッケージ | **保留 (作らない)** |
 | [repo_structure.md](repo_structure.md) | パッケージのディレクトリグループ化 | 未着手・低リスク・見送り中 |
@@ -50,7 +50,14 @@
   状態が違う。`infos.first` を取る実装なら公開中の record に書き込んでいた
 - **U-6 完全解決: Play のエディットは有効期間ちょうど2時間。**
   長い投入は1エディットに収まらない可能性がある
-- **残るのは書き込み経路の検証。** 両ストアとも1度も書いていない
+- **Play は書き込み経路まで通った。** 実アプリに `--dry-run` を実行し、
+  `listings.update` / `images.deleteall` / `images.upload` を staging して
+  **Google 自身の検証が受理**、そして破棄。残るは `commit` だけ
+- **実データが実装の誤りを1件暴いた。** 403 を認証エラーに丸めていたため、
+  「8枚を超えている」という検証エラーに「権限を確認しろ」と誤診していた。
+  Google は権限エラーと検証エラーを同じ 403・理由なしで返す。401 のみを
+  認証扱いにしていた `colaxy_store_console` が正しかった
+- **残るは Play の `commit` と、Apple の書き込み全部**
 
 ## 書き方の約束
 

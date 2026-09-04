@@ -53,6 +53,13 @@ class PlayApiGuard {
   static Future<void> _wait(Duration duration) =>
       Future<void>.delayed(duration);
 
+  /// What to check when Google Play refuses on permission grounds.
+  static const _permissionHint =
+      'Check that the service account is invited in Play Console under Users '
+      'and permissions. Publishing needs more than the read permissions: '
+      '"Edit and delete draft apps" and "Release apps to testing tracks" or '
+      '"Release to production" as appropriate.';
+
   /// Runs [request], retrying per [retryPolicy] and translating failures.
   ///
   /// [description] names the operation in log lines, e.g.
@@ -140,13 +147,32 @@ class PlayApiGuard {
       );
     }
 
-    if (status == 401 || status == 403) {
+    // Play uses 401 for "this service account was never invited", which is a
+    // diagnosis worth stating outright.
+    if (status == 401) {
       return StoreAuthException(
-        '$message. Check that the service account is invited in Play Console '
-        'under Users and permissions. Publishing needs more than the '
-        'read permissions: "Edit and delete draft apps" and "Release apps to '
-        'testing tracks" or "Release to production" as appropriate.',
+        '$message. $_permissionHint',
         store: Store.googlePlay,
+      );
+    }
+
+    // 403 is *not* an auth failure here, and treating it as one produced a
+    // badly wrong message on real data: `edits.validate` rejects
+    // "This app has more than 8 screenshots for language ja-JP." with a 403
+    // and an empty `errors` array — indistinguishable, by status alone, from
+    // a permission problem. Google's own message is the only thing that
+    // separates them, so it stays the headline and the permission hint moves
+    // to `detail` where it cannot masquerade as the diagnosis.
+    if (status == 403) {
+      return StoreApiException(
+        message,
+        statusCode: status,
+        store: Store.googlePlay,
+        code: reason,
+        detail:
+            'A 403 from Google Play is either a rejected request or a '
+            'missing permission, and the response does not say which. '
+            '$_permissionHint',
       );
     }
 

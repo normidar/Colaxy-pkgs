@@ -182,11 +182,28 @@ store went through `fastlane supply`.
 - A failed transfer deletes the upload. One left in `AWAITING_UPLOAD` is not a
   build, just clutter nothing else clears.
 
-### Not yet verified
-No call has been made against a real account on either store. The API surface
-comes from reading the `androidpublisher/v3` generated client and Apple's own
-OpenAPI document (4.4.1); the tests run against a mock.
+### Verified against a live account
+- **Google Play's whole write path works.** A `--dry-run` over one locale and
+  18 screenshots — `edits.insert`, `listings.update`, `images.deleteall`,
+  `images.upload`, `edits.validate`, `edits.delete` — was accepted by Google's
+  own validation and discarded. Only `commit` remains unproven.
+- **Play edits expire after exactly two hours.** Measured, not documented. A
+  large screenshot run can outlive one, which is why `expiresAt` is exposed.
+- **An app really has several `appInfo` records** in different states, which
+  confirms why `AppInfosApi.editable` filters rather than taking the first.
+- App Store read paths verified; every App Store write path is still
+  unverified.
 
+### Fixed before release
+- A 403 from Google Play was reported as `StoreAuthException` telling the
+  caller to check permissions. Real data showed `edits.validate` rejects
+  `This app has more than 8 screenshots for language ja-JP.` with a 403 and an
+  empty `errors` array — indistinguishable from a permission failure by status
+  alone. Google's message is now the headline and the permission hint moved to
+  `detail`. Only 401 means "not invited", which is what
+  `colaxy_store_console` had right and this package had widened by mistake.
+
+### Not yet verified
 Two App Store mappings are secondary sources rather than specification, and
 are marked as such in the code: `ipadPro13` → `APP_IPAD_PRO_3GEN_129`, and
 the claim that writing through a non-editable `appInfo` silently no-ops.

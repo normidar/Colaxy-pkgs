@@ -20,8 +20,8 @@
 | ✅ **検証済み** | Google Play 側は `googleapis` 17.0.0 の `androidpublisher/v3.dart` を**実際に読んだ**。リソース・メソッド・モデルのフィールド・`imageType` の許容値は実物 |
 | ✅ **検証済み** | `colaxy_localization` / `colaxy_screenshot` / `colaxy_store_console` のソースを読み、出力パスと既存の API 利用範囲を確認 |
 | ✅ **検証済み** | **実装した。** モック (`MockClient`) に対するテストが通る |
-| ✅ **実アカウント検証済み (2026-09-04)** | **`--doctor` が実アカウントで通った。** `edits.insert` / `listings.list` / `tracks.list` / `edits.delete` が動作。10節 |
-| ⚠️ **未検証** | **書き込み経路 (`listings.update` / `images.upload` / `commit`) は未検証** |
+| ✅ **実アカウント検証済み (2026-09-04)** | **書き込み経路まで通った。** `insert` / `listings.update` / `images.deleteall` / `images.upload` / `validate` / `delete` を実アプリで実行し、**Google 自身の検証が staged 変更一式を受理**した。10節 |
+| ⚠️ **未検証** | **`commit` だけ未検証** (U-9 も含む)。実際に公開しないと確かめられない |
 | ✅ **解決済み** | ~~App Store Connect 側は一切確認していない~~ → 公式 OpenAPI 4.4.1 を読み、実装もした。[app_store_connect_api.md](app_store_connect_api.md) |
 
 ---
@@ -314,7 +314,7 @@ Play は API が直接ファイルを受け、Apple は必ず予約して別エ�
 | U-5 | `changelogs/` → リリースノートへの対応。トラック単位かリリース単位か | **解決 (0-2)。** リリース単位 (`TrackRelease.releaseNotes`) |
 | U-6 | エディットの有効期限 | ✅ **完全解決。** `expiryTimeSeconds` で取得でき、**実測で有効期間はちょうど2時間** (10節) |
 | U-7 | 同時に複数の `edits` を開いた場合の挙動 | **推測で実装した。** 409 を `PlayEditConflictException` にして再試行しない。**409 が実際に返るかは未確認** |
-| **U-8** | **実アカウント検証** | ⚠️ **半分解決。** 読み取りとエディットの生成/破棄は通った (10節)。**書き込みと commit は未検証** |
+| **U-8** | **実アカウント検証** | ✅ **ほぼ解決。** 書き込み経路まで実アプリで通った (10節)。**残るは `commit` だけ** |
 | U-9 | `changesInReviewBehavior` の既定が本当にレビューを取り消すか (0-4) | discovery document の記述のみ。実挙動は未確認 |
 | U-10 | `bundles.upload` のサイズ上限。resumable が既定で正しいか | 未確認。resumable にしたのは「大きいファイルだから」という判断のみ |
 
@@ -400,7 +400,68 @@ PASS   Cleanup             discarded edit …; nothing was written
 
 | # | 事項 |
 |---|---|
-| U-8a | `listings.update` / `images.upload` が実際に通るか。`--dry-run` で確認できる (validate して破棄するので安全) |
+| ~~U-8a~~ | ✅ **解決。** `listings.update` も `images.upload` も `images.deleteall` も通り、`validate` が受理した |
 | U-9 | `changesInReviewBehavior` の既定が本当に審査を取り消すか。**commit しないと分からない** |
 | U-7 | 並列に `edits.insert` した場合の 409。2ジョブ同時実行が要る |
 | U-10 | `bundles.upload` のサイズ上限 |
+
+### 10-2. 書き込み経路の検証 (同日、追記)
+
+実アプリ (6ロケール・スクショ108枚) の fastlane ツリーに対して
+`--dry-run` を1ロケールで実行した。**commit しないので何も公開されていない。**
+
+```
+Opened edit …, expires 2026-09-04 03:30:42.000Z
+updated listing for ja-JP
+emptied ja-JP/phoneScreenshots (6 images)
+uploaded 6 to ja-JP/phoneScreenshots
+emptied ja-JP/sevenInchScreenshots (6 images)
+uploaded 6 to ja-JP/sevenInchScreenshots
+emptied ja-JP/tenInchScreenshots (6 images)
+uploaded 6 to ja-JP/tenInchScreenshots
+PlayPublishReport(1 listings, 18 images, 18 deleted)
+Google validated the staged changes. Discarding.
+```
+
+**`edits.validate` が staged 変更一式を受理した。** これで U-8a は解決し、
+Play 側で未検証なのは **`commit` そのものだけ**になった。
+
+#### 見つかった実装の誤り: 403 を認証エラーに丸めていた
+
+最初の試行 (`--replace-screenshots` 無し) はこう落ちた:
+
+```
+StoreAuthException: This app has more than 8 screenshots for language ja-JP..
+Check that the service account is invited in Play Console under Users and
+permissions. …
+```
+
+**メッセージが矛盾している。** 権限は正常で、実際は検証エラーだった。
+生のエラーを捕まえたところ:
+
+```
+status  : 403
+message : This app has more than 8 screenshots for language ja-JP.
+errors  : (空)
+```
+
+**Google は権限エラーと検証エラーを同じ 403・理由なしで返す。**
+ステータスだけでは区別できない。
+`PlayApiGuard` は 401 と 403 をまとめて `StoreAuthException` にしていたので、
+**正しい権限を「確認しろ」と言う誤診**を出していた。
+
+`colaxy_store_console` は **401 だけ**を認証扱いにしていて、そちらが正しかった。
+`PlayApiGuard` を書くときに広げてしまったのが誤り。
+
+→ **修正**: 401 のみ `StoreAuthException`。403 は Google のメッセージを
+見出しにした `StoreApiException` にし、権限のヒントは `detail` に移した
+(403 が本当に権限問題である可能性も残るため、消しはしない)。
+
+#### 運用上の発見: 既存アプリには `--replace-screenshots` が要る
+
+**Play は1スロット8枚が上限**で、アップロードは追記。
+既に6枚あるスロットに6枚足すと12枚になって検証で落ちる。
+
+**追記を既定にした判断自体は変えない** — 既定で削除する方が悪い誤り。
+ただし**既に公開しているアプリへの最初の投入は必ずフラグが要る**ので、
+README に明記した。

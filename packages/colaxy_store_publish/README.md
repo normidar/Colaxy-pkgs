@@ -197,6 +197,13 @@ Check `PlayPublishReport.isEmpty` before committing an unattended run.
   `PlayPublishOptions(replaceScreenshots: true)`. Single-image slots — icon,
   feature graphic, TV banner — are replaced by Google on upload and are
   unaffected.
+
+  > **An app that already has screenshots needs `--replace-screenshots`.**
+  > Play caps a slot at 8, so appending 6 to a slot that holds 6 fails
+  > validation with `This app has more than 8 screenshots for language …`.
+  > Verified against a real account. The append default is still the right
+  > one — deleting by default is the worse mistake — but the first publish to
+  > an existing listing will need the flag.
 - **`listings.deleteAll` is never called for you.** A metadata directory
   holding five locales says nothing about a sixth that was translated in Play
   Console. The method exists; nothing in this package reaches it.
@@ -576,22 +583,28 @@ pipeline that reads and writes has one set to handle. Added here:
 | `PlayEditExpiredException` | The edit is gone, or the app is not visible |
 | `FastlaneLayoutException` | The local layout cannot produce a request |
 
-## Not verified against a live account
+## What has been verified against a live account
 
-Every claim above comes from reading the specifications — the
+The API surface comes from reading the specifications — the
 `androidpublisher/v3` generated client for Google Play, Apple's own OpenAPI
-document (4.4.1) for the App Store — and from tests against a mock. **No call
-in this package has been made against a real store account yet.**
+document (4.4.1) for the App Store. On top of that:
 
-In this repository's experience that gap has produced real errors before, so
-treat the first run against a live app as the verification step:
+| | Verified | Still unverified |
+|---|---|---|
+| **Google Play** | The whole write path. `edits.insert`, `listings.list`/`update`, `images.deleteall`/`upload`, `edits.validate`, `edits.delete` — a full `--dry-run` over one locale and 18 screenshots was **accepted by Google's own validation** and discarded | `commit` itself, and whether its default really cancels a review in flight |
+| **App Store** | Read paths only: `appInfos`, `appStoreVersions`, `betaGroups` | Every write: metadata, screenshots, `buildUploads`, TestFlight |
 
-- **Google Play**: `--check`, then `--doctor`, then `--dry-run`. The dry run
-  is Google's own validation, so it is a genuine rehearsal.
-- **App Store**: `--doctor` reads only. There is no dry run to follow it with,
-  so start with `--locales=` naming one locale and `--no-screenshots`, and
-  widen from there.
+Two things real data changed:
 
-Two mappings are secondary sources rather than specification, and are marked
-in the code as well: `ipadPro13` → `APP_IPAD_PRO_3GEN_129`, and the claim that
+- **Play edits expire after exactly two hours.** A large screenshot run can
+  outlive one; `PlayEditSession.expiresAt` is there to check.
+- **An app really does have several `appInfo` records** in different states,
+  confirming why `AppInfosApi.editable` filters instead of taking the first.
+
+Two mappings remain secondary sources rather than specification, and are
+marked in the code: `ipadPro13` → `APP_IPAD_PRO_3GEN_129`, and the claim that
 writing through a non-editable `appInfo` silently no-ops.
+
+For a first run against your own app: `--check`, `--doctor`, then `--dry-run`
+on Google Play. On the App Store `--doctor` reads only, and there is no dry
+run to follow it with, so start with one locale and `--no-screenshots`.
