@@ -291,11 +291,20 @@ Future<void> main(List<String> args) async {
       return;
     }
 
-    await session.commit(
-      changesInReviewBehavior: args.contains('--error-if-in-review')
-          ? ChangesInReviewBehavior.errorIfInReview
-          : null,
-    );
+    try {
+      await session.commit(
+        changesInReviewBehavior: args.contains('--error-if-in-review')
+            ? ChangesInReviewBehavior.errorIfInReview
+            : null,
+      );
+    } on Object {
+      // A refused commit leaves the edit open, holding the app's edit lock
+      // until it expires two hours later. Discarding costs the chance to
+      // retry the same commit, which only helps for ERROR_IF_IN_REVIEW; every
+      // other failure needs the staging redone anyway.
+      await session.discardQuietly();
+      rethrow;
+    }
     stdout.writeln('Committed. The changes are live or queued for review.');
   } on StoreConsoleException catch (error) {
     stderr.writeln(error);
