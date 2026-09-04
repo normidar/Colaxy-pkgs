@@ -93,8 +93,13 @@ class BuildUploadsApi {
   /// ### Optional
   /// - **[platform]**: `IOS`, `MAC_OS`, `TV_OS` or `VISION_OS`
   ///   (default: `IOS`).
-  /// - **[algorithm]**: Checksum algorithm (default:
-  ///   [ChecksumAlgorithm.sha256]).
+  /// - **[algorithm]**: Checksum algorithm (default: [ChecksumAlgorithm.md5]).
+  ///   **`SHA_256` is in the specification's enum and is rejected by the
+  ///   store.** Verified against a real account: committing with
+  ///   `{file: {hash, algorithm: SHA_256}}` fails
+  ///   `ENTITY_ERROR.ATTRIBUTE.INVALID`, while the same shape with `MD5` is
+  ///   accepted. The parameter stays because the enum has two values; the
+  ///   default is the one that works.
   /// - **[wait]**: Whether to poll until Apple finishes (default: `true`).
   /// - **[timeout]**: How long to poll for (default: 30 minutes).
   ///
@@ -112,7 +117,7 @@ class BuildUploadsApi {
     required String cfBundleVersion,
     required String cfBundleShortVersionString,
     String platform = 'IOS',
-    ChecksumAlgorithm algorithm = ChecksumAlgorithm.sha256,
+    ChecksumAlgorithm algorithm = ChecksumAlgorithm.md5,
     bool wait = true,
     Duration timeout = const Duration(minutes: 30),
     Duration interval = const Duration(seconds: 10),
@@ -141,6 +146,16 @@ class BuildUploadsApi {
                 'cfBundleVersion': cfBundleVersion,
                 'cfBundleShortVersionString': cfBundleShortVersionString,
                 'platform': platform,
+              },
+              // Required. The specification lists `app` under the request's
+              // *relationships* `required`, separately from the attribute
+              // list — omitting it fails with
+              // `ENTITY_ERROR.RELATIONSHIP.REQUIRED`, which took a real
+              // upload to discover.
+              'relationships': {
+                'app': {
+                  'data': {'type': 'apps', 'id': appId},
+                },
               },
             },
           }))['data']

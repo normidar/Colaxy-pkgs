@@ -1,7 +1,8 @@
 # App Store Connect API: 投入系の実測
 
-**ステータス: 調査完了 (Stage A)。Stage 5〜8 (バイナリ) は実装済み。
-読み取り経路は実アカウントで検証済み (12節)、書き込み経路は未検証。**
+**ステータス: 調査完了 (Stage A)。Stage 5〜8 は実装済み。
+読み取りは検証済み (12節)。**バイナリ投入は転送・確定まで実アカウントで動作**
+(13節)。メタデータとスクショの書き込みは未検証。**
 
 調査日: 2026-09-03。[dart_native_pipeline.md](dart_native_pipeline.md) の Stage A
 「Apple 側の空白を埋める」の結果。それまで Apple に関する記述は
@@ -16,7 +17,8 @@
 | ✅ **検証済み** | **Apple 公式の OpenAPI 仕様 (`openapi.oas.json`) をダウンロードして実際に読んだ。** `info.version` は **4.4.1**、966 paths / 1393 schemas。パス・メソッド・スキーマ属性・enum の値は**実物** |
 | ✅ **検証済み** | Play 側と同じ基準。あちらは `googleapis` の生成クライアントを読んだ ([store_publish.md](store_publish.md))。**ようやく両者の信頼度が揃った** |
 | ✅ **実アカウント検証済み (2026-09-04)** | **読み取り経路を実際に叩いた。** `appInfos` / `appStoreVersions` / `betaGroups`。12節に結果 |
-| ⚠️ **未検証** | **書き込み経路は1度も叩いていない。** メタデータ PATCH、スクショ、`buildUploads`、TestFlight |
+| ✅ **実アカウント検証済み (2026-09-04)** | **`buildUploads` の転送と確定が動いた** — 29MB / 6チャンク。Apple の処理段階でバージョン理由の拒否 (13節) |
+| ⚠️ **未検証** | **メタデータ PATCH / スクショ / TestFlight は未検証。** ビルドが COMPLETE まで通るのも未確認 |
 | ⚠️ **二次情報** | 運用上の注意 (レート制限、既知の不具合、altool の制約) はフォーラムとブログ由来。**仕様ではないので別扱い**。本文では「二次」と明記する |
 
 > **表を要約しない** ([dart_native_pipeline.md](dart_native_pipeline.md) の R-1)。
@@ -513,3 +515,79 @@ TestFlight グループが1つも無いので、`isInternalGroup` が返るか�
 | U-A5 / U-A6 | スクショの分割転送と `ipadPro13` の対応先。書き込みが要る |
 | U-A7 | `.pkg` を `buildUploads` で上げられるか (12-4) |
 | U-A9 | `isInternalGroup` が返るか (12-5)。グループを作らないと確かめられない |
+
+---
+
+## 13. buildUploads の実アカウント検証 (2026-09-04)
+
+polygon の `.ipa` (29MB) を実アカウントに投げた。**転送と確定は完全に動いた。**
+拒否されたのは Apple の業務ルールで、実装の欠陥ではない。
+
+```
+created build upload …  for 78
+reserved PolyWallet.ipa (6 chunks)
+uploaded 5242880 bytes ×5 + 3778537 bytes   ← 29MB / 6チャンク
+committed the archive
+→ Apple が処理して拒否:
+   90062: CFBundleShortVersionString [1.4.7] は承認済みの [1.4.9] より
+          高くなければならない
+   90478: 1.4.9 は新規ビルド受付を終了している
+   90186: train version '1.4.7' は受付終了
+```
+
+**Apple は宣言値ではなく `.ipa` 内の Info.plist を読む。** `buildUploads` に
+`cfBundleShortVersionString` を宣言させるのに、検証は実ファイルに対して行う。
+つまり**宣言はメタデータであって真実ではない**。上げ直すにはビルドし直すしかない。
+
+### 13-1. 仕様の読み落としが2件、実データで露見した
+
+どちらも**モックでは絶対に見つからない** — モックは渡されたものをそのまま返すので。
+
+**(1) `app` リレーションが必須だった**
+
+```
+POST /v1/buildUploads → 409 ENTITY_ERROR.RELATIONSHIP.REQUIRED
+  You must provide a value for the relationship 'app'
+```
+
+仕様の `BuildUploadCreateRequest` は `attributes.required` と
+`relationships.required` を**別々に**持つ。前者だけ見て後者を見落としていた。
+`uti` / `assetType` の enum 見落とし (0節) と**同じ形の誤り**。
+スキーマは1箇所読んで分かった気にならないこと。
+
+**(2) `SHA_256` は仕様の enum にあるが、ストアが拒否する**
+
+バイトを送らずに3通り試した結果:
+
+| 送った形 | Apple |
+|---|---|
+| `file` のみ / `SHA_256` | ❌ `ENTITY_ERROR.ATTRIBUTE.INVALID` |
+| `file` のみ / **`MD5`** | ✅ **形は受理** (`CONTENT_NOT_UPLOADED` で止まる = 別の理由) |
+| `file` + `composite` / `SHA_256` | ❌ `ATTRIBUTE.INVALID` |
+
+→ **`MD5` 必須。`composite` は不要。** 既定を `SHA_256` にしていたのが誤りだった。
+`ChecksumAlgorithm` に両方あるのは仕様どおりだが、**動くのは片方だけ**。
+
+> **バイトを送らずに検証できたのが効いた。** 予約だけ作って PATCH を3通り
+> 投げれば属性検証は走る。29MB を3回送っていたら10分近く掛かっていた。
+
+### 13-2. `DELETE /v1/buildUploads/{id}` は状態を選ぶ
+
+- `AWAITING_UPLOAD` → 削除できた
+- `FAILED` → **`STATE_ERROR.INVALID_STATE` で削除できない**
+
+つまり**失敗したアップロードの記録は消せない**。
+実装の `_deleteQuietly` (転送失敗時) は前者に当たるので機能するが、
+処理段階で拒否されたものは残る。
+
+アカウント全体では `AWAITING_UPLOAD` が27件溜まっていた。
+**放置された予約が溜まるのはこの API の通常の姿**で、
+Transporter 経由でも同じことが起きているとみられる。
+
+### 13-3. 未検証のまま残ったもの
+
+| # | 事項 |
+|---|---|
+| U-A13 | **ビルドが実際に COMPLETE まで通るか。** バージョンを上げ直したビルドでしか確かめられない |
+| U-A7 | `.pkg` (macOS) が上げられるか。polygon には macOS 版がある |
+| U-A3 の残り | `ASSET_DESCRIPTION` / `ASSET_SPI` が必要な場面があるか。本体だけで**予約と転送と確定は通った** |

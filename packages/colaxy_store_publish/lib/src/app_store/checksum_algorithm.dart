@@ -10,11 +10,18 @@
 /// ```dart
 /// await uploader.upload(ipa, operations, algorithm: ChecksumAlgorithm.sha256);
 /// ```
+/// **The specification lists two values and the store accepts one.**
+/// Committing a build upload with `SHA_256` fails
+/// `ENTITY_ERROR.ATTRIBUTE.INVALID`; the identical request with `MD5` is
+/// accepted. Verified against a real account, so `MD5` is the default
+/// everywhere here.
 enum ChecksumAlgorithm {
-  /// MD5. What screenshot uploads use, and still accepted for builds.
+  /// MD5. The only value observed to work, on screenshots and on builds.
   md5('MD5'),
 
-  /// SHA-256. The stronger of the two Apple accepts for a build.
+  /// SHA-256. In the specification's enum, **rejected by the store** for
+  /// `sourceFileChecksums`. Kept because the enum has it, not because it
+  /// works.
   sha256('SHA_256');
 
   /// Creates an algorithm with the wire name App Store Connect uses.

@@ -120,11 +120,39 @@ void main() {
           );
 
       final body = jsonDecode(api.requests.first.body) as Map<String, dynamic>;
-      final attributes = (body['data'] as Map<String, dynamic>)['attributes']
-          as Map<String, dynamic>;
+      final data = body['data'] as Map<String, dynamic>;
+      final attributes = data['attributes'] as Map<String, dynamic>;
       expect(attributes['cfBundleVersion'], '412');
       expect(attributes['cfBundleShortVersionString'], '1.4.0');
       expect(attributes['platform'], 'IOS');
+    });
+
+    test('names the app, which is a required relationship', () async {
+      // The specification lists `app` under the request's *relationships*
+      // required, separately from the attribute list. Omitting it fails with
+      // ENTITY_ERROR.RELATIONSHIP.REQUIRED — found by a real upload, not by
+      // the mock, because the mock answered whatever it was given.
+      final file = archive('App.ipa');
+      final api = Recorder()
+        ..enqueue(_upload('AWAITING_UPLOAD'))
+        ..enqueue(_reservedFile(file.lengthSync()))
+        ..enqueue(jsonApiOne(resource('buildUploadFiles', 'buf-1', {})))
+        ..enqueue(_upload('COMPLETE'));
+
+      await publisher(api, Recorder()..enqueue(const <String, dynamic>{}))
+          .buildUploads
+          .upload(
+            file: file,
+            cfBundleVersion: '412',
+            cfBundleShortVersionString: '1.4.0',
+            sleep: (_) async {},
+          );
+
+      final body = jsonDecode(api.requests.first.body) as Map<String, dynamic>;
+      final relationships = (body['data'] as Map<String, dynamic>)
+          ['relationships'] as Map<String, dynamic>;
+      final app = relationships['app'] as Map<String, dynamic>;
+      expect(app['data'], {'type': 'apps', 'id': '6740000000'});
     });
 
     test('reserves with the ASSET slot and the ipa type identifier',
@@ -156,16 +184,15 @@ void main() {
     test('commits with a Checksums object naming the algorithm', () async {
       // A screenshot commits with a bare sourceFileChecksum string; a build
       // upload names the algorithm. Confusing the two fails obscurely.
+      // `composite` is deliberately absent: a real commit with `file` alone
+      // passed attribute validation, so it is not required.
       final file = archive('App.ipa');
       final api = Recorder()
         ..enqueue(_upload('AWAITING_UPLOAD'))
         ..enqueue(_reservedFile(file.lengthSync()))
         ..enqueue(jsonApiOne(resource('buildUploadFiles', 'buf-1', {})))
         ..enqueue(_upload('COMPLETE'));
-      final expected = await AssetUploader.checksum(
-        file,
-        algorithm: ChecksumAlgorithm.sha256,
-      );
+      final expected = await AssetUploader.checksum(file);
 
       await publisher(api, Recorder()..enqueue(const <String, dynamic>{}))
           .buildUploads
@@ -183,7 +210,9 @@ void main() {
       final checksums = attributes['sourceFileChecksums']
           as Map<String, dynamic>;
       final fileHash = checksums['file'] as Map<String, dynamic>;
-      expect(fileHash['algorithm'], 'SHA_256');
+      // MD5, not SHA_256: the store rejects SHA_256 for this attribute even
+      // though the specification's enum offers it. Found by a real upload.
+      expect(fileHash['algorithm'], 'MD5');
       expect(fileHash['hash'], expected);
     });
 

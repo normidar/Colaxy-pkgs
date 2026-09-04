@@ -191,10 +191,23 @@ store went through `fastlane supply`.
   large screenshot run can outlive one, which is why `expiresAt` is exposed.
 - **An app really has several `appInfo` records** in different states, which
   confirms why `AppInfosApi.editable` filters rather than taking the first.
-- App Store read paths verified; every App Store write path is still
+- **`buildUploads` transfers and commits against a real account** — a 29MB
+  `.ipa` in 6 chunks, committed. Apple then rejected the build on versioning
+  (`CFBundleShortVersionString` must exceed the last approved one), which is
+  a business rule rather than a defect. No Transporter, no `altool`.
+- Other App Store write paths — metadata, screenshots, TestFlight — are still
   unverified.
 
 ### Fixed before release
+- **`POST /v1/buildUploads` omitted the required `app` relationship.** The
+  specification keeps `attributes.required` and `relationships.required` in
+  separate places and only the first had been read — the same shape of
+  mistake as missing that `uti` and `assetType` are enums. A mock cannot
+  catch this: it answers whatever it is given.
+- **Build upload checksums must be `MD5`.** `SHA_256` is in the
+  specification's `ChecksumAlgorithm` enum and the store rejects it with
+  `ENTITY_ERROR.ATTRIBUTE.INVALID`; the identical request with `MD5` passes.
+  The default was `SHA_256`. `composite` turns out not to be required.
 - A 403 from Google Play was reported as `StoreAuthException` telling the
   caller to check permissions. Real data showed `edits.validate` rejects
   `This app has more than 8 screenshots for language ja-JP.` with a 403 and an
