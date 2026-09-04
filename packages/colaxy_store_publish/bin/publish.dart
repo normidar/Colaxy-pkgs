@@ -31,15 +31,33 @@ Modes
                   is the only way to prove edit permission — reading a listing
                   succeeds for an account that could never publish. Nothing
                   else is written and nothing is committed.
-  --upload=FILE   Upload an .aab and commit the edit, then stop. Metadata and
-                  screenshots are not touched, and **no track is released**,
-                  so the bundle lands in Play Console as an artifact and
-                  reaches no user. Releasing it is a separate, deliberate
-                  step through PlayTracksApi.
-  --dry-run       Stage every change in a Play edit, have Google validate it,
-                  then discard. Nothing reaches the store. Combines with
-                  --upload to check a bundle without keeping it.
-  (none)          Stage the changes and commit the edit. This publishes.
+  --dry-run       Stage everything in a Play edit, have Google validate it,
+                  then discard. Nothing reaches the store. A real rehearsal:
+                  the check is Google's own, not a local imitation.
+  (none)          Stage and commit. This publishes.
+
+Everything named below goes into ONE edit and out through ONE commit — the
+bundle, the metadata and the track release together. A release whose binary
+landed but whose listing did not is what committing twice would produce.
+
+What to stage
+  --upload=FILE   Add an .aab to the edit.
+  --version-code=N
+                  Release a bundle that is already in Play Console, instead
+                  of uploading one. This is how a build gets promoted from
+                  one track to another without being sent again.
+  --track=NAME    Release the uploaded bundle on this track: internal, alpha,
+                  beta, production, or a custom one. **Without this the
+                  bundle reaches no user** — it lands in Play Console as an
+                  artifact and waits. That separation is Google Play's, and
+                  it is what makes "upload now, decide later" possible.
+  --status=X      draft, completed (default), inProgress or halted.
+                  `draft` stages the release without serving it, which is
+                  what an unattended job usually wants.
+  --user-fraction=0.1
+                  Share of users for --status=inProgress.
+  --skip-metadata Do not touch listings or screenshots. Metadata is staged by
+                  default, matching `upload_to_play_store`.
 
 Options
   --metadata=DIR  The fastlane/metadata/android directory
@@ -90,6 +108,10 @@ Future<void> main(List<String> args) async {
         !arg.startsWith('--metadata=') &&
         !arg.startsWith('--locales=') &&
         !arg.startsWith('--upload=') &&
+        !arg.startsWith('--track=') &&
+        !arg.startsWith('--version-code=') &&
+        !arg.startsWith('--status=') &&
+        !arg.startsWith('--user-fraction=') &&
         !const {
           '--check',
           '--doctor',
@@ -98,6 +120,7 @@ Future<void> main(List<String> args) async {
           '--feature-graphic',
           '--error-if-in-review',
           '--skip-check',
+          '--skip-metadata',
           '--allow-empty',
         }.contains(arg),
   );
@@ -113,6 +136,7 @@ Future<void> main(List<String> args) async {
   final doctorOnly = args.contains('--doctor');
   final dryRun = args.contains('--dry-run');
   final bundlePath = _option(args, '--upload=');
+  final skipMetadata = args.contains('--skip-metadata');
   final metadata = _metadata(_option(args, '--metadata='));
   final locales = _locales(_option(args, '--locales='));
 
@@ -122,10 +146,10 @@ Future<void> main(List<String> args) async {
     uploadStrayFeatureGraphic: args.contains('--feature-graphic'),
   );
 
-  // A bundle upload never reads the metadata tree, so checking it would only
-  // report problems the run cannot cause — and, worse, refuse to proceed over
-  // them. `--doctor` has the same shape and is handled below.
-  final readsMetadata = bundlePath == null;
+  // Checking a tree the run will not read would report problems it cannot
+  // cause and, worse, refuse to proceed over them. `--doctor` has the same
+  // shape and is handled below.
+  final readsMetadata = !skipMetadata;
 
   var blocking = 0;
   if (readsMetadata) {
@@ -196,45 +220,60 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  if (bundlePath != null) {
-    await _uploadBundle(
-      publisher,
-      path: bundlePath,
-      dryRun: dryRun,
-      changesInReviewBehavior: args.contains('--error-if-in-review')
-          ? ChangesInReviewBehavior.errorIfInReview
-          : null,
-    );
-    publisher.close();
-    return;
-  }
-
-  final metadataPublisher = PlayMetadataPublisher(
-    metadata: metadata,
-    options: options,
-    onLog: stdout.writeln,
-  );
-
   try {
-    // The edit is driven by hand rather than through `publisher.edit`, because
-    // whether to commit depends on what got staged: committing an edit that
-    // staged nothing still cancels a review in progress.
+    // Everything goes into **one** edit and out through **one** commit: the
+    // bundle, the metadata, and the track release. That is the shape Play's
+    // transaction is for — a release whose binary landed but whose listing
+    // did not is exactly what committing twice would produce.
+    //
+    // The edit is driven by hand rather than through `publisher.edit`,
+    // because whether to commit depends on what got staged: committing an
+    // edit that staged nothing still cancels a review in progress.
     final session = await publisher.openEdit();
     stdout.writeln(
       'Opened edit ${session.editId}'
       '${session.expiresAt == null ? '' : ', expires ${session.expiresAt}'}',
     );
 
-    final PlayPublishReport report;
+    var staged = false;
     try {
-      report = await metadataPublisher.publish(session);
+      PlayBundle? bundle;
+      if (bundlePath != null) {
+        bundle = await session.bundles.upload(File(bundlePath));
+        stdout.writeln('Uploaded version code ${bundle.versionCode}');
+        staged = true;
+      }
+
+      if (!skipMetadata) {
+        final report = await PlayMetadataPublisher(
+          metadata: metadata,
+          options: options,
+          onLog: stdout.writeln,
+        ).publish(session);
+        stdout.writeln(report);
+        staged = staged || !report.isEmpty;
+      }
+
+      final track = _option(args, '--track=');
+      if (track != null) {
+        await _release(
+          session,
+          track: track,
+          versionCode: bundle?.versionCode ??
+              int.tryParse(_option(args, '--version-code=') ?? ''),
+          metadata: skipMetadata ? null : metadata,
+          status: _option(args, '--status='),
+          userFraction: _option(args, '--user-fraction='),
+          locales: locales,
+        );
+        staged = true;
+      }
     } on Object {
       await session.discardQuietly();
       rethrow;
     }
-    stdout.writeln(report);
 
-    if (report.isEmpty && !args.contains('--allow-empty')) {
+    if (!staged && !args.contains('--allow-empty')) {
       stdout.writeln('Nothing was staged; discarding the edit.');
       await session.discard();
       return;
@@ -260,54 +299,64 @@ Future<void> main(List<String> args) async {
   }
 }
 
-/// Uploads an app bundle and commits, **without releasing it to a track**.
+/// Stages a track release for [versionCode] into the open edit.
 ///
-/// Committing an edit that holds only a bundle puts the artifact in Play
-/// Console and gives it to nobody: a build reaches users when a *track* names
-/// its version code, which is a separate call this deliberately does not
-/// make. That separation is what makes "upload now, decide later" possible on
-/// Google Play, and it has no App Store equivalent.
-Future<void> _uploadBundle(
-  PlayPublisher publisher, {
-  required String path,
-  required bool dryRun,
-  ChangesInReviewBehavior? changesInReviewBehavior,
+/// **A bundle with no track release reaches nobody.** Uploading and releasing
+/// are separate on Google Play, which is what makes "upload now, decide
+/// later" possible — and what makes it easy to think a publish worked when
+/// only half of it happened.
+///
+/// Release notes come from the metadata tree's `changelogs/`, keyed by locale
+/// and selected by the version code just uploaded, exactly as
+/// `fastlane supply` does.
+Future<void> _release(
+  PlayEditSession session, {
+  required String track,
+  required int? versionCode,
+  required FastlaneMetadata? metadata,
+  String? status,
+  String? userFraction,
+  Set<String>? locales,
 }) async {
-  final file = File(path);
-  final session = await publisher.openEdit();
-  stdout.writeln(
-    'Opened edit ${session.editId}'
-    '${session.expiresAt == null ? '' : ', expires ${session.expiresAt}'}',
-  );
-
-  final PlayBundle bundle;
-  try {
-    bundle = await session.bundles.upload(file);
-  } on Object {
-    await session.discardQuietly();
-    rethrow;
-  }
-  stdout.writeln('Uploaded version code ${bundle.versionCode}');
-
-  if (dryRun) {
-    await session.validate();
-    stdout.writeln('Google validated the bundle. Discarding.');
-    await session.discard();
-    return;
-  }
-
-  try {
-    await session.commit(changesInReviewBehavior: changesInReviewBehavior);
-  } on Object {
-    await session.discardQuietly();
-    rethrow;
-  }
-  stdout
-    ..writeln('Committed. The bundle is in Play Console.')
-    ..writeln(
-      'It is released to no track, so no user has it. Put it on a track '
-      'deliberately when you want that.',
+  if (versionCode == null) {
+    throw const FastlaneLayoutException(
+      '--track needs a version code to release. Pass --upload=FILE to send a '
+      'new bundle, or --version-code=N to release one already in Play '
+      'Console.',
     );
+  }
+
+  final releaseStatus = switch (status) {
+    null || 'completed' => PlayReleaseStatus.completed,
+    'draft' => PlayReleaseStatus.draft,
+    'inProgress' => PlayReleaseStatus.inProgress,
+    'halted' => PlayReleaseStatus.halted,
+    _ => throw FastlaneLayoutException(
+      'Unknown --status "$status". Use draft, completed, inProgress or '
+      'halted.',
+    ),
+  };
+
+  final notes = <String, String>{};
+  if (metadata != null) {
+    for (final locale in metadata.locales()) {
+      if (locales != null && !locales.contains(locale)) continue;
+      final text = metadata.listing(locale).changelogFor(versionCode);
+      if (text != null) notes[locale] = text;
+    }
+  }
+
+  await session.tracks.release(
+    track: track,
+    versionCodes: [versionCode],
+    status: releaseStatus,
+    userFraction: userFraction == null ? null : double.parse(userFraction),
+    releaseNotes: notes,
+  );
+  stdout.writeln(
+    'Staged $versionCode on $track as ${releaseStatus.wireName}'
+    '${notes.isEmpty ? '' : ' with notes for ${notes.length} locales'}',
+  );
 }
 
 /// `1 error` / `2 errors`, so a one-problem run does not read as broken.
