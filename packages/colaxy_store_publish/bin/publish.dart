@@ -31,8 +31,14 @@ Modes
                   is the only way to prove edit permission — reading a listing
                   succeeds for an account that could never publish. Nothing
                   else is written and nothing is committed.
+  --upload=FILE   Upload an .aab and commit the edit, then stop. Metadata and
+                  screenshots are not touched, and **no track is released**,
+                  so the bundle lands in Play Console as an artifact and
+                  reaches no user. Releasing it is a separate, deliberate
+                  step through PlayTracksApi.
   --dry-run       Stage every change in a Play edit, have Google validate it,
-                  then discard. Nothing reaches the store.
+                  then discard. Nothing reaches the store. Combines with
+                  --upload to check a bundle without keeping it.
   (none)          Stage the changes and commit the edit. This publishes.
 
 Options
@@ -83,6 +89,7 @@ Future<void> main(List<String> args) async {
     (arg) =>
         !arg.startsWith('--metadata=') &&
         !arg.startsWith('--locales=') &&
+        !arg.startsWith('--upload=') &&
         !const {
           '--check',
           '--doctor',
@@ -105,6 +112,7 @@ Future<void> main(List<String> args) async {
   final checkOnly = args.contains('--check');
   final doctorOnly = args.contains('--doctor');
   final dryRun = args.contains('--dry-run');
+  final bundlePath = _option(args, '--upload=');
   final metadata = _metadata(_option(args, '--metadata='));
   final locales = _locales(_option(args, '--locales='));
 
@@ -114,13 +122,21 @@ Future<void> main(List<String> args) async {
     uploadStrayFeatureGraphic: args.contains('--feature-graphic'),
   );
 
-  final issues = MetadataCheck(metadata: metadata, options: options).run()
-    ..forEach(stderr.writeln);
-  final blocking = issues.where((issue) => issue.severity.blocks).length;
-  final warnings = issues.length - blocking;
-  stdout.writeln(
-    'Check: ${_count(blocking, 'error')}, ${_count(warnings, 'warning')}.',
-  );
+  // A bundle upload never reads the metadata tree, so checking it would only
+  // report problems the run cannot cause — and, worse, refuse to proceed over
+  // them. `--doctor` has the same shape and is handled below.
+  final readsMetadata = bundlePath == null;
+
+  var blocking = 0;
+  if (readsMetadata) {
+    final issues = MetadataCheck(metadata: metadata, options: options).run()
+      ..forEach(stderr.writeln);
+    blocking = issues.where((issue) => issue.severity.blocks).length;
+    stdout.writeln(
+      'Check: ${_count(blocking, 'error')}, '
+      '${_count(issues.length - blocking, 'warning')}.',
+    );
+  }
 
   if (checkOnly) {
     if (blocking > 0) exitCode = 1;
@@ -180,6 +196,19 @@ Future<void> main(List<String> args) async {
     return;
   }
 
+  if (bundlePath != null) {
+    await _uploadBundle(
+      publisher,
+      path: bundlePath,
+      dryRun: dryRun,
+      changesInReviewBehavior: args.contains('--error-if-in-review')
+          ? ChangesInReviewBehavior.errorIfInReview
+          : null,
+    );
+    publisher.close();
+    return;
+  }
+
   final metadataPublisher = PlayMetadataPublisher(
     metadata: metadata,
     options: options,
@@ -229,6 +258,56 @@ Future<void> main(List<String> args) async {
   } finally {
     publisher.close();
   }
+}
+
+/// Uploads an app bundle and commits, **without releasing it to a track**.
+///
+/// Committing an edit that holds only a bundle puts the artifact in Play
+/// Console and gives it to nobody: a build reaches users when a *track* names
+/// its version code, which is a separate call this deliberately does not
+/// make. That separation is what makes "upload now, decide later" possible on
+/// Google Play, and it has no App Store equivalent.
+Future<void> _uploadBundle(
+  PlayPublisher publisher, {
+  required String path,
+  required bool dryRun,
+  ChangesInReviewBehavior? changesInReviewBehavior,
+}) async {
+  final file = File(path);
+  final session = await publisher.openEdit();
+  stdout.writeln(
+    'Opened edit ${session.editId}'
+    '${session.expiresAt == null ? '' : ', expires ${session.expiresAt}'}',
+  );
+
+  final PlayBundle bundle;
+  try {
+    bundle = await session.bundles.upload(file);
+  } on Object {
+    await session.discardQuietly();
+    rethrow;
+  }
+  stdout.writeln('Uploaded version code ${bundle.versionCode}');
+
+  if (dryRun) {
+    await session.validate();
+    stdout.writeln('Google validated the bundle. Discarding.');
+    await session.discard();
+    return;
+  }
+
+  try {
+    await session.commit(changesInReviewBehavior: changesInReviewBehavior);
+  } on Object {
+    await session.discardQuietly();
+    rethrow;
+  }
+  stdout
+    ..writeln('Committed. The bundle is in Play Console.')
+    ..writeln(
+      'It is released to no track, so no user has it. Put it on a track '
+      'deliberately when you want that.',
+    );
 }
 
 /// `1 error` / `2 errors`, so a one-problem run does not read as broken.
