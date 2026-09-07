@@ -357,6 +357,27 @@ different editability windows. Google Play's equivalent is a single `Listing`.
 > record and picks the editable one, and the publisher stops rather than
 > guessing when there is none.
 
+### Nothing to write to is not automatically fixed
+
+Metadata and screenshots hang off an `appStoreVersion` in
+`PREPARE_FOR_SUBMISSION`. If the last version shipped and no new one has been
+created yet, there is none — and the run stops instead of guessing which
+version, if any, was meant:
+
+```
+FastlaneLayoutException: No App Store version is in PREPARE_FOR_SUBMISSION,
+so there is nothing to write version metadata or screenshots to. Create the
+next version in App Store Connect first — doing that automatically is a
+release decision, not a publishing detail.
+```
+
+`fastlane deliver` opened one for you here. This package does not, by
+default — the version string is a real decision (what ships next), not a
+detail `publish-ios` should infer. Pass `--create-version=X.Y.Z` to make that
+decision explicit and let the run open one itself when none is editable; it
+does nothing when one already is, so it is safe to pass unconditionally from
+a pipeline that always knows the version it is about to publish.
+
 ### Screenshots are three steps and a wait
 
 ```text
@@ -548,8 +569,14 @@ Credentials come from `PLAY_KEY_JSON` and `PLAY_PACKAGE`.
 (`--version`, `--short-version`), `--testflight=A,B` (`--build`,
 `--no-beta-review`), `--root=DIR`, `--locales=a,b`, `--no-app-info`,
 `--no-version-text`, `--no-screenshots`, `--replace-screenshots`, `--no-wait`,
-`--platform=IOS`. Credentials come from `ASC_KEY_ID`, `ASC_ISSUER_ID`,
-`ASC_P8` and `ASC_APP_ID`. **No flag submits for review.**
+`--platform=IOS`, `--create-version=X.Y.Z`. Credentials come from
+`ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_P8` and `ASC_APP_ID`. **No flag submits
+for review.**
+
+`--create-version` opens the next version when none is editable, instead of
+stopping with "no version to write to" — see
+[Metadata splits across two resources](#metadata-splits-across-two-resources).
+It is a no-op when one is already open, so passing it on every run is safe.
 
 Both exit `0` on success, `1` when the store rejected something or a check
 found errors, `64` for bad arguments or missing credentials. See `--help`.

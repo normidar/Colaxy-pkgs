@@ -121,6 +121,10 @@ store went through `fastlane supply`.
   one record per state and writing through the wrong one is reported to
   succeed while changing nothing visible, so the publisher stops rather than
   taking the first record.
+- `AppStoreVersionsApi.create` opens the next version. Nothing else in this
+  package calls it — `editable` returning `null` (usually because the last
+  version shipped and no new one exists yet) is deliberate, not a gap, so
+  `publish-ios` only creates one when `--create-version=X.Y.Z` says so.
 - Screenshots are reserve → chunked transfer → MD5 commit → poll. The bytes go
   to Apple's asset host without the API's bearer token, because every request
   body in the specification is JSON. A failed upload deletes its reservation:

@@ -79,4 +79,39 @@ class AppStoreVersionsApi {
     );
     return versions.isEmpty ? null : versions.first;
   }
+
+  /// Opens the next version, in `PREPARE_FOR_SUBMISSION`.
+  ///
+  /// **Nothing else in this package calls this.** [editable] returning `null`
+  /// is deliberate, not a gap: a new version is a release decision, and
+  /// callers that want one open now do so explicitly, by name, the same
+  /// judgement `ReviewSubmissionsApi.submit` makes about submitting.
+  ///
+  /// ## Parameters
+  ///
+  /// ### Required
+  /// - **[versionString]**: The marketing version, e.g. `1.4.0`.
+  ///
+  /// ### Optional
+  /// - **[platform]**: `IOS`, `MAC_OS`, `TV_OS` or `VISION_OS`
+  ///   (default: `IOS`).
+  Future<AppStoreVersion> create({
+    required String versionString,
+    String platform = 'IOS',
+  }) async {
+    final response = await _client.postJson('/v1/appStoreVersions', {
+      'data': {
+        'type': 'appStoreVersions',
+        'attributes': {'platform': platform, 'versionString': versionString},
+        'relationships': {
+          'app': {
+            'data': {'type': 'apps', 'id': appId},
+          },
+        },
+      },
+    });
+    return AppStoreVersion.fromJson(
+      response['data'] as Map<String, dynamic>? ?? const {},
+    );
+  }
 }

@@ -58,6 +58,12 @@ Options
                   Processing is asynchronous and can reject an asset that
                   uploaded cleanly, so waiting is on by default.
   --platform=IOS  Narrow the version lookup (IOS, MAC_OS, TV_OS, VISION_OS).
+  --create-version=X.Y.Z
+                  Open the next version, in PREPARE_FOR_SUBMISSION, if none is
+                  editable yet — the situation that otherwise stops a write
+                  with "no version to write to". A no-op when one already is,
+                  so passing it on every run is safe. Still not automatic:
+                  passing this flag is the explicit decision, every time.
   --no-beta-review
                   With --testflight, skip the beta review submission. Leaves
                   external groups without the build.
@@ -102,6 +108,7 @@ Future<void> main(List<String> args) async {
         !arg.startsWith('--upload=') &&
         !arg.startsWith('--version=') &&
         !arg.startsWith('--short-version=') &&
+        !arg.startsWith('--create-version=') &&
         !const {
           '--doctor',
           '--no-app-info',
@@ -125,7 +132,9 @@ Future<void> main(List<String> args) async {
   final p8 = _env('ASC_P8');
   final bundleId = _env('ASC_BUNDLE_ID');
   var appId = _env('ASC_APP_ID');
-  if (keyId == null || issuerId == null || p8 == null ||
+  if (keyId == null ||
+      issuerId == null ||
+      p8 == null ||
       (appId == null && bundleId == null)) {
     stderr
       ..writeln(
@@ -226,6 +235,21 @@ Future<void> main(List<String> args) async {
         submitForBetaReview: !args.contains('--no-beta-review'),
       );
       return;
+    }
+
+    final createVersion = _option(args, '--create-version=');
+    if (createVersion != null) {
+      final platform = _option(args, '--platform=') ?? 'IOS';
+      final existing = await publisher.versions.editable(platform: platform);
+      if (existing == null) {
+        final created = await publisher.versions.create(
+          versionString: createVersion,
+          platform: platform,
+        );
+        stdout.writeln(
+          'Created version ${created.versionString} (${created.id})',
+        );
+      }
     }
 
     final report = await AppStoreMetadataPublisher(
