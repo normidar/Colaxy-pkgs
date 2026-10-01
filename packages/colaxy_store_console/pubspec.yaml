@@ -14,7 +14,7 @@ executables:
   colaxy-store-verify: verify
 dev_dependencies:
   test: ^1.24.0
-  very_good_analysis: ^10.3.0
+  very_good_analysis: ^11.0.0
 environment:
   sdk: ^3.8.0
 # test_api_key.dart holds a throwaway P-256 key generated for the test suite.
