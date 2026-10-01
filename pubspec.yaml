@@ -9,7 +9,7 @@ environment:
 dev_dependencies:
   melos: 8.2.2
   # Needed so the root analysis_options.yaml can `include:` it.
-  very_good_analysis: ^10.3.0
+  very_good_analysis: ^11.0.0
 
 workspace:
   - packages/*
